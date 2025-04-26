@@ -1,0 +1,123 @@
+import tkinter as tk
+from tkinter import messagebox
+import requests
+from login_gui import LoginGUI
+from PIL import Image, ImageTk
+import os
+
+API_URL = "http://127.0.0.1:8000/license"  # FastAPI server URL
+
+
+class LicenseSplashScreen(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.title("License & Welcome")
+        self.state('zoomed')  # Fullscreen mode
+        self.configure(bg="#2C3E50")
+        
+        self._set_window_icon()
+        self._create_ui()
+    
+    def _set_window_icon(self):
+        """Sets the application window icon."""
+        icon_paths = ["frontend/icon.ico", "frontend/icon.png"]
+        
+        for path in icon_paths:
+            abs_path = os.path.abspath(path).replace("\\", "/")
+            if os.path.exists(abs_path):
+                if path.endswith(".ico"):
+                    self.iconbitmap(abs_path)
+                else:
+                    try:
+                        icon_img = Image.open(abs_path).resize((80, 80))
+                        self.icon_image = ImageTk.PhotoImage(icon_img)
+                        self.iconphoto(True, self.icon_image)
+                    except Exception as e:
+                        print(f"Error loading PNG icon: {e}")
+                break
+        else:
+            print("Error: Icon file not found!")
+    
+    def _create_ui(self):
+        """Creates the license input UI."""
+        self.license_frame = tk.Frame(self, bg="white", padx=40, pady=30)
+        self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=380)
+
+        self._add_label(self.license_frame, "Admin License Password:")
+        self.password_entry = self._add_entry(self.license_frame, show="*")
+
+        self._add_label(self.license_frame, "License Key:")
+        self.key_entry = self._add_entry(self.license_frame)
+
+        self._add_button(self.license_frame, "Generate License", self.generate_license)
+
+        self._add_label(self.license_frame, "Enter License Key to Verify:")
+        self.verify_key_entry = self._add_entry(self.license_frame)
+        
+        self._add_button(self.license_frame, "Verify License", self.verify_license)
+
+        tk.Label(self, text="✦  W E L C O M E  ✦\nHotel & Event Management System",
+                 font=("Century Gothic", 24, "bold"), fg="white", bg="#2C3E50").place(relx=0.5, rely=0.08, anchor="n")
+
+        tk.Label(self, text="Produced & Licensed by School of Accounting Package",
+                 font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.8, rely=0.94, anchor="n")
+        
+        tk.Label(self, text="© 2025", font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.85, rely=0.97, anchor="n")
+
+    def _add_label(self, parent, text):
+        return tk.Label(parent, text=text, font=("Arial", 12, "bold")).pack(padx=5, pady=5)
+    
+    def _add_entry(self, parent, show=None):
+        return tk.Entry(parent, width=35, font=("Arial", 12), show=show).pack(padx=5, pady=5)
+    
+    def _add_button(self, parent, text, command):
+        return tk.Button(parent, text=text, font=("Arial", 12), command=command).pack(pady=10)
+    
+    def generate_license(self):
+        """Handles license generation."""
+        license_password = self.password_entry.get()
+        key = self.key_entry.get()
+        
+        if not license_password or not key:
+            return messagebox.showerror("Input Error", "Please enter both license password and key.")
+        
+        try:
+            response = requests.post(f"{API_URL}/generate", params={"license_password": license_password, "key": key})
+            response.raise_for_status()
+            new_license = response.json()
+            messagebox.showinfo("License Generated", f"New License Key: {new_license['key']}")
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("Error", f"Request failed: {e}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Unexpected error: {e}")
+    
+    def verify_license(self):
+        """Handles license verification."""
+        key = self.verify_key_entry.get()
+        
+        if not key:
+            return messagebox.showerror("Input Error", "Please enter a license key.")
+        
+        try:
+            response = requests.get(f"{API_URL}/verify/{key}")
+            response.raise_for_status()
+            result = response.json()
+            
+            if result.get("valid"):
+                messagebox.showinfo("License Valid", "The license key is valid!")
+                self.destroy()
+                login_window = tk.Toplevel(self.master)
+                LoginGUI(login_window)
+            else:
+                messagebox.showwarning("Invalid License", result.get("message", "License is invalid."))
+        except requests.exceptions.RequestException:
+            messagebox.showerror("Error", "Failed to verify the license key.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Unexpected error: {e}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()
+    LicenseSplashScreen(root)
+    root.mainloop()

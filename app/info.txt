@@ -1,0 +1,86 @@
+ pip install -r requirements.txt
+ pip freeze > requirements.txt
+
+%USERPROFILE%\AppData\Local\programs
+[System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\Git\bin", [System.EnvironmentVariableTarget]::Machine)
+
+$env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\cmd"
+after the above, then shut down
+powershell
+
+Get-NetIPAddress | Select-Object InterfaceAlias,IPAddress
+
+ipconfig.exe
+
+to use the remote desktop  
+sysdm.cpl
+
+
+Press Win + R, type mstsc, and hit Enter.
+2️⃣ In the Remote Desktop Connection, enter the server’s IP address (e.g., 192.168.1.200).
+3️⃣ Click Connect, enter login details, and access the system.
+
+using winpython, installing requirements.txt
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64\python.exe -m pip install -r C:\Users\KLOUNGE\Documents\HEMS-main\requirements.txt
+
+
+📌 Step 1: Find the Correct Python Path in WinPython
+Since you're using WinPython, we need to find the correct Python executable.
+
+1️⃣ Go to your WinPython folder in File Explorer:
+
+makefile
+Copy
+Edit
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111
+2️⃣ Open the "python-3.10.11.amd64" folder
+
+Inside this folder, you should see python.exe.
+3️⃣ Copy the full path of python.exe (e.g., it should be something like):
+
+makefile
+Copy
+Edit
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64\python.exe
+📌 Step 2: Install Dependencies Using the Correct Python Path
+Now, in your WinPython Command Prompt, type:
+
+sh
+Copy
+Edit
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64\python.exe -m pip install -r C:\Users\KLOUNGE\Documents\HEMS-main\requirements.txt
+✅ This ensures that dependencies install correctly using WinPython’s embedded Python.
+
+📌 Step 3: Run Your Application
+Once dependencies are installed, run:
+
+sh
+Copy
+Edit
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64\python.exe C:\Users\KLOUNGE\Documents\HEMS-main\start.py
+✅ Your application should now start! 🚀
+
+📌 Step 4: Create a Shortcut for Easy Running
+To avoid typing these commands every time, create a shortcut BAT file:
+
+1️⃣ Open Notepad
+2️⃣ Copy and paste the following code:
+
+bat
+Copy
+Edit
+@echo off
+cd C:\Users\KLOUNGE\Documents\HEMS-main
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64\python.exe start.py
+3️⃣ Click File → Save As
+
+Save it as run_hems.bat
+
+Select "All Files" as file type
+
+Save it inside C:\Users\KLOUNGE\Documents\HEMS-main
+
+✅ Now, just double-click run_hems.bat to start your app! 🚀
+
+C:\Users\KLOUNGE\Desktop\WinPython\WPy64-310111\python-3.10.11.amd64>
+

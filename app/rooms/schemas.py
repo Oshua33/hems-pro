@@ -1,0 +1,41 @@
+from pydantic import BaseModel
+from typing import List
+from datetime import datetime
+from typing import Optional
+from typing import Literal
+from decimal import Decimal
+from datetime import date
+
+        
+
+class RoomSchema(BaseModel):
+    room_number: str
+    room_type: str
+    amount: float
+    status: Literal["available", "checked-in", "reserved"]  # Updated status options
+
+    class Config:
+        from_attributes = True
+
+        
+
+class RoomList(BaseModel):
+    room_number: str
+    room_type: str
+    amount: float
+    
+
+    class Config:
+        from_attributes = True
+        
+        
+class RoomUpdateSchema(BaseModel):
+    room_number: str
+    room_type: Optional[str] = None
+    amount: Optional[int] = None
+    status: Optional[Literal["available", "checked-in", "reserved"]] = None
+
+    class Config:
+        from_attributes = True
+
+
