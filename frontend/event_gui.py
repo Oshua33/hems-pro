@@ -14,6 +14,64 @@ import sys
 
 
 
+class RoundedButton(tk.Canvas):
+    def __init__(self, parent, text, command, radius=20, padding=10, 
+                 color="#34495E", hover_color="#1ABC9C", text_color="white", 
+                 font=("Helvetica", 10)):
+        self.width = 120  # << Smaller width to match sidebar
+        self.height = 35
+
+        super().__init__(parent, width=self.width, height=self.height, bg=parent["bg"], highlightthickness=0)
+
+        self.command = command
+        self.radius = radius
+        self.color = color
+        self.hover_color = hover_color
+        self.text_color = text_color
+        self.font = font
+        self.text = text
+
+        # Draw rounded rectangle
+        self.rounded_rect = self.create_round_rect(2, 2, self.width-2, self.height-2, self.radius, fill=self.color)
+        
+        # 🛠️ Create LEFT-ALIGNED text
+        self.text_id = self.create_text(10, self.height//2, text=self.text, fill=self.text_color, font=self.font, anchor="w") 
+
+        # Bind Events
+        self.tag_bind(self.rounded_rect, "<Enter>", self.on_enter)
+        self.tag_bind(self.rounded_rect, "<Leave>", self.on_leave)
+        self.tag_bind(self.rounded_rect, "<Button-1>", self.on_click)
+        self.tag_bind(self.text_id, "<Enter>", self.on_enter)
+        self.tag_bind(self.text_id, "<Leave>", self.on_leave)
+        self.tag_bind(self.text_id, "<Button-1>", self.on_click)
+
+    def create_round_rect(self, x1, y1, x2, y2, r=25, **kwargs):
+        points = [
+            x1+r, y1,
+            x2-r, y1,
+            x2, y1,
+            x2, y1+r,
+            x2, y2-r,
+            x2, y2,
+            x2-r, y2,
+            x1+r, y2,
+            x1, y2,
+            x1, y2-r,
+            x1, y1+r,
+            x1, y1
+        ]
+        return self.create_polygon(points, smooth=True, splinesteps=36, **kwargs)
+
+    def on_enter(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.hover_color)
+
+    def on_leave(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.color)
+
+    def on_click(self, event=None):
+        if self.command:
+            self.command()
+
 
 class EventManagement:
     def __init__(self, root, token):
@@ -87,7 +145,7 @@ class EventManagement:
         self.menu_label.pack(fill=tk.X)
 
         # Sidebar Section (Inside `Menu` Frame)
-        self.left_frame = tk.Frame(self.Menu, bg="#2C3E50", width=220)
+        self.left_frame = tk.Frame(self.Menu, bg="#2C3E50", width=230)
         self.left_frame.pack(fill=tk.BOTH, expand=True)
 
         # Right Section (Main Content)
@@ -110,15 +168,16 @@ class EventManagement:
         ]
 
         for text, command in event_buttons:
-            btn = tk.Button(self.left_frame, text=text,
-                            command=lambda t=text, c=command: self.update_subheading(t, c),
-                            width=10, font=("Arial", 10), anchor="w", padx=10,
-                            bg="#34495E", fg="white", relief="flat", bd=0)
-            
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#34495E"))
-            btn.pack(pady=8, padx=15, anchor="w", fill="x")
-            self.buttons.append(btn)
+            rb = RoundedButton(
+                self.left_frame,
+                text=text,
+                command=lambda t=text, c=command: self.update_subheading(t, c),
+                radius=15,
+                color="#34495E",
+                hover_color="#1ABC9C",
+                font=("Helvetica", 10)
+            )
+            rb.pack(anchor="w", padx=(8, 0), pady=2)  # <<< only pad from the left
 
         # Separation Line
         separator = tk.Frame(self.left_frame, height=4, bg="#ECF0F1")
@@ -128,22 +187,24 @@ class EventManagement:
         payment_buttons = [
             ("Create Payment", self.create_event_payment),
             ("List Payments", self.list_events_payment),
-            ("Payment By Status", self.list_payment_by_status),
-            ("Sort Payment by ID", self.search_payment_by_id),
+            ("Sort By Status", self.list_payment_by_status),
+            ("Sort Payment ID", self.search_payment_by_id),
             ("Debtor List", self.event_debtor_list),
             ("Void Payment", self.void_payment),
         ]
 
         for text, command in payment_buttons:
-            btn = tk.Button(self.left_frame, text=text,
-                            command=lambda t=text, c=command: self.update_subheading(t, c),
-                            width=13, font=("Arial", 10), anchor="w", padx=10,
-                            bg="#34495E", fg="white", relief="flat", bd=0)
-            
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#34495E"))
-            btn.pack(pady=8, padx=15, anchor="w", fill="x")
-            self.buttons.append(btn)
+            rb = RoundedButton(
+                self.left_frame,
+                text=text,
+                command=lambda t=text, c=command: self.update_subheading(t, c),
+                radius=15,
+                color="#34495E",
+                hover_color="#1ABC9C",
+                font=("Helvetica", 10)
+            )
+            rb.pack(anchor="w", padx=(8, 0), pady=2)  # <<< only pad from the left
+
 
         # Dashboard Link
             self.dashboard_label = tk.Label(

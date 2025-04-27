@@ -20,17 +20,78 @@ from payment_gui import PaymentManagement  # Import the Payment GUI
 ##
 
 
+class RoundedButton(tk.Canvas):
+    def __init__(self, parent, text, command, radius=20, padding=10, 
+                 color="#34495E", hover_color="#1ABC9C", text_color="white", 
+                 font=("Helvetica", 10)):
+        self.width = 120  # << Smaller width to match sidebar
+        self.height = 35
+
+        super().__init__(parent, width=self.width, height=self.height, bg=parent["bg"], highlightthickness=0)
+
+        self.command = command
+        self.radius = radius
+        self.color = color
+        self.hover_color = hover_color
+        self.text_color = text_color
+        self.font = font
+        self.text = text
+
+        # Draw rounded rectangle
+        self.rounded_rect = self.create_round_rect(2, 2, self.width-2, self.height-2, self.radius, fill=self.color)
+        
+        # 🛠️ Create LEFT-ALIGNED text
+        self.text_id = self.create_text(10, self.height//2, text=self.text, fill=self.text_color, font=self.font, anchor="w") 
+
+        # Bind Events
+        self.tag_bind(self.rounded_rect, "<Enter>", self.on_enter)
+        self.tag_bind(self.rounded_rect, "<Leave>", self.on_leave)
+        self.tag_bind(self.rounded_rect, "<Button-1>", self.on_click)
+        self.tag_bind(self.text_id, "<Enter>", self.on_enter)
+        self.tag_bind(self.text_id, "<Leave>", self.on_leave)
+        self.tag_bind(self.text_id, "<Button-1>", self.on_click)
+
+    def create_round_rect(self, x1, y1, x2, y2, r=25, **kwargs):
+        points = [
+            x1+r, y1,
+            x2-r, y1,
+            x2, y1,
+            x2, y1+r,
+            x2, y2-r,
+            x2, y2,
+            x2-r, y2,
+            x1+r, y2,
+            x1, y2,
+            x1, y2-r,
+            x1, y1+r,
+            x1, y1
+        ]
+        return self.create_polygon(points, smooth=True, splinesteps=36, **kwargs)
+
+    def on_enter(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.hover_color)
+
+    def on_leave(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.color)
+
+    def on_click(self, event=None):
+        if self.command:
+            self.command()
+
+
+
+# =================== Main Booking Management ===================
 class BookingManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
-        self.tree = ttk.Treeview(self.root)  # Ensure the treeview is initialized
         self.root.title("Booking Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
         
-        self.username = "current_user"
         self.token = token
+        self.username = "current_user"
 
+        self.tree = ttk.Treeview(self.root)  # Treeview (make sure it's defined)
 
         # Set application icon
         icon_path = os.path.abspath("frontend/icon.ico")
@@ -46,7 +107,7 @@ class BookingManagement:
         y_coordinate = (screen_height // 2) - (window_height // 2)
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
         
-        # Main Container Frame
+        # ========== Main Layout ==========
         self.container = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
         self.container.pack(fill=tk.BOTH, expand=True)
 
@@ -58,9 +119,9 @@ class BookingManagement:
                                     font=("Helvetica", 16, "bold"), fg="gold", bg="#2C3E50")
         self.title_label.pack(pady=0)
         
-        # ==== New Action Frame (Right Side of Header) ====
+        # Action Frame (right side of header)
         self.action_frame = tk.Frame(self.header_frame, bg="#2C3E50")
-        self.action_frame.pack(side=tk.RIGHT, padx=20)  
+        self.action_frame.pack(side=tk.RIGHT, padx=20)
 
         # Export to Excel
         self.export_label = tk.Label(self.action_frame, text="📊 Export to Excel",
@@ -78,34 +139,30 @@ class BookingManagement:
         self.print_label.bind("<Leave>", lambda e: self.print_label.config(fg="white"))
         self.print_label.bind("<Button-1>", lambda e: self.print_report())
 
-
-         # ==== Main Content Frame (Holds Sidebar + Right Section) ====
+       # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-         # ==== Menu Container (With "Menu" Heading) ====
-        self.Menu = tk.Frame(self.main_frame, bg="#2C3E50", width=230)
-        self.Menu.pack(side=tk.LEFT, fill=tk.Y)
+        # Sidebar Frame
+        self.left_frame = tk.Frame(self.main_frame, bg="#2C3E50", width=140)  # Set desired width
+        self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        self.left_frame.pack_propagate(False)  # Prevent frame from resizing
 
-        # === "Menu" Heading ===
-        self.menu_label = tk.Label(self.Menu, text="MENU", font=("Helvetica", 12, "bold"), 
-                                   fg="white", bg="#34495E", pady=5)
+        # Sidebar Label
+        self.menu_label = tk.Label(self.left_frame, text="MENU", font=("Helvetica", 12, "bold"), 
+                                fg="white", bg="#34495E", pady=5)
         self.menu_label.pack(fill=tk.X)
 
-        # Sidebar Section (Inside `Menu` Frame)
-        self.left_frame = tk.Frame(self.Menu, bg="#2C3E50", width=220)
-        self.left_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Right Section (Main Content)
+        # Right Content Frame
         self.right_frame = tk.Frame(self.main_frame, bg="#ffffff", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
+                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
         self.subheading_label.pack(pady=10)
 
-        # ==== Booking Action Buttons in Sidebar ====
+        # Sidebar Buttons
         buttons = [
             ("Create Booking", self.create_booking),
             ("List Booking", self.list_bookings),
@@ -117,16 +174,21 @@ class BookingManagement:
             ("Guest Checkout", self.guest_checkout),
             ("Cancel Booking", self.cancel_booking),
         ]
-        
-        for text, command in buttons:
-            btn = tk.Button(self.left_frame, text=text,
-                            command=lambda t=text, c=command: self.update_subheading(t, c),
-                            width=10, font=("Arial", 10), anchor="w", padx=10,
-                            bg="#34495E", fg="white", relief="flat", bd=0)
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#34495E"))
-            btn.pack(pady=8, padx=10, anchor="w", fill="x")
 
+        for text, command in buttons:
+            rb = RoundedButton(
+                self.left_frame,
+                text=text,
+                command=lambda t=text, c=command: self.update_subheading(t, c),
+                radius=15,
+                color="#34495E",
+                hover_color="#1ABC9C",
+                font=("Helvetica", 10)
+            )
+            rb.pack(anchor="w", padx=(8, 0), pady=2)  # <<< only pad from the left
+
+
+            
             # Dashboard Link
             self.dashboard_label = tk.Label(
             self.left_frame,
