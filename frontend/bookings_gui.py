@@ -21,27 +21,29 @@ from payment_gui import PaymentManagement  # Import the Payment GUI
 
 
 class RoundedButton(tk.Canvas):
-    def __init__(self, parent, text, command, radius=20, padding=10, 
+    def __init__(self, parent, text, command, radius=12, padding=5, 
                  color="#34495E", hover_color="#1ABC9C", text_color="white", 
-                 font=("Helvetica", 10)):
-        self.width = 120  # << Smaller width to match sidebar
-        self.height = 35
-
-        super().__init__(parent, width=self.width, height=self.height, bg=parent["bg"], highlightthickness=0)
-
+                 font=("Helvetica", 10), border_color="#16A085", border_width=2):
         self.command = command
         self.radius = radius
         self.color = color
         self.hover_color = hover_color
         self.text_color = text_color
+        self.padding = padding
         self.font = font
         self.text = text
-
-        # Draw rounded rectangle
-        self.rounded_rect = self.create_round_rect(2, 2, self.width-2, self.height-2, self.radius, fill=self.color)
+        self.border_color = border_color
+        self.border_width = border_width
         
-        # 🛠️ Create LEFT-ALIGNED text
-        self.text_id = self.create_text(10, self.height//2, text=self.text, fill=self.text_color, font=self.font, anchor="w") 
+        # Adjusted button size
+        self.width = 120  # Smaller width
+        self.height = 30  # Smaller height
+
+        super().__init__(parent, width=self.width, height=self.height, bg=parent["bg"], highlightthickness=0)
+
+        # Draw rounded rectangle and text
+        self.rounded_rect = self.create_round_rect(5, 5, self.width-5, self.height-5, self.radius, fill=self.color, outline=self.border_color, width=self.border_width)
+        self.text_id = self.create_text(self.width//2, self.height//2, text=self.text, fill=self.text_color, font=self.font)
 
         # Bind Events
         self.tag_bind(self.rounded_rect, "<Enter>", self.on_enter)
@@ -108,36 +110,57 @@ class BookingManagement:
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
         
         # ========== Main Layout ==========
-        self.container = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
+        self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
-        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=60)
-        self.header_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        self.title_label = tk.Label(self.header_frame, text="📅 Booking Management", 
-                                    font=("Helvetica", 16, "bold"), fg="gold", bg="#2C3E50")
-        self.title_label.pack(pady=0)
-        
+        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=50)
+        self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
+        self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
+
+        # Title Label (left side of header)
+        self.title_label = tk.Label(
+            self.header_frame,
+            text="                                                                                             📅 Booking Management",
+            font=("Helvetica", 16, "bold"),
+            fg="gold",
+            bg="#2C3E50",
+            anchor="w"
+        )
+        self.title_label.pack(side=tk.LEFT, padx=20)  # Padding left so it doesn't stick to edge
+
         # Action Frame (right side of header)
         self.action_frame = tk.Frame(self.header_frame, bg="#2C3E50")
-        self.action_frame.pack(side=tk.RIGHT, padx=20)
+        self.action_frame.pack(side=tk.RIGHT, padx=20, pady=10)
 
-        # Export to Excel
-        self.export_label = tk.Label(self.action_frame, text="📊 Export to Excel",
-                                    font=("Helvetica", 10, "bold"), fg="white", bg="#2C3E50", cursor="hand2")
-        self.export_label.pack(side=tk.RIGHT, padx=10)
-        self.export_label.bind("<Enter>", lambda e: self.export_label.config(fg="#D3D3D3"))
-        self.export_label.bind("<Leave>", lambda e: self.export_label.config(fg="white"))
-        self.export_label.bind("<Button-1>", lambda e: self.export_report())
+        # Add buttons to action frame (example: Export and Print buttons)
+        self.export_button = RoundedButton(
+            self.action_frame,
+            text="📊Export to Excel",
+            command=lambda: self.export_report(),
+            radius=10,
+            color="#95A5A6",
+            hover_color="#16A085",
+            text_color="white",
+            border_color="#16A085",
+            font=("Helvetica", 9, "bold"),
+            border_width=2
+        )
+        self.export_button.pack(side=tk.LEFT, padx=5)
 
-        # Print Report
-        self.print_label = tk.Label(self.action_frame, text="🖨 Print Report",
-                                    font=("Helvetica", 10, "bold"), fg="white", bg="#2C3E50", cursor="hand2")
-        self.print_label.pack(side=tk.RIGHT, padx=10)
-        self.print_label.bind("<Enter>", lambda e: self.print_label.config(fg="#D3D3D3"))
-        self.print_label.bind("<Leave>", lambda e: self.print_label.config(fg="white"))
-        self.print_label.bind("<Button-1>", lambda e: self.print_report())
+        self.print_button = RoundedButton(
+            self.action_frame,
+            text="🖨 Print Report",
+            command=lambda: self.print_report(),
+            radius=10,
+            color="#95A5A6",
+            hover_color="#16A085",
+            text_color="white",
+            border_color="#16A085",
+            font=("Helvetica", 9, "bold"),
+            border_width=2
+        )
+        self.print_button.pack(side=tk.LEFT, padx=5)
 
        # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
@@ -180,12 +203,13 @@ class BookingManagement:
                 self.left_frame,
                 text=text,
                 command=lambda t=text, c=command: self.update_subheading(t, c),
-                radius=15,
+                radius=12,
                 color="#34495E",
                 hover_color="#1ABC9C",
-                font=("Helvetica", 10)
+                border_color="#1ABC9C",  # or any color you want
+                font=("Helvetica", 9)
             )
-            rb.pack(anchor="w", padx=(8, 0), pady=2)  # <<< only pad from the left
+            rb.pack(anchor="w", padx=(8, 0), pady=2)
 
 
             
