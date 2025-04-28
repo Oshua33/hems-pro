@@ -7,6 +7,7 @@ import os
 
 API_URL = "http://127.0.0.1:8000/license"
 
+
 class LicenseGUI(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
@@ -34,7 +35,7 @@ class LicenseGUI(tk.Toplevel):
 
         # License Frame
         self.license_frame = tk.Frame(self, bg="#34495E", padx=40, pady=30)
-        self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=380)
+        self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=400)
 
         self.add_label("Admin License Password:")
         self.password_entry = self.create_entry(show="*")
@@ -42,12 +43,12 @@ class LicenseGUI(tk.Toplevel):
         self.add_label("License Key:")
         self.key_entry = self.create_entry()
 
-        self.create_button("Generate License", self.generate_license)
+        self.create_rounded_button("Generate License", self.generate_license)
 
         self.add_label("Enter License Key to Verify:")
         self.verify_key_entry = self.create_entry()
 
-        self.create_button("Verify License", self.verify_license)
+        self.create_rounded_button("Verify License", self.verify_license)
 
         # Welcome Text
         tk.Label(self, text="✦  W E L C O M E  TO  HEMS✦\nHotel & Event Management System",
@@ -81,26 +82,13 @@ class LicenseGUI(tk.Toplevel):
 
         return entry
 
-    def create_button(self, text, command):
-        btn = tk.Label(self.license_frame, text=text, font=("Arial", 12, "bold"),
-                    bg="#1ABC9C", fg="white", padx=10, pady=5,
-                    relief="flat", bd=0, cursor="hand2")
-        btn.pack(pady=10)
+    def create_rounded_button(self, text, command):
+        button = RoundedButton(self.license_frame, text=text, command=command, 
+                               radius=12, padding=10, color="#1ABC9C", hover_color="#16A085", 
+                               text_color="white", font=("Arial", 12, "bold"), border_color="#16A085", border_width=2)
+        button.pack(pady=10)
 
-        # Hover effect
-        def on_enter(e):
-            btn.config(bg="#16A085")  # Darker teal on hover
-
-        def on_leave(e):
-            btn.config(bg="#1ABC9C")  # Original color
-
-        btn.bind("<Enter>", on_enter)
-        btn.bind("<Leave>", on_leave)
-        btn.bind("<Button-1>", lambda e: command())  # Click action
-
-        return btn
-        
-        
+        return button
 
     def generate_license(self):
         license_password = self.password_entry.get()
@@ -122,21 +110,26 @@ class LicenseGUI(tk.Toplevel):
         except requests.exceptions.HTTPError as err:
             if response.status_code == 400:
                 error_message = response.json().get("detail", "License key already exists.")
+                print(f"HTTP Error 400: {error_message}")
                 CTkMessagebox(title="Error", message=error_message, icon="cancel")
             elif response.status_code == 403:
                 CTkMessagebox(title="Error", message="Invalid license password.", icon="cancel")
             else:
+                print(f"HTTP Error: {response.status_code} - {response.text}")
                 CTkMessagebox(title="Error", message=f"HTTP Error: {response.status_code} - {response.text}", icon="cancel")
 
         except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
             CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="cancel")
         except Exception as e:
+            print(f"Unexpected error: {e}")
             CTkMessagebox(title="Error", message=f"An unexpected error occurred: {e}", icon="cancel")
 
     def verify_license(self):
         key = self.verify_key_entry.get()
 
         if not key:
+        
             CTkMessagebox(title="Input Error", message="Please enter a license key.", icon="cancel")
             return
 
@@ -146,6 +139,7 @@ class LicenseGUI(tk.Toplevel):
             result = response.json()
 
             if result["valid"]:
+                
                 msg = CTkMessagebox(title="License Valid",
                                     message="The license key is valid!",
                                     icon="check",
@@ -155,12 +149,79 @@ class LicenseGUI(tk.Toplevel):
                     login_window = tk.Toplevel(self.master)
                     LoginGUI(login_window)
             else:
+                print(f"Invalid License: {result['message']}")
                 CTkMessagebox(title="Invalid License", message=result["message"], icon="warning")
 
         except requests.exceptions.HTTPError:
+            print("Invalid license key")
             CTkMessagebox(title="Error", message="Invalid license key", icon="cancel")
         except Exception as e:
+            print(f"Unexpected error: {e}")
             CTkMessagebox(title="Error", message=f"An unexpected error occurred: {e}", icon="cancel")
+
+
+class RoundedButton(tk.Canvas):
+    def __init__(self, parent, text, command, radius=12, padding=5, 
+                 color="#34495E", hover_color="#1ABC9C", text_color="white", 
+                 font=("Helvetica", 10), border_color="#16A085", border_width=2):
+        self.command = command  # Store the command to execute when the button is clicked
+        self.radius = radius
+        self.color = color
+        self.hover_color = hover_color
+        self.text_color = text_color
+        self.padding = padding
+        self.font = font
+        self.text = text
+        self.border_color = border_color
+        self.border_width = border_width
+        
+        # Adjusted button size
+        self.width = 200  # Wider width for better alignment with your text
+        self.height = 40  # Adjusted height for better appearance
+
+        super().__init__(parent, width=self.width, height=self.height, bg=parent["bg"], highlightthickness=0)
+
+        # Draw rounded rectangle and text
+        self.rounded_rect = self.create_round_rect(5, 5, self.width-5, self.height-5, self.radius, fill=self.color, outline=self.border_color, width=self.border_width)
+        self.text_id = self.create_text(self.width//2, self.height//2, text=self.text, fill=self.text_color, font=self.font)
+
+        # Bind Events
+        self.tag_bind(self.rounded_rect, "<Enter>", self.on_enter)
+        self.tag_bind(self.rounded_rect, "<Leave>", self.on_leave)
+        self.tag_bind(self.rounded_rect, "<Button-1>", self.on_click)
+        self.tag_bind(self.text_id, "<Enter>", self.on_enter)
+        self.tag_bind(self.text_id, "<Leave>", self.on_leave)
+        self.tag_bind(self.text_id, "<Button-1>", self.on_click)
+
+    def create_round_rect(self, x1, y1, x2, y2, r=25, **kwargs):
+        points = [
+            x1+r, y1,
+            x2-r, y1,
+            x2, y1,
+            x2, y1+r,
+            x2, y2-r,
+            x2, y2,
+            x2-r, y2,
+            x1+r, y2,
+            x1, y2,
+            x1, y2-r,
+            x1, y1+r,
+            x1, y1
+        ]
+        return self.create_polygon(points, smooth=True, splinesteps=36, **kwargs)
+
+    def on_enter(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.hover_color)
+
+    def on_leave(self, event=None):
+        self.itemconfig(self.rounded_rect, fill=self.color)
+
+    def on_click(self, event=None):
+        if self.command:
+            self.command()  # Trigger the command when the button is clicked
+
+
+
 
 # Main Execution
 root = tk.Tk()
