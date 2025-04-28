@@ -837,68 +837,96 @@ class EventManagement:
             
       
     def cancel_event(self):
-        self.clear_right_frame()
-        """Opens a professional pop-up window to cancel an event."""
-        cancel_window = tk.Toplevel(self.root)
-        cancel_window.title("Cancel Event")
-        cancel_window.configure(bg="#dddddd")  # Light grey background
+            self.clear_right_frame()
 
-        # Set window size
-        window_width = 450
-        window_height = 230
+            cancel_window = tk.Toplevel(self.root)
+            cancel_window.title("Cancel Event")
+            cancel_window.configure(bg="#2c3e50")
 
-        # Get screen width and height
-        screen_width = cancel_window.winfo_screenwidth()
-        screen_height = cancel_window.winfo_screenheight()
+            window_width = 470
+            window_height = 260  # Reduced a bit too
+            screen_width = cancel_window.winfo_screenwidth()
+            screen_height = cancel_window.winfo_screenheight()
+            x_coordinate = (screen_width - window_width) // 2
+            y_coordinate = (screen_height - window_height) // 2
+            cancel_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
-        # Center the window
-        x_coordinate = (screen_width - window_width) // 2
-        y_coordinate = (screen_height - window_height) // 2
+            cancel_window.transient(self.root)
+            cancel_window.grab_set()
 
-        cancel_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+            # === Header Frame ===
+            header_frame = tk.Frame(cancel_window, bg="#1abc9c", height=50)
+            header_frame.pack(fill=tk.X)
 
-        # Make the window modal
-        cancel_window.transient(self.root)
-        cancel_window.grab_set()
+            header_label = tk.Label(header_frame, text="Cancel Event", font=("Century Gothic", 16, "bold"),
+                                    fg="white", bg="#1abc9c", pady=10)
+            header_label.pack()
 
-        # === Dark Header ===
-        header_frame = tk.Frame(cancel_window, bg="#2c3e50", height=40)
-        header_frame.pack(fill=tk.X)
+            # === Outer Content Frame ===
+            outer_frame = tk.Frame(cancel_window, bg="#ecf0f1", padx=15, pady=20)
+            outer_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(10, 20))
 
-        header_label = tk.Label(header_frame, text="Cancel Event", font=("Arial", 13, "bold"), fg="white", bg="#2c3e50", pady=5)
-        header_label.pack()
+            # === Data Entry Section ===
+            form_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+            form_frame.pack(fill=tk.X, pady=(0, 20))
 
-        # === Main Content Frame ===
-        frame = tk.Frame(cancel_window, bg="#ffffff", padx=15, pady=10, relief="ridge", borderwidth=2)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            fields = [
+                ("Event ID", tk.Entry),
+                ("Cancellation Reason", tk.Entry),
+            ]
+            self.entries = {}
 
-        # === Form Fields ===
-        fields = [
-            ("Event ID", tk.Entry),
-            ("Cancellation Reason", tk.Entry),
-        ]
+            for i, (label_text, field_type) in enumerate(fields):
+                label = tk.Label(form_frame, text=label_text, font=("Helvetica", 10, "bold"),
+                                bg="#ecf0f1", fg="#2c3e50")
+                label.grid(row=i, column=0, sticky="w", pady=5, padx=(5, 10))
 
-        self.entries = {}
+                # Frame around each Entry
+                entry_outer_frame = tk.Frame(form_frame, bg="white", relief="groove", borderwidth=2)
+                entry_outer_frame.grid(row=i, column=1, sticky="ew", pady=5)
 
-        for i, (label_text, field_type) in enumerate(fields):
-            label = tk.Label(frame, text=label_text, font=("Helvetica", 11, "bold"), bg="#ffffff", fg="#2c3e50")
-            label.grid(row=i, column=0, sticky="w", pady=5, padx=5)
+                entry = field_type(entry_outer_frame, font=("Helvetica", 10), width=28,
+                                bg="white", fg="black", relief="flat")
+                entry.pack(fill=tk.X, padx=4, pady=3)  # Smaller vertical padding!
 
-            entry = field_type(frame, font=("Helvetica", 11), width=25)
-            entry.grid(row=i, column=1, pady=5, padx=5, sticky="ew")
-            self.entries[label_text] = entry
+                self.entries[label_text] = entry
 
-        # === Buttons Frame (Compact) ===
-        btn_frame = tk.Frame(cancel_window, bg="#ffffff")
-        btn_frame.pack(pady=10)
+            form_frame.columnconfigure(1, weight=1)
 
-        # Submit Button
-        submit_btn = ttk.Button(btn_frame, text="Submit", command=lambda: self.submit_cancel_event(cancel_window))
-        submit_btn.grid(row=0, column=0, padx=5)
+            # === Buttons Frame ===
+            btn_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+            btn_frame.pack()
 
-        # Cancel Button
-        cancel_btn = ttk.Button(btn_frame, text="Cancel", command=cancel_window.destroy)
-        cancel_btn.grid(row=0, column=1, padx=5)
+            submit_btn = RoundedButton(
+                btn_frame,
+                text="Submit",
+                command=lambda: self.submit_cancel_event(cancel_window),
+                radius=14,
+                padding=8,  # Slightly smaller buttons too
+                color="#1abc9c",
+                hover_color="#16a085",
+                text_color="white",
+                font=("Helvetica", 10, "bold"),
+                border_color="#16a085",
+                border_width=2,
+            )
+            submit_btn.grid(row=0, column=0, padx=15)
+
+            cancel_btn = RoundedButton(
+                btn_frame,
+                text="Cancel",
+                command=cancel_window.destroy,
+                radius=14,
+                padding=8,
+                color="#e74c3c",
+                hover_color="#c0392b",
+                text_color="white",
+                font=("Helvetica", 10, "bold"),
+                border_color="#c0392b",
+                border_width=2,
+            )
+            cancel_btn.grid(row=0, column=1, padx=15)
+
 
         
     def submit_cancel_event(self, cancel_window):
