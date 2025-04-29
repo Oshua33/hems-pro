@@ -96,6 +96,7 @@ class PaymentManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
         self.root.title("Payment Management")
+        self.current_view = None  # or "", default nothing
         self.username = "current_user"
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
@@ -103,6 +104,7 @@ class PaymentManagement:
         self.token = token
         self.payments_data = []
         self.last_exported_file = None
+
 
 
 
@@ -310,31 +312,119 @@ class PaymentManagement:
     
 
     def export_report(self):
-        """Export only the visible bookings from the Treeview to Excel"""
         if not hasattr(self, "tree") or not self.tree.get_children():
             messagebox.showwarning("Warning", "No data available to export.")
+            return
+
+        if not self.current_view:
+            messagebox.showwarning("Warning", "No view selected for export.")
             return
 
         # Extract column headers
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
 
-        # Extract row data from Treeview
+        # Extract row data
         rows = []
         for item in self.tree.get_children():
             row_data = [self.tree.item(item)["values"][i] for i in range(len(columns))]
             rows.append(row_data)
 
-        # Convert to DataFrame for better formatting
+        # Create a DataFrame
         df = pd.DataFrame(rows, columns=columns)
 
-        # Save in user's Downloads folder
+        # Set the file path
         download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(download_dir, "bookings_report.xlsx")
+
+        # Handle file naming
+        if self.current_view == "payments":
+            file_path = os.path.join(download_dir, "payments_report.xlsx")
+        elif self.current_view == "debtors":
+            file_path = os.path.join(download_dir, "debtors_report.xlsx")
+        elif self.current_view == "daily_payments":
+            file_path = os.path.join(download_dir, "daily_payments_report.xlsx")
+        else:
+            messagebox.showerror("Error", "Unknown view selected.")
+            return
 
         try:
-            df.to_excel(file_path, index=False)  # Export properly formatted Excel
+            with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+                sheet_name = self.current_view.capitalize()
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                workbook = writer.book
+                worksheet = writer.sheets[sheet_name]
+
+                # Write a timestamp
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                worksheet.write(0, 0, f"Exported on: {now}")
+
+                # Start summary writing after data
+                start_row = len(df) + 3
+                worksheet.write(start_row, 0, "Summary")
+
+                def extract_amount(label_widget):
+                    if label_widget is None:
+                        return "N/A"
+                    text = label_widget.cget("text")
+                    parts = text.split(":")
+                    if len(parts) > 1:
+                        amount_text = parts[1].strip().replace(",", "")
+                        try:
+                            return float(amount_text)
+                        except ValueError:
+                            return "N/A"
+                    return "N/A"
+
+                # Handle summaries based on view
+                if self.current_view == "payments":
+                    total_cash = extract_amount(getattr(self, "cash_label", None))
+                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
+                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
+                    total_amount = extract_amount(getattr(self, "total_label", None))
+
+                    worksheet.write(start_row + 1, 0, "Total Cash")
+                    worksheet.write(start_row + 1, 1, total_cash)
+
+                    worksheet.write(start_row + 2, 0, "Total POS Card")
+                    worksheet.write(start_row + 2, 1, total_pos)
+
+                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
+                    worksheet.write(start_row + 3, 1, total_bank)
+
+                    worksheet.write(start_row + 4, 0, "Total Amount")
+                    worksheet.write(start_row + 4, 1, total_amount)
+
+                elif self.current_view == "debtors":
+                    total_current_debt = extract_amount(getattr(self, "total_current_debt_label", None))
+                    total_gross_debt = extract_amount(getattr(self, "total_gross_debt_label", None))
+
+                    worksheet.write(start_row + 1, 0, "Total Current Debt")
+                    worksheet.write(start_row + 1, 1, total_current_debt)
+
+                    worksheet.write(start_row + 2, 0, "Total Gross Debt")
+                    worksheet.write(start_row + 2, 1, total_gross_debt)
+
+                elif self.current_view == "daily_payments":
+                    total_cash = extract_amount(getattr(self, "cash_label", None))
+                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
+                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
+                    total_amount = extract_amount(getattr(self, "total_label", None))
+
+                    worksheet.write(start_row + 1, 0, "Total Daily Cash")
+                    worksheet.write(start_row + 1, 1, total_cash)
+
+                    worksheet.write(start_row + 2, 0, "Total Daily POS Card")
+                    worksheet.write(start_row + 2, 1, total_pos)
+
+                    worksheet.write(start_row + 3, 0, "Total Daily Bank Transfer")
+                    worksheet.write(start_row + 3, 1, total_bank)
+
+                    worksheet.write(start_row + 4, 0, "Total Daily Amount")
+                    worksheet.write(start_row + 4, 1, total_amount)
+
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+
         except PermissionError:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
@@ -368,7 +458,70 @@ class PaymentManagement:
         command()
 
         
-        
+    def load_payment_list(self):
+        self.current_view = "payments"  # Track which view is active
+
+        # Create payment summary labels if not already created
+        if not hasattr(self, "total_cash_label"):
+            self.total_cash_label = tk.Label(self, text="Total Cash: 0.00")
+            self.total_cash_label.pack()
+
+        if not hasattr(self, "total_pos_label"):
+            self.total_pos_label = tk.Label(self, text="Total POS Card: 0.00")
+            self.total_pos_label.pack()
+
+        if not hasattr(self, "total_bank_label"):
+            self.total_bank_label = tk.Label(self, text="Total Bank Transfer: 0.00")
+            self.total_bank_label.pack()
+
+        if not hasattr(self, "total_label"):
+            self.total_label = tk.Label(self, text="Total Amount: 0.00")
+            self.total_label.pack()
+
+        # ... load your Treeview data here
+
+
+    def load_debtor_list(self):
+        self.current_view = "debtors"  # Track which view is active
+
+        # Create debtor summary labels if not already created
+        if not hasattr(self, "total_current_label"):
+            self.total_current_label = tk.Label(self, text="Total Current Debt: 0.00")
+            self.total_current_label.pack()
+
+        if not hasattr(self, "total_gross_label"):
+            self.total_gross_label = tk.Label(self, text="Total Gross Debt: 0.00")
+            self.total_gross_label.pack()
+
+        # --- Load your treeview data here ---
+        # Example: load your data into the tree
+        # self.tree.insert("", "end", values=(...))
+
+        # --- Calculate totals and update the labels ---
+        current_total = 0
+        gross_total = 0
+
+        for item in self.tree.get_children():
+            values = self.tree.item(item)["values"]
+
+            try:
+                current_debt = float(str(values[2]).replace(",", ""))  # 3rd column (index 2)
+                gross_debt = float(str(values[3]).replace(",", ""))    # 4th column (index 3)
+            except (IndexError, ValueError):
+                current_debt = 0
+                gross_debt = 0
+
+            current_total += current_debt
+            gross_total += gross_debt
+
+        # Update the correct labels
+        self.total_current_label.config(text=f"Total Current Debt: {current_total:,.2f}")
+        self.total_gross_label.config(text=f"Total Gross Debt: {gross_total:,.2f}")
+
+
+
+    def load_daily_payment_list(self):
+        self.current_view = "daily_payments"
 
 
 
@@ -556,6 +709,8 @@ class PaymentManagement:
 
     def list_payments(self):
         self.clear_right_frame()
+        self.current_view = "payments"
+
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -861,6 +1016,8 @@ class PaymentManagement:
    
     def debtor_list(self):
         self.clear_right_frame()
+        self.current_view = "debtors"
+
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -997,6 +1154,7 @@ class PaymentManagement:
 
     def list_total_daily_payments(self):
         self.clear_right_frame()
+        self.current_view = "payments"
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)

@@ -350,7 +350,7 @@ class BookingManagement:
 
 
     def export_report(self):
-        """Export only the visible bookings from the Treeview to Excel"""
+        """Export the visible bookings and the total booking cost to Excel."""
         if not hasattr(self, "tree") or not self.tree.get_children():
             messagebox.showwarning("Warning", "No data available to export.")
             return
@@ -358,21 +358,48 @@ class BookingManagement:
         # Extract column headers
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
 
-        # Extract row data from Treeview
+        # Extract row data
         rows = []
         for item in self.tree.get_children():
             row_data = [self.tree.item(item)["values"][i] for i in range(len(columns))]
             rows.append(row_data)
 
-        # Convert to DataFrame for better formatting
+        # Convert to DataFrame
         df = pd.DataFrame(rows, columns=columns)
 
-        # Save in user's Downloads folder
+        # Save in Downloads
         download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
         file_path = os.path.join(download_dir, "bookings_report.xlsx")
 
         try:
-            df.to_excel(file_path, index=False)  # Export properly formatted Excel
+            # Create a Pandas Excel writer
+            with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+                df.to_excel(writer, sheet_name="Bookings", index=False)
+
+                workbook = writer.book
+                worksheet = writer.sheets["Bookings"]
+
+                # Find next empty row after the data
+                start_row = len(df) + 2  # one empty row
+
+                # Write "Summary"
+                worksheet.write(start_row, 0, "Summary")
+
+                # Get the total booking cost from the label text
+                label_text = self.total_booking_cost_label.cget("text")  # e.g., "Total Booking Cost: 120,000.00"
+                if ":" in label_text:
+                    total_cost_str = label_text.split(":")[1].strip().replace(",", "")
+                    try:
+                        total_cost_value = float(total_cost_str)
+                    except ValueError:
+                        total_cost_value = "N/A"
+                else:
+                    total_cost_value = "N/A"
+
+                # Write Total Booking Cost
+                worksheet.write(start_row + 1, 0, "Total Booking Cost")
+                worksheet.write(start_row + 1, 1, total_cost_value)
+
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
         except PermissionError:

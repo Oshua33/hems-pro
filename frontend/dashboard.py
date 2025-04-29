@@ -30,14 +30,48 @@ class Dashboard:
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
         
-        # HEADER FRAME
-        self.header = tk.Frame(self.root,  bg="#1E3C72", height=60)
-        self.header.pack(fill=tk.X)
+        # === SOFT SHADOW HEADER EFFECT ===
 
-        title_label = tk.Label(self.header, text="Dashboard                                                                             HEMS    🏨Hotel & Event Management System", fg="gold", bg="#1E3C72", 
-                               font=("Arial", 14, "bold"), )
-        title_label.pack(side=tk.LEFT, padx=20, pady=10)
-        
+# Shadow Frame (slightly offset)
+        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=64)  # Darker grey-blue
+        self.header_shadow.pack(fill=tk.X)
+
+        # Actual Header (on top of shadow)
+        self.header = tk.Frame(self.root, bg="#2C3E50", height=60)
+        self.header.place(relx=0, rely=0, relwidth=1)  # Using place() to sit above shadow
+
+        # Left Title
+        left_title = tk.Label(self.header, text="Dashboard", fg="white", bg="#2C3E50",
+                            font=("Helvetica", 14, "bold"))
+        left_title.pack(side=tk.LEFT, padx=20, pady=10)
+
+        # Center Title (HEMS)
+        center_title = tk.Label(self.header, text="🏨 HEMS", fg="gold", bg="#2C3E50",
+                                font=("Helvetica", 16, "bold"))
+        center_title.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Right Title
+        right_title = tk.Label(self.header, text="Hotel & Event Management System", fg="white", bg="#2C3E50",
+                            font=("Helvetica", 12))
+        right_title.pack(side=tk.RIGHT, padx=20, pady=10)
+
+        # Bottom Border
+        border = tk.Frame(self.root, bg="#1abc9c", height=2)
+        border.pack(fill=tk.X)
+
+        # Hover Animation for Center Title
+        def on_enter(event):
+            center_title.config(fg="#1abc9c")
+
+        def on_leave(event):
+            center_title.config(fg="gold")
+
+        center_title.bind("<Enter>", on_enter)
+        center_title.bind("<Leave>", on_leave)
+
+
+
+
         # SIDEBAR CONTAINER FRAME
         self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=220, bd=2, relief=tk.RIDGE)
         self.sidebar_container.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
