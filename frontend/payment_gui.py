@@ -366,17 +366,18 @@ class PaymentManagement:
                     if label_widget is None:
                         return "N/A"
                     text = label_widget.cget("text")
-                    print(f"Extracting from label: {text}")  # Debugging line to see the label text
-                    parts = text.split(":")
+                    print(f"Extracting from label: {text}")  # Debug
+                    parts = text.split(":", 1)
                     if len(parts) > 1:
-                        amount_text = parts[1].strip().replace(",", "")  # Remove commas if any
+                        amount_text = parts[1].strip().replace(",", "")
                         try:
-                            amount = float(amount_text)  # Convert to float
-                            print(f"Amount extracted: {amount}")  # Debugging line to see the extracted amount
+                            amount = float(amount_text)
+                            print(f"Amount extracted: {amount}")  # Debug
                             return amount
                         except ValueError:
                             return "N/A"
                     return "N/A"
+
 
 
                 # Handle summaries
@@ -405,23 +406,22 @@ class PaymentManagement:
                     worksheet.write(start_row + 2, 1, total_gross_debt)
 
                 elif self.current_view == "daily_payments":
-                    # Extract amounts from the labels
-                    total_cash = extract_amount(getattr(self, "daily_cash_label", None))
-                    total_pos = extract_amount(getattr(self, "daily_pos_card_label", None))
-                    total_bank = extract_amount(getattr(self, "daily_bank_transfer_label", None))
-                    total_amount = extract_amount(getattr(self, "daily_total_label", None))
+                    total_cash = extract_amount(getattr(self, "cash_label", None))
+                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
+                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
+                    total_amount = extract_amount(getattr(self, "total_label", None))
 
-                    # Debugging: Print the extracted values to verify
-                    print(f"Extracted Cash: {total_cash}, POS: {total_pos}, Bank: {total_bank}, Total Amount: {total_amount}")
+                    # Debug
+                    print(f"Extracted Cash: {total_cash}, POS: {total_pos}, Bank: {total_bank}, Total: {total_amount}")
 
                     # Write the extracted values to the Excel sheet
-                    worksheet.write(start_row + 1, 0, "Total Daily Cash")
+                    worksheet.write(start_row + 1, 0, "Total Cash")
                     worksheet.write(start_row + 1, 1, total_cash)
-                    worksheet.write(start_row + 2, 0, "Total Daily POS Card")
+                    worksheet.write(start_row + 2, 0, "Total POS Card")
                     worksheet.write(start_row + 2, 1, total_pos)
-                    worksheet.write(start_row + 3, 0, "Total Daily Bank Transfer")
+                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
                     worksheet.write(start_row + 3, 1, total_bank)
-                    worksheet.write(start_row + 4, 0, "Total Daily Amount")
+                    worksheet.write(start_row + 4, 0, "Total Amount")
                     worksheet.write(start_row + 4, 1, total_amount)
 
             self.last_exported_file = file_path
@@ -516,22 +516,11 @@ class PaymentManagement:
     def load_daily_payment_list(self):
         self.current_view = "daily_payments"  # Track active view
 
-        # Create daily payment summary labels if not already created
-        if not hasattr(self, "daily_total_label"):
-            self.daily_total_label = tk.Label(self, text="Total Daily Amount: 0.00")
-            self.daily_total_label.pack()
-
-        if not hasattr(self, "_cash_label"):
-            self.daily_cash_label = tk.Label(self, text="Total Daily Cash: 0.00")
-            self.daily_cash_label.pack()
-
-        if not hasattr(self, "daily_pos_card_label"):
-            self.daily_pos_card_label = tk.Label(self, text="Total Daily POS Card: 0.00")
-            self.daily_pos_card_label.pack()
-
-        if not hasattr(self, "daily_bank_transfer_label"):
-            self.daily_bank_transfer_label = tk.Label(self, text="Total Daily Bank Transfer: 0.00")
-            self.daily_bank_transfer_label.pack()
+        # Just reference the main labels if they already exist
+        self.daily_total_label = getattr(self, "total_label", None)
+        self.daily_cash_label = getattr(self, "cash_label", None)
+        self.daily_pos_card_label = getattr(self, "pos_card_label", None)
+        self.daily_bank_transfer_label = getattr(self, "bank_transfer_label", None)
 
           
 
@@ -1169,7 +1158,7 @@ class PaymentManagement:
 
     def list_total_daily_payments(self):
         self.clear_right_frame()
-        self.current_view = "payments"
+        self.current_view = "daily_payments"
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1240,6 +1229,9 @@ class PaymentManagement:
                 self.pos_card_label.config(text=f"Total POS Card: {total_by_method.get('POS Card', 0):,.2f}")
                 self.bank_transfer_label.config(text=f"Total Bank Transfer: {total_by_method.get('Bank Transfer', 0):,.2f}")
                 self.cash_label.config(text=f"Total Cash: {total_by_method.get('Cash', 0):,.2f}")
+
+                
+                
 
                 if "payments" in data:
                     payments = data["payments"]
