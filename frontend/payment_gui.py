@@ -334,91 +334,93 @@ class PaymentManagement:
 
         # Set the file path
         download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        file_name = {
+            "payments": "payments_report.xlsx",
+            "debtors": "debtors_report.xlsx",
+            "daily_payments": "daily_payments_report.xlsx"
+        }.get(self.current_view)
 
-        # Handle file naming
-        if self.current_view == "payments":
-            file_path = os.path.join(download_dir, "payments_report.xlsx")
-        elif self.current_view == "debtors":
-            file_path = os.path.join(download_dir, "debtors_report.xlsx")
-        elif self.current_view == "daily_payments":
-            file_path = os.path.join(download_dir, "daily_payments_report.xlsx")
-        else:
+        if not file_name:
             messagebox.showerror("Error", "Unknown view selected.")
             return
 
+        file_path = os.path.join(download_dir, file_name)
+
         try:
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-                sheet_name = self.current_view.capitalize()
+                sheet_name = self.current_view.replace("_", " ").title()
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
 
-                # Write a timestamp
+                # Write timestamp
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 worksheet.write(0, 0, f"Exported on: {now}")
 
-                # Start summary writing after data
                 start_row = len(df) + 3
                 worksheet.write(start_row, 0, "Summary")
 
+                # Helper function
                 def extract_amount(label_widget):
                     if label_widget is None:
                         return "N/A"
                     text = label_widget.cget("text")
+                    print(f"Extracting from label: {text}")  # Debugging line to see the label text
                     parts = text.split(":")
                     if len(parts) > 1:
-                        amount_text = parts[1].strip().replace(",", "")
+                        amount_text = parts[1].strip().replace(",", "")  # Remove commas if any
                         try:
-                            return float(amount_text)
+                            amount = float(amount_text)  # Convert to float
+                            print(f"Amount extracted: {amount}")  # Debugging line to see the extracted amount
+                            return amount
                         except ValueError:
                             return "N/A"
                     return "N/A"
 
-                # Handle summaries based on view
+
+                # Handle summaries
                 if self.current_view == "payments":
-                    total_cash = extract_amount(getattr(self, "cash_label", None))
-                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
-                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
+                    total_cash = extract_amount(getattr(self, "total_cash_label", None))
+                    total_pos = extract_amount(getattr(self, "total_pos_label", None))
+                    total_bank = extract_amount(getattr(self, "total_bank_label", None))
                     total_amount = extract_amount(getattr(self, "total_label", None))
 
                     worksheet.write(start_row + 1, 0, "Total Cash")
                     worksheet.write(start_row + 1, 1, total_cash)
-
                     worksheet.write(start_row + 2, 0, "Total POS Card")
                     worksheet.write(start_row + 2, 1, total_pos)
-
                     worksheet.write(start_row + 3, 0, "Total Bank Transfer")
                     worksheet.write(start_row + 3, 1, total_bank)
-
                     worksheet.write(start_row + 4, 0, "Total Amount")
                     worksheet.write(start_row + 4, 1, total_amount)
 
                 elif self.current_view == "debtors":
-                    total_current_debt = extract_amount(getattr(self, "total_current_debt_label", None))
-                    total_gross_debt = extract_amount(getattr(self, "total_gross_debt_label", None))
+                    total_current_debt = extract_amount(getattr(self, "total_current_label", None))
+                    total_gross_debt = extract_amount(getattr(self, "total_gross_label", None))
 
                     worksheet.write(start_row + 1, 0, "Total Current Debt")
                     worksheet.write(start_row + 1, 1, total_current_debt)
-
                     worksheet.write(start_row + 2, 0, "Total Gross Debt")
                     worksheet.write(start_row + 2, 1, total_gross_debt)
 
                 elif self.current_view == "daily_payments":
-                    total_cash = extract_amount(getattr(self, "cash_label", None))
-                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
-                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
-                    total_amount = extract_amount(getattr(self, "total_label", None))
+                    # Extract amounts from the labels
+                    total_cash = extract_amount(getattr(self, "daily_cash_label", None))
+                    total_pos = extract_amount(getattr(self, "daily_pos_card_label", None))
+                    total_bank = extract_amount(getattr(self, "daily_bank_transfer_label", None))
+                    total_amount = extract_amount(getattr(self, "daily_total_label", None))
 
+                    # Debugging: Print the extracted values to verify
+                    print(f"Extracted Cash: {total_cash}, POS: {total_pos}, Bank: {total_bank}, Total Amount: {total_amount}")
+
+                    # Write the extracted values to the Excel sheet
                     worksheet.write(start_row + 1, 0, "Total Daily Cash")
                     worksheet.write(start_row + 1, 1, total_cash)
-
                     worksheet.write(start_row + 2, 0, "Total Daily POS Card")
                     worksheet.write(start_row + 2, 1, total_pos)
-
                     worksheet.write(start_row + 3, 0, "Total Daily Bank Transfer")
                     worksheet.write(start_row + 3, 1, total_bank)
-
                     worksheet.write(start_row + 4, 0, "Total Daily Amount")
                     worksheet.write(start_row + 4, 1, total_amount)
 
@@ -429,7 +431,6 @@ class PaymentManagement:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
             messagebox.showerror("Error", f"Error exporting to Excel: {e}")
-
 
 
 
@@ -459,9 +460,8 @@ class PaymentManagement:
 
         
     def load_payment_list(self):
-        self.current_view = "payments"  # Track which view is active
+        self.current_view = "payments"
 
-        # Create payment summary labels if not already created
         if not hasattr(self, "total_cash_label"):
             self.total_cash_label = tk.Label(self, text="Total Cash: 0.00")
             self.total_cash_label.pack()
@@ -478,13 +478,12 @@ class PaymentManagement:
             self.total_label = tk.Label(self, text="Total Amount: 0.00")
             self.total_label.pack()
 
-        # ... load your Treeview data here
+        # Load your payment treeview data here
 
 
     def load_debtor_list(self):
-        self.current_view = "debtors"  # Track which view is active
+        self.current_view = "debtors"
 
-        # Create debtor summary labels if not already created
         if not hasattr(self, "total_current_label"):
             self.total_current_label = tk.Label(self, text="Total Current Debt: 0.00")
             self.total_current_label.pack()
@@ -493,20 +492,15 @@ class PaymentManagement:
             self.total_gross_label = tk.Label(self, text="Total Gross Debt: 0.00")
             self.total_gross_label.pack()
 
-        # --- Load your treeview data here ---
-        # Example: load your data into the tree
-        # self.tree.insert("", "end", values=(...))
-
-        # --- Calculate totals and update the labels ---
+        # Load your debtor treeview data here and update the totals
         current_total = 0
         gross_total = 0
 
         for item in self.tree.get_children():
             values = self.tree.item(item)["values"]
-
             try:
-                current_debt = float(str(values[2]).replace(",", ""))  # 3rd column (index 2)
-                gross_debt = float(str(values[3]).replace(",", ""))    # 4th column (index 3)
+                current_debt = float(str(values[2]).replace(",", ""))
+                gross_debt = float(str(values[3]).replace(",", ""))
             except (IndexError, ValueError):
                 current_debt = 0
                 gross_debt = 0
@@ -514,14 +508,35 @@ class PaymentManagement:
             current_total += current_debt
             gross_total += gross_debt
 
-        # Update the correct labels
         self.total_current_label.config(text=f"Total Current Debt: {current_total:,.2f}")
         self.total_gross_label.config(text=f"Total Gross Debt: {gross_total:,.2f}")
 
 
 
     def load_daily_payment_list(self):
-        self.current_view = "daily_payments"
+        self.current_view = "daily_payments"  # Track active view
+
+        # Create daily payment summary labels if not already created
+        if not hasattr(self, "daily_total_label"):
+            self.daily_total_label = tk.Label(self, text="Total Daily Amount: 0.00")
+            self.daily_total_label.pack()
+
+        if not hasattr(self, "_cash_label"):
+            self.daily_cash_label = tk.Label(self, text="Total Daily Cash: 0.00")
+            self.daily_cash_label.pack()
+
+        if not hasattr(self, "daily_pos_card_label"):
+            self.daily_pos_card_label = tk.Label(self, text="Total Daily POS Card: 0.00")
+            self.daily_pos_card_label.pack()
+
+        if not hasattr(self, "daily_bank_transfer_label"):
+            self.daily_bank_transfer_label = tk.Label(self, text="Total Daily Bank Transfer: 0.00")
+            self.daily_bank_transfer_label.pack()
+
+          
+
+        # You would then load the daily payment list into the Treeview here
+        # Example: self.tree.insert(...) for each daily payment
 
 
 
