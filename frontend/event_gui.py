@@ -306,35 +306,96 @@ class EventManagement:
         command()
      
     def export_report(self):
-        """Export only the visible bookings from the Treeview to Excel"""
         if not hasattr(self, "tree") or not self.tree.get_children():
             messagebox.showwarning("Warning", "No data available to export.")
             return
 
-        # Extract column headers
+        if not self.current_view:
+            messagebox.showwarning("Warning", "No view selected for export.")
+            return
+
+        # Extract columns and rows
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
+        rows = [
+            [self.tree.item(item)["values"][i] for i in range(len(columns))]
+            for item in self.tree.get_children()
+        ]
 
-        # Extract row data from Treeview
-        rows = []
-        for item in self.tree.get_children():
-            row_data = [self.tree.item(item)["values"][i] for i in range(len(columns))]
-            rows.append(row_data)
-
-        # Convert to DataFrame for better formatting
         df = pd.DataFrame(rows, columns=columns)
 
-        # Save in user's Downloads folder
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(download_dir, "event_report.xlsx")
+        # Map filenames by current view
+        file_name_map = {
+            "event_list": "event_list_report.xlsx",
+            "event_payments": "event_payment_report.xlsx",
+            "event_debtors": "event_debtor_report.xlsx",
+        }
+
+        file_name = file_name_map.get(self.current_view)
+        if not file_name:
+            messagebox.showerror("Error", "Unknown event report view selected.")
+            return
+
+        file_path = os.path.join(os.path.expanduser("~"), "Downloads", file_name)
 
         try:
-            df.to_excel(file_path, index=False)  # Export properly formatted Excel
+            with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+                sheet_name = self.current_view.replace("_", " ").title()
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                workbook = writer.book
+                worksheet = writer.sheets[sheet_name]
+
+                # Timestamp
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                worksheet.write(0, 0, f"Exported on: {now}")
+
+                start_row = len(df) + 3
+                worksheet.write(start_row, 0, "Summary")
+
+                def extract_amount(label_widget):
+                    if not label_widget:
+                        return "N/A"
+                    text = label_widget.cget("text")
+                    parts = text.split(":", 1)
+                    if len(parts) > 1:
+                        try:
+                            return float(parts[1].strip().replace(",", ""))
+                        except ValueError:
+                            return "N/A"
+                    return "N/A"
+
+                if self.current_view == "event_payments":
+                    worksheet.write(start_row + 1, 0, "Total Cash")
+                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_cash_label", None)))
+
+                    worksheet.write(start_row + 2, 0, "Total POS Card")
+                    worksheet.write(start_row + 2, 1, extract_amount(getattr(self, "total_pos_label", None)))
+
+                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
+                    worksheet.write(start_row + 3, 1, extract_amount(getattr(self, "total_bank_label", None)))
+
+                    worksheet.write(start_row + 4, 0, "Total Amount")
+                    worksheet.write(start_row + 4, 1, extract_amount(getattr(self, "total_label", None)))
+
+                elif self.current_view == "event_debtors":
+                    worksheet.write(start_row + 1, 0, "Total Current Debt")
+                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_current_label", None)))
+
+                    worksheet.write(start_row + 2, 0, "Total Gross Debt")
+                    worksheet.write(start_row + 2, 1, extract_amount(getattr(self, "total_gross_label", None)))
+
+                elif self.current_view == "event_list":
+                    worksheet.write(start_row + 1, 0, "Total Event Amount")
+                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_label", None)))
+
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+
         except PermissionError:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
             messagebox.showerror("Error", f"Error exporting to Excel: {e}")
+
 
 
     def print_report(self):
@@ -486,6 +547,7 @@ class EventManagement:
     def list_events(self):
         """List events with filtering by date."""
         self.clear_right_frame()
+        self.current_view = "event_list"
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1110,6 +1172,7 @@ class EventManagement:
 
     def list_events_payment(self):
         self.clear_right_frame()
+        self.current_view = "event_payments"
         
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1250,6 +1313,7 @@ class EventManagement:
 
     def event_debtor_list(self):
         self.clear_right_frame()
+        self.current_view = "event_debtors"
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
