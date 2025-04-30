@@ -389,10 +389,11 @@ class BookingManagement:
                 cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
 
                 # === Merge Title ===
-                end_col_letter = chr(64 + len(columns)) if len(columns) <= 26 else 'Z'
-                worksheet.merge_range(f"A1:{end_col_letter}1", report_title, title_format)
+                worksheet.merge_range('A1:E1', report_title, title_format)
                 worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
 
+
+                
                 # Header styling
                 for col_num, col_name in enumerate(columns):
                     worksheet.write(5, col_num, col_name, header_format)
