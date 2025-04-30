@@ -314,7 +314,6 @@ class EventManagement:
             messagebox.showwarning("Warning", "No view selected for export.")
             return
 
-        # Extract columns and rows
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
         rows = [
             [self.tree.item(item)["values"][i] for i in range(len(columns))]
@@ -323,7 +322,6 @@ class EventManagement:
 
         df = pd.DataFrame(rows, columns=columns)
 
-        # Map filenames and titles by current view
         file_name_map = {
             "event_list": ("event_list_report.xlsx", "Event List Report"),
             "event_payments": ("event_payment_report.xlsx", "Event Payments Report"),
@@ -341,26 +339,55 @@ class EventManagement:
         try:
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
                 sheet_name = self.current_view.replace("_", " ").title()
-                df.to_excel(writer, sheet_name=sheet_name, startrow=4, index=False)
+                df.to_excel(writer, sheet_name=sheet_name, startrow=5, index=False)
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
 
-                # Title Heading
-                merge_format = workbook.add_format({
+                # === Styles ===
+                title_format = workbook.add_format({
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
-                    'font_size': 14
+                    'font_size': 16
                 })
-                worksheet.merge_range('A1:E1', report_title, merge_format)
 
-                # Timestamp
-                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                worksheet.write(2, 0, f"Exported on: {now}")
+                timestamp_format = workbook.add_format({'italic': True, 'font_size': 10})
+                header_format = workbook.add_format({
+                    'bold': True,
+                    'bg_color': '#DDEBF7',
+                    'border': 1,
+                    'align': 'center',
+                    'valign': 'vcenter'
+                })
+                cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
 
-                start_row = len(df) + 6
-                worksheet.write(start_row, 0, "Summary")
+                # === Merge Title ===
+                worksheet.merge_range('A1:E1', report_title, title_format)
+                worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
+
+                # === Format Headers ===
+                for col_num, col_name in enumerate(columns):
+                    worksheet.write(5, col_num, col_name, header_format)
+
+                # === Apply border to cells ===
+                for row_num in range(len(rows)):
+                    for col_num in range(len(columns)):
+                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
+
+                # === Autofit columns ===
+                for i, col in enumerate(columns):
+                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
+                    worksheet.set_column(i, i, col_width + 2)
+
+                # === Summary Section ===
+                start_row = len(rows) + 8
+                col_span = len(columns)
+                end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'  # fallback if columns > 26
+                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
+
+                # Merge the summary title across all columns
+                worksheet.merge_range(summary_range, "Summary", header_format)
 
                 def extract_amount(label_widget):
                     if not label_widget:
@@ -369,34 +396,28 @@ class EventManagement:
                     parts = text.split(":", 1)
                     if len(parts) > 1:
                         try:
-                            return float(parts[1].strip().replace(",", ""))
+                            amount = float(parts[1].strip().replace(",", ""))
+                            return "{:,.0f}".format(amount)
                         except ValueError:
                             return "N/A"
                     return "N/A"
 
+                def write_summary_row(row_offset, label_text, label_widget):
+                    worksheet.write(start_row + row_offset, 0, label_text, header_format)
+                    worksheet.write(start_row + row_offset, 1, extract_amount(label_widget), cell_format)
+
                 if self.current_view == "event_payments":
-                    worksheet.write(start_row + 1, 0, "Total Cash")
-                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_cash_label", None)))
-
-                    worksheet.write(start_row + 2, 0, "Total POS Card")
-                    worksheet.write(start_row + 2, 1, extract_amount(getattr(self, "total_pos_label", None)))
-
-                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
-                    worksheet.write(start_row + 3, 1, extract_amount(getattr(self, "total_bank_label", None)))
-
-                    worksheet.write(start_row + 4, 0, "Total Amount")
-                    worksheet.write(start_row + 4, 1, extract_amount(getattr(self, "total_label", None)))
+                    write_summary_row(2, "Cash", getattr(self, "total_cash_label", None))
+                    write_summary_row(3, "POS Card", getattr(self, "total_pos_label", None))
+                    write_summary_row(4, "Bank Transfer", getattr(self, "total_bank_label", None))
+                    write_summary_row(5, "Total Amount", getattr(self, "total_label", None))
 
                 elif self.current_view == "event_debtors":
-                    worksheet.write(start_row + 1, 0, "Total Current Debt")
-                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_current_label", None)))
-
-                    worksheet.write(start_row + 2, 0, "Total Gross Debt")
-                    worksheet.write(start_row + 2, 1, extract_amount(getattr(self, "total_gross_label", None)))
+                    write_summary_row(2, "Current Debt", getattr(self, "total_current_label", None))
+                    write_summary_row(3, "Gross Debt", getattr(self, "total_gross_label", None))
 
                 elif self.current_view == "event_list":
-                    worksheet.write(start_row + 1, 0, "Total Event Amount")
-                    worksheet.write(start_row + 1, 1, extract_amount(getattr(self, "total_label", None)))
+                    write_summary_row(2, "Total Amount", getattr(self, "total_label", None))
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
@@ -405,6 +426,7 @@ class EventManagement:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
             messagebox.showerror("Error", f"Error exporting to Excel: {e}")
+
 
 
 
@@ -588,7 +610,7 @@ class EventManagement:
         style.theme_use("clam")  # Ensures styling is applied
         style.configure("Treeview.Heading", font=("Helvetica", 10, "bold"), foreground="black")
 
-        columns = ("ID", "Organizer", "Title", "Event_Amount", "Caution_Fee", 
+        columns = ("Event ID", "Organizer", "Title", "Event_Amount", "Caution_Fee", 
                 "Start Date", "End Date", "Location", "Phone", "Status/Payment", "Created_at","created_by")
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")

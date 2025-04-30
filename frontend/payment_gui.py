@@ -320,109 +320,106 @@ class PaymentManagement:
             messagebox.showwarning("Warning", "No view selected for export.")
             return
 
-        # Extract column headers
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
+        rows = [
+            [self.tree.item(item)["values"][i] for i in range(len(columns))]
+            for item in self.tree.get_children()
+        ]
 
-        # Extract row data
-        rows = []
-        for item in self.tree.get_children():
-            row_data = [self.tree.item(item)["values"][i] for i in range(len(columns))]
-            rows.append(row_data)
-
-        # Create a DataFrame
         df = pd.DataFrame(rows, columns=columns)
 
-        # Set the file path
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_name = {
-            "payments": "payments_report.xlsx",
-            "debtors": "debtors_report.xlsx",
-            "daily_payments": "daily_payments_report.xlsx"
-        }.get(self.current_view)
+        file_name_map = {
+            "payments": ("payments_report.xlsx", "Hotel Payment Report"),
+            "debtors": ("debtors_report.xlsx", "Hotel Debtor Report"),
+            "daily_payments": ("daily_payments_report.xlsx", "Hotel Daily Payment Report")
+        }
 
-        if not file_name:
+        mapped = file_name_map.get(self.current_view)
+        if not mapped:
             messagebox.showerror("Error", "Unknown view selected.")
             return
 
-        file_path = os.path.join(download_dir, file_name)
+        file_name, report_title = mapped
+        file_path = os.path.join(os.path.expanduser("~"), "Downloads", file_name)
 
         try:
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
                 sheet_name = self.current_view.replace("_", " ").title()
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                df.to_excel(writer, sheet_name=sheet_name, startrow=5, index=False)
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
 
-                # Write timestamp
-                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                worksheet.write(0, 0, f"Exported on: {now}")
+                # === Styles ===
+                title_format = workbook.add_format({
+                    'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
+                })
+                timestamp_format = workbook.add_format({'italic': True, 'font_size': 10})
+                header_format = workbook.add_format({
+                    'bold': True, 'bg_color': '#DDEBF7', 'border': 1,
+                    'align': 'center', 'valign': 'vcenter'
+                })
+                cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
 
-                start_row = len(df) + 3
-                worksheet.write(start_row, 0, "Summary")
+                # === Merge Title ===
+                end_col_letter = chr(64 + len(columns)) if len(columns) <= 26 else 'Z'
+                worksheet.merge_range('A1:{}1'.format(end_col_letter), report_title, title_format)
+                worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
 
-                # Helper function
+                # Header styling
+                for col_num, col_name in enumerate(columns):
+                    worksheet.write(5, col_num, col_name, header_format)
+
+                # Data cell styling
+                for row_num in range(len(rows)):
+                    for col_num in range(len(columns)):
+                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
+
+                # Auto-fit columns
+                for i, col in enumerate(columns):
+                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
+                    worksheet.set_column(i, i, col_width + 2)
+
+                # === Summary Section ===
+                start_row = len(df) + 8
+                col_span = len(columns)
+                end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'
+                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
+
+                worksheet.merge_range(summary_range, "Summary", header_format)
+
                 def extract_amount(label_widget):
                     if label_widget is None:
                         return "N/A"
                     text = label_widget.cget("text")
-                    print(f"Extracting from label: {text}")  # Debug
                     parts = text.split(":", 1)
                     if len(parts) > 1:
-                        amount_text = parts[1].strip().replace(",", "")
                         try:
-                            amount = float(amount_text)
-                            print(f"Amount extracted: {amount}")  # Debug
-                            return amount
+                            amount = float(parts[1].strip().replace(",", ""))
+                            return "{:,.0f}".format(amount)
                         except ValueError:
                             return "N/A"
                     return "N/A"
 
+                def write_summary_row(row_offset, label_text, label_widget):
+                    worksheet.write(start_row + row_offset, 0, label_text, header_format)
+                    worksheet.write(start_row + row_offset, 1, extract_amount(label_widget), cell_format)
 
-
-                # Handle summaries
                 if self.current_view == "payments":
-                    total_cash = extract_amount(getattr(self, "total_cash_label", None))
-                    total_pos = extract_amount(getattr(self, "total_pos_label", None))
-                    total_bank = extract_amount(getattr(self, "total_bank_label", None))
-                    total_amount = extract_amount(getattr(self, "total_label", None))
-
-                    worksheet.write(start_row + 1, 0, "Total Cash")
-                    worksheet.write(start_row + 1, 1, total_cash)
-                    worksheet.write(start_row + 2, 0, "Total POS Card")
-                    worksheet.write(start_row + 2, 1, total_pos)
-                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
-                    worksheet.write(start_row + 3, 1, total_bank)
-                    worksheet.write(start_row + 4, 0, "Total Amount")
-                    worksheet.write(start_row + 4, 1, total_amount)
+                    write_summary_row(2, "Cash", getattr(self, "total_cash_label", None))
+                    write_summary_row(3, "POS Card", getattr(self, "total_pos_label", None))
+                    write_summary_row(4, "Bank Transfer", getattr(self, "total_bank_label", None))
+                    write_summary_row(5, "Total Amount", getattr(self, "total_label", None))
 
                 elif self.current_view == "debtors":
-                    total_current_debt = extract_amount(getattr(self, "total_current_label", None))
-                    total_gross_debt = extract_amount(getattr(self, "total_gross_label", None))
-
-                    worksheet.write(start_row + 1, 0, "Total Current Debt")
-                    worksheet.write(start_row + 1, 1, total_current_debt)
-                    worksheet.write(start_row + 2, 0, "Total Gross Debt")
-                    worksheet.write(start_row + 2, 1, total_gross_debt)
+                    write_summary_row(2, "Current Debt", getattr(self, "total_current_label", None))
+                    write_summary_row(3, "Gross Debt", getattr(self, "total_gross_label", None))
 
                 elif self.current_view == "daily_payments":
-                    total_cash = extract_amount(getattr(self, "cash_label", None))
-                    total_pos = extract_amount(getattr(self, "pos_card_label", None))
-                    total_bank = extract_amount(getattr(self, "bank_transfer_label", None))
-                    total_amount = extract_amount(getattr(self, "total_label", None))
-
-                    # Debug
-                    print(f"Extracted Cash: {total_cash}, POS: {total_pos}, Bank: {total_bank}, Total: {total_amount}")
-
-                    # Write the extracted values to the Excel sheet
-                    worksheet.write(start_row + 1, 0, "Total Cash")
-                    worksheet.write(start_row + 1, 1, total_cash)
-                    worksheet.write(start_row + 2, 0, "Total POS Card")
-                    worksheet.write(start_row + 2, 1, total_pos)
-                    worksheet.write(start_row + 3, 0, "Total Bank Transfer")
-                    worksheet.write(start_row + 3, 1, total_bank)
-                    worksheet.write(start_row + 4, 0, "Total Amount")
-                    worksheet.write(start_row + 4, 1, total_amount)
+                    write_summary_row(2, "Cash", getattr(self, "cash_label", None))
+                    write_summary_row(3, "POS Card", getattr(self, "pos_card_label", None))
+                    write_summary_row(4, "Bank Transfer", getattr(self, "bank_transfer_label", None))
+                    write_summary_row(5, "Total Amount", getattr(self, "total_label", None))
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
@@ -431,6 +428,7 @@ class PaymentManagement:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
             messagebox.showerror("Error", f"Error exporting to Excel: {e}")
+
 
 
 
@@ -459,76 +457,7 @@ class PaymentManagement:
         command()
 
         
-    def load_payment_list(self):
-        self.current_view = "payments"
-
-        if not hasattr(self, "total_cash_label"):
-            self.total_cash_label = tk.Label(self, text="Total Cash: 0.00")
-            self.total_cash_label.pack()
-
-        if not hasattr(self, "total_pos_label"):
-            self.total_pos_label = tk.Label(self, text="Total POS Card: 0.00")
-            self.total_pos_label.pack()
-
-        if not hasattr(self, "total_bank_label"):
-            self.total_bank_label = tk.Label(self, text="Total Bank Transfer: 0.00")
-            self.total_bank_label.pack()
-
-        if not hasattr(self, "total_label"):
-            self.total_label = tk.Label(self, text="Total Amount: 0.00")
-            self.total_label.pack()
-
-        # Load your payment treeview data here
-
-
-    def load_debtor_list(self):
-        self.current_view = "debtors"
-
-        if not hasattr(self, "total_current_label"):
-            self.total_current_label = tk.Label(self, text="Total Current Debt: 0.00")
-            self.total_current_label.pack()
-
-        if not hasattr(self, "total_gross_label"):
-            self.total_gross_label = tk.Label(self, text="Total Gross Debt: 0.00")
-            self.total_gross_label.pack()
-
-        # Load your debtor treeview data here and update the totals
-        current_total = 0
-        gross_total = 0
-
-        for item in self.tree.get_children():
-            values = self.tree.item(item)["values"]
-            try:
-                current_debt = float(str(values[2]).replace(",", ""))
-                gross_debt = float(str(values[3]).replace(",", ""))
-            except (IndexError, ValueError):
-                current_debt = 0
-                gross_debt = 0
-
-            current_total += current_debt
-            gross_total += gross_debt
-
-        self.total_current_label.config(text=f"Total Current Debt: {current_total:,.2f}")
-        self.total_gross_label.config(text=f"Total Gross Debt: {gross_total:,.2f}")
-
-
-
-    def load_daily_payment_list(self):
-        self.current_view = "daily_payments"  # Track active view
-
-        # Just reference the main labels if they already exist
-        self.daily_total_label = getattr(self, "total_label", None)
-        self.daily_cash_label = getattr(self, "cash_label", None)
-        self.daily_pos_card_label = getattr(self, "pos_card_label", None)
-        self.daily_bank_transfer_label = getattr(self, "bank_transfer_label", None)
-
-          
-
-        # You would then load the daily payment list into the Treeview here
-        # Example: self.tree.insert(...) for each daily payment
-
-
-
+    
     def create_payment(self):
         """Opens a modern CTk pop-up window for creating a new payment."""
         create_window = ctk.CTkToplevel(self.root)
@@ -740,7 +669,7 @@ class PaymentManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        columns = ("ID", "Guest Name", "Room Number", "Booking Cost", "Amount Paid", "Discount Allowed",
+        columns = ("Payment ID", "Guest Name", "Room Number", "Booking Cost", "Amount Paid", "Discount Allowed",
                 "Balance Due", "Payment Method", "Payment Date", "Status", "Void Date", "Booking ID", "Created_by")
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")

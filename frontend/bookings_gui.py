@@ -4,6 +4,8 @@ from tkcalendar import DateEntry
 import requests
 from utils import BASE_URL
 import datetime 
+from datetime import datetime
+
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 #from customtkinter import CTkMessagebox
@@ -355,53 +357,83 @@ class BookingManagement:
             messagebox.showwarning("Warning", "No data available to export.")
             return
 
-        # Extract column headers
+        
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
-
-        # Extract row data
-        rows = []
-        for item in self.tree.get_children():
-            row_data = [self.tree.item(item)["values"][i] for i in range(len(columns))]
-            rows.append(row_data)
-
-        # Convert to DataFrame
+        rows = [
+            [self.tree.item(item)["values"][i] for i in range(len(columns))]
+            for item in self.tree.get_children()
+        ]
         df = pd.DataFrame(rows, columns=columns)
 
-        # Save in Downloads
         download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
         file_path = os.path.join(download_dir, "bookings_report.xlsx")
+        report_title = "Hotel Booking Report"
 
         try:
-            # Create a Pandas Excel writer
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-                df.to_excel(writer, sheet_name="Bookings", index=False)
+                sheet_name = "Bookings"
+                df.to_excel(writer, sheet_name=sheet_name, startrow=5, index=False)
 
                 workbook = writer.book
-                worksheet = writer.sheets["Bookings"]
+                worksheet = writer.sheets[sheet_name]
 
-                # Find next empty row after the data
-                start_row = len(df) + 2  # one empty row
+                # === Styles ===
+                title_format = workbook.add_format({
+                    'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
+                })
+                timestamp_format = workbook.add_format({'italic': True, 'font_size': 10})
+                header_format = workbook.add_format({
+                    'bold': True, 'bg_color': '#DDEBF7', 'border': 1,
+                    'align': 'center', 'valign': 'vcenter'
+                })
+                cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
 
-                # Write "Summary"
-                worksheet.write(start_row, 0, "Summary")
+                # === Merge Title ===
+                end_col_letter = chr(64 + len(columns)) if len(columns) <= 26 else 'Z'
+                worksheet.merge_range(f"A1:{end_col_letter}1", report_title, title_format)
+                worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
 
-                # Get the total booking cost from the label text
-                label_text = self.total_booking_cost_label.cget("text")  # e.g., "Total Booking Cost: 120,000.00"
+                # Header styling
+                for col_num, col_name in enumerate(columns):
+                    worksheet.write(5, col_num, col_name, header_format)
+
+                # Data cell styling
+                for row_num in range(len(rows)):
+                    for col_num in range(len(columns)):
+                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
+
+                # Auto-fit columns
+                for i, col in enumerate(columns):
+                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
+                    worksheet.set_column(i, i, col_width + 2)
+
+                # === Summary Section ===
+                start_row = len(df) + 8
+                col_span = len(columns)
+                end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'
+                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
+                worksheet.merge_range(summary_range, "Summary", header_format)
+
+                # Total Booking Cost from label
+                label_text = self.total_booking_cost_label.cget("text")
                 if ":" in label_text:
-                    total_cost_str = label_text.split(":")[1].strip().replace(",", "")
                     try:
-                        total_cost_value = float(total_cost_str)
+                        total_cost = float(label_text.split(":")[1].strip().replace(",", ""))
+                        formatted_cost = "{:,.0f}".format(total_cost)
                     except ValueError:
-                        total_cost_value = "N/A"
+                        formatted_cost = "N/A"
                 else:
-                    total_cost_value = "N/A"
+                    formatted_cost = "N/A"
 
-                # Write Total Booking Cost
-                worksheet.write(start_row + 1, 0, "Total Booking Cost")
-                worksheet.write(start_row + 1, 1, total_cost_value)
+                worksheet.write(start_row + 2, 0, "Booking Cost", header_format)
+                worksheet.write(start_row + 2, 1, formatted_cost, cell_format)
+
+                # === Optional: Add other summary rows based on custom logic ===
+                # For example, you can add more detailed breakdowns or additional metrics here
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+
         except PermissionError:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
@@ -619,8 +651,8 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Define Treeview columns
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
+        columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification No", "Address","Created_by")
 
         # Create a Treeview widget
         style = ttk.Style()
