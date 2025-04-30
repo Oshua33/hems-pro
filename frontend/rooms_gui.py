@@ -23,6 +23,19 @@ class RoomManagement:
         self.setup_ui()
         self.fetch_rooms()
 
+    def apply_grid_effect(self, tree=None):
+        if tree is None:
+            tree = self.tree  # Default to main tree if none is provided
+        
+        for i, item in enumerate(tree.get_children()):
+            if i % 2 == 0:
+                tree.item(item, tags=("evenrow",))
+            else:
+                tree.item(item, tags=("oddrow",))
+
+        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("oddrow", background="white")
+
         # Style Configuration
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"), background="#2C3E50", foreground="white")
@@ -138,7 +151,7 @@ class RoomManagement:
             # Insert the room details into the display
             self.tree.insert("", tk.END, values=(room_number, room_type, amount, current_status, booking_type))
             
-            
+            self.apply_grid_effect()  
             
     def list_available_rooms(self):
         """Fetch and display available rooms in a structured format."""

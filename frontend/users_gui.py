@@ -22,9 +22,27 @@ class UserManagement:
         
         self.user_management_window.configure(bg="#2c3e50")
 
+    
+   
+
         self.setup_ui()
         self.fetch_users()
 
+
+    def apply_grid_effect(self, tree=None):
+        if tree is None:
+            tree = self.users_treeview  # Fixed from self.tree to self.users_treeview
+
+        for i, item in enumerate(tree.get_children()):
+            if i % 2 == 0:
+                tree.item(item, tags=("evenrow",))
+            else:
+                tree.item(item, tags=("oddrow",))
+
+        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("oddrow", background="white")
+
+        
     def setup_ui(self):
         """Set up UI components including buttons and user table."""
         style = ttk.Style()
@@ -91,7 +109,7 @@ class UserManagement:
             self.users_treeview.insert("", tk.END, values=(user["id"], user["username"], user["role"]))
     
      
-    
+        self.apply_grid_effect()
     
     def add_user(self):
         self.open_user_form("Add User", self.submit_new_user)

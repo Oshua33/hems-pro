@@ -268,7 +268,8 @@ class PaymentManagement:
             else:
                 tree.item(item, tags=("oddrow",))
 
-        tree.tag_configure("evenrow", background="#f2f2f2")  # Light gray
+        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        #tree.tag_configure("oddrow", background="#f0f0f0")   # light gray
         tree.tag_configure("oddrow", background="white")      # White
 
 
