@@ -323,33 +323,43 @@ class EventManagement:
 
         df = pd.DataFrame(rows, columns=columns)
 
-        # Map filenames by current view
+        # Map filenames and titles by current view
         file_name_map = {
-            "event_list": "event_list_report.xlsx",
-            "event_payments": "event_payment_report.xlsx",
-            "event_debtors": "event_debtor_report.xlsx",
+            "event_list": ("event_list_report.xlsx", "Event List Report"),
+            "event_payments": ("event_payment_report.xlsx", "Event Payments Report"),
+            "event_debtors": ("event_debtor_report.xlsx", "Event Debtors Report"),
         }
 
-        file_name = file_name_map.get(self.current_view)
-        if not file_name:
+        mapped = file_name_map.get(self.current_view)
+        if not mapped:
             messagebox.showerror("Error", "Unknown event report view selected.")
             return
 
+        file_name, report_title = mapped
         file_path = os.path.join(os.path.expanduser("~"), "Downloads", file_name)
 
         try:
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
                 sheet_name = self.current_view.replace("_", " ").title()
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                df.to_excel(writer, sheet_name=sheet_name, startrow=4, index=False)
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
 
+                # Title Heading
+                merge_format = workbook.add_format({
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'font_size': 14
+                })
+                worksheet.merge_range('A1:E1', report_title, merge_format)
+
                 # Timestamp
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                worksheet.write(0, 0, f"Exported on: {now}")
+                worksheet.write(2, 0, f"Exported on: {now}")
 
-                start_row = len(df) + 3
+                start_row = len(df) + 6
                 worksheet.write(start_row, 0, "Summary")
 
                 def extract_amount(label_widget):
