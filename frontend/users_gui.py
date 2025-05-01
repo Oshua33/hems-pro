@@ -1,6 +1,7 @@
 from customtkinter import *
 import tkinter.messagebox as messagebox
 import tkinter.ttk as ttk
+import customtkinter as ctk
 from tkinter import font
 
 import requests
