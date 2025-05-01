@@ -1,4 +1,5 @@
 import tkinter as tk
+import customtkinter as ctk
 from tkinter import ttk, messagebox
 from utils import api_request, get_user_role
 import re
@@ -154,7 +155,7 @@ class RoomManagement:
             self.apply_grid_effect()  
             
     def list_available_rooms(self):
-        """Fetch and display available rooms in a structured format."""
+        """Fetch and display available rooms in a non-blocking dark-themed CustomTkinter window."""
         response = api_request("/rooms/available", "GET", token=self.token)
 
         if not response or "available_rooms" not in response:
@@ -162,47 +163,72 @@ class RoomManagement:
             return
 
         available_rooms = response["available_rooms"]
-        available_rooms.sort(key=self.natural_sort_key)  # Apply natural sorting
+        available_rooms.sort(key=self.natural_sort_key)
         total_available = len(available_rooms)
 
-        # Create new window
-        available_window = tk.Toplevel(self.root)
+        # Create popup window that doesn't close the dashboard
+        available_window = ctk.CTkToplevel(self.root)
         available_window.title("Available Rooms")
-        available_window.geometry("550x420")
-        available_window.configure(bg="#EAEAEA")  # Light gray background
+        available_window.geometry("600x460")
+        available_window.resizable(False, False)
+        available_window.transient(self.root)   # Keep on top of dashboard
+        available_window.grab_set()             # Optional: to focus this window
 
-        # Header Frame with subtle border color
-        header_frame = tk.Frame(available_window, bg="white", relief="solid", borderwidth=1, highlightbackground="#B0B0B0")
-        header_frame.pack(fill="x", padx=10, pady=5)
+        # Header
+        header_frame = ctk.CTkFrame(available_window, fg_color="#1e1e1e", corner_radius=10)
+        header_frame.pack(fill="x", padx=15, pady=(15, 5))
 
-        ttk.Label(
-            header_frame, 
-            text=f"Available Rooms ({total_available})", 
-            font=("Helvetica", 14, "bold"), 
-            background="white"
-        ).pack(pady=8)
+        ctk.CTkLabel(
+            header_frame,
+            text=f"Available Rooms ({total_available})",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="white"
+        ).pack(pady=10)
 
-        # Main Content Frame
-        content_frame = tk.Frame(available_window, bg="#F5F5F5", padx=10, pady=10, relief="solid", borderwidth=1, highlightbackground="#B0B0B0")
-        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        # Content Frame
+        content_frame = ctk.CTkFrame(available_window, fg_color="#2a2a2a", corner_radius=10)
+        content_frame.pack(fill="both", expand=True, padx=15, pady=(5, 10))
 
-        # Define Treeview (Table)
+        # Style Treeview
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview",
+                        background="#2a2a2a",
+                        foreground="white",
+                        rowheight=28,
+                        fieldbackground="#2a2a2a",
+                        font=("Segoe UI", 11))
+        style.configure("Treeview.Heading",
+                        background="#3a3a3a",
+                        foreground="white",
+                        font=("Segoe UI", 11, "bold"))
+        style.map("Treeview", background=[("selected", "#007acc")])
+
+        # Treeview widget
         columns = ("Room Number", "Room Type", "Amount")
-        tree = ttk.Treeview(content_frame, columns=columns, show="headings", height=10)
+        tree = ttk.Treeview(content_frame, columns=columns, show="headings")
 
-        # Format Columns
         for col in columns:
             tree.heading(col, text=col, anchor="center")
-            tree.column(col, width=160, anchor="center")
+            tree.column(col, anchor="center", width=180)
 
-        tree.pack(pady=5, fill=tk.BOTH, expand=True)
-
-        # Insert available room data
         for room in available_rooms:
             tree.insert("", tk.END, values=(room["room_number"], room["room_type"], room["amount"]))
 
+        tree.pack(padx=10, pady=10, fill="both", expand=True)
+
         # Close Button
-        ttk.Button(available_window, text="Close", command=available_window.destroy).pack(pady=10)
+        ctk.CTkButton(
+            available_window,
+            text="Close",
+            command=available_window.destroy,
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            text_color="white",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            width=120,
+            corner_radius=8
+        ).pack(pady=(0, 15))
 
 
     
