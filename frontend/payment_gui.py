@@ -350,6 +350,7 @@ class PaymentManagement:
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
+                worksheet.set_landscape()
 
                 # === Styles ===
                 title_format = workbook.add_format({
