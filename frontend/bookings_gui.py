@@ -378,6 +378,9 @@ class BookingManagement:
                 worksheet = writer.sheets[sheet_name]
                 worksheet.set_landscape()
 
+                worksheet.center_horizontally()  # Center content horizontally on the page
+                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)  # Adjust margins in inches
+
                 # === Styles ===
                 title_format = workbook.add_format({
                     'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
