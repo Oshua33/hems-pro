@@ -187,6 +187,8 @@ class BookingManagement:
                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
         self.subheading_label.pack(pady=10)
 
+        
+
         # Sidebar Buttons
         buttons = [
             ("Create Booking", self.create_booking),

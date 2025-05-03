@@ -1111,7 +1111,7 @@ class PaymentManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        columns = ("ID", "Guest Name", "Room Number", "Amount Paid", "Discount Allowed", "Balance Due",
+        columns = ("Payment ID", "Guest Name", "Room Number", "Amount Paid", "Discount Allowed", "Balance Due",
                 "Payment Method", "Payment Date", "Status", "Booking ID")
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")

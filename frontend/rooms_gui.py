@@ -67,8 +67,8 @@ class RoomManagement:
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         # Apply alternating row colors
-        self.tree.tag_configure("oddrow", background="#ECF0F1")  # Light gray
-        self.tree.tag_configure("evenrow", background="white")
+        #self.tree.tag_configure("oddrow", background="#ECF0F1")  # Light gray
+        #self.tree.tag_configure("evenrow", background="white")
 
         # Button Frame
         btn_frame = tk.Frame(self.root, bg="#f8f9fa")
@@ -161,6 +161,8 @@ class RoomManagement:
         if not response or "available_rooms" not in response:
             messagebox.showerror("Error", "Unable to retrieve available rooms. Please try again.")
             return
+        
+        
 
         available_rooms = response["available_rooms"]
         available_rooms.sort(key=self.natural_sort_key)
@@ -230,6 +232,7 @@ class RoomManagement:
             corner_radius=8
         ).pack(pady=(0, 15))
 
+        self.apply_grid_effect(self.tree)
 
     
     def open_room_form(self):
@@ -237,6 +240,9 @@ class RoomManagement:
         form.title("Add Room")
         form.geometry("350x320")
         form.resizable(False, False)
+
+
+        
 
         # Center the window
         form.update_idletasks()  # Ensure correct size calculation
@@ -453,6 +459,8 @@ class RoomManagement:
                 self.fetch_rooms()
             else:
                 messagebox.showerror("Error", "Failed to delete room")
+
+        
 
 if __name__ == "__main__":
     root = tk.Tk()
