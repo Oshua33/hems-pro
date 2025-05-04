@@ -3,6 +3,7 @@ from CTkMessagebox import CTkMessagebox
 import requests
 from login_gui import LoginGUI
 from PIL import Image, ImageTk
+import customtkinter as ctk
 import os
 
 API_URL = "http://127.0.0.1:8000/license"
@@ -35,7 +36,7 @@ class LicenseGUI(tk.Toplevel):
 
         # License Frame
         self.license_frame = tk.Frame(self, bg="#34495E", padx=40, pady=30)
-        self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=400)
+        self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=385)
 
         self.add_label("Admin License Password:")
         self.password_entry = self.create_entry(show="*")
@@ -50,10 +51,24 @@ class LicenseGUI(tk.Toplevel):
 
         self.create_rounded_button("Verify License", self.verify_license)
 
-        # Welcome Text
-        tk.Label(self, text="✦  W E L C O M E  TO  HEMS✦\nHotel & Event Management System",
-                 font=("Century Gothic", 24, "bold"), fg="white", bg="#2C3E50",
-                 padx=10, pady=5).place(relx=0.5, rely=0.08, anchor="n")
+        # Example inside a CTkFrame or CTk window (replace `self` with your container/frame)
+        ctk.CTkLabel(self, text="W  e  l  c  o  m  e   T  o", 
+                    font=ctk.CTkFont("Century Gothic", 20, "bold"), 
+                    text_color="white", 
+                    fg_color="#2C3E50", 
+                    anchor="center").place(relx=0.5, rely=0.05, anchor="n")
+
+        ctk.CTkLabel(self, text="H     E     M     S", 
+                    font=ctk.CTkFont("Century Gothic", 32, "bold"), 
+                    text_color="white", 
+                    fg_color="#2C3E50", 
+                    anchor="center").place(relx=0.5, rely=0.11, anchor="n")
+
+        ctk.CTkLabel(self, text="Hotel & Event Management System", 
+                    font=ctk.CTkFont("Century Gothic", 18), 
+                    text_color="white", 
+                    fg_color="#2C3E50", 
+                    anchor="center").place(relx=0.5, rely=0.17, anchor="n")
 
         tk.Label(self, text="Produced & Licensed by School of Accounting Package",
                  font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.8, rely=0.94, anchor="n")
