@@ -692,6 +692,43 @@ class BookingManagement:
         self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_booking_cost_label.pack(pady=10)
 
+                # View button to open booking details
+        view_button = ttk.Button(frame, text="View Booking", command=self.view_selected_booking)
+        view_button.pack(pady=5)
+
+    def view_selected_booking(self):
+        selected_item = self.tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No selection", "Please select a booking to view.")
+            return
+
+        booking_data = self.tree.item(selected_item, "values")
+        field_names = [
+            "Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Identification No", "Address", "Created by"
+        ]
+
+        # Create a new window to display the booking details
+        view_window = tk.Toplevel(self.root)
+        view_window.title("Booking Details")
+        view_window.geometry("500x600")
+        view_window.config(bg="white")
+
+        tk.Label(view_window, text="Booking Details Report", font=("Arial", 14, "bold"), bg="white").pack(pady=10)
+
+        # Display each detail in structured layout
+        for i, (field, value) in enumerate(zip(field_names, booking_data)):
+            row = tk.Frame(view_window, bg="white")
+            row.pack(fill=tk.X, padx=20, pady=2)
+
+            tk.Label(row, text=f"{field}:", font=("Arial", 11, "bold"), bg="white", anchor="w", width=15).pack(side=tk.LEFT)
+            tk.Label(row, text=value, font=("Arial", 11), bg="white", anchor="w", wraplength=300).pack(side=tk.LEFT)
+
+        # Optional Print Button (placeholder)
+        print_btn = ttk.Button(view_window, text="Print", command=lambda: messagebox.showinfo("Print", "Print functionality is not implemented."))
+        print_btn.pack(pady=10)
+
         
 
     def fetch_bookings(self, start_date_entry, end_date_entry):
