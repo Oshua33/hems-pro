@@ -10,8 +10,6 @@ import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 #from customtkinter import CTkMessagebox
 
-
-
 from tkinter import Tk, Button, messagebox
 from utils import export_to_excel, print_excel
 import requests
@@ -20,7 +18,11 @@ import sys
 import pandas as pd
 from payment_gui import PaymentManagement  # Import the Payment GUI
 ##
-
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import tempfile
+import os
+import platform
 
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text, command, radius=12, padding=5, 
@@ -717,17 +719,60 @@ class BookingManagement:
 
         tk.Label(view_window, text="Booking Details Report", font=("Arial", 14, "bold"), bg="white").pack(pady=10)
 
-        # Display each detail in structured layout
-        for i, (field, value) in enumerate(zip(field_names, booking_data)):
+        rows = []
+        for field, value in zip(field_names, booking_data):
             row = tk.Frame(view_window, bg="white")
             row.pack(fill=tk.X, padx=20, pady=2)
-
             tk.Label(row, text=f"{field}:", font=("Arial", 11, "bold"), bg="white", anchor="w", width=15).pack(side=tk.LEFT)
             tk.Label(row, text=value, font=("Arial", 11), bg="white", anchor="w", wraplength=300).pack(side=tk.LEFT)
+            rows.append((field, value))  # Store for print/PDF use
 
-        # Optional Print Button (placeholder)
-        print_btn = ttk.Button(view_window, text="Print", command=lambda: messagebox.showinfo("Print", "Print functionality is not implemented."))
-        print_btn.pack(pady=10)
+        # Buttons for Print and PDF
+        button_frame = tk.Frame(view_window, bg="white")
+        button_frame.pack(pady=15)
+
+        ttk.Button(button_frame, text="Print", command=lambda: self.print_booking(rows)).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Export to PDF", command=lambda: self.export_booking_to_pdf(rows)).pack(side=tk.LEFT, padx=10)
+
+    def print_booking(self, data):
+        # Create a temporary file with formatted booking details
+        text = "Booking Details Report\n\n"
+        for field, value in data:
+            text += f"{field}: {value}\n"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as tmp:
+            tmp.write(text)
+            tmp_path = tmp.name
+
+        # Send to default printer (platform dependent)
+        if platform.system() == "Windows":
+            os.startfile(tmp_path, "print")
+        elif platform.system() == "Darwin":  # macOS
+            os.system(f"lpr {tmp_path}")
+        else:  # Linux
+            os.system(f"lp {tmp_path}")
+
+
+    def export_booking_to_pdf(self, data):
+        filename = tempfile.mktemp(suffix=".pdf")
+        c = canvas.Canvas(filename, pagesize=A4)
+        width, height = A4
+
+        textobject = c.beginText(40, height - 50)
+        textobject.setFont("Helvetica", 12)
+        textobject.textLine("Booking Details Report")
+        textobject.moveCursor(0, 20)
+
+        for field, value in data:
+            textobject.textLine(f"{field}: {value}")
+
+        c.drawText(textobject)
+        c.showPage()
+        c.save()
+
+        # Open the PDF after export
+        os.startfile(filename) if platform.system() == "Windows" else os.system(f"open {filename}" if platform.system() == "Darwin" else f"xdg-open {filename}")
+
 
         
 
