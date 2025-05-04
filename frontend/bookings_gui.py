@@ -24,6 +24,16 @@ import tempfile
 import os
 import platform
 
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+import webbrowser
+
+
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text, command, radius=12, padding=5, 
                  color="#34495E", hover_color="#1ABC9C", text_color="white", 
@@ -694,9 +704,10 @@ class BookingManagement:
         self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_booking_cost_label.pack(pady=10)
 
-                # View button to open booking details
-        view_button = ttk.Button(frame, text="View Booking", command=self.view_selected_booking)
-        view_button.pack(pady=5)
+            
+        # View button using CustomTkinter (inside list_bookings)
+        view_button = ctk.CTkButton(frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
+        view_button.pack(pady=10)
 
     def view_selected_booking(self):
         selected_item = self.tree.focus()
@@ -727,51 +738,99 @@ class BookingManagement:
             tk.Label(row, text=value, font=("Arial", 11), bg="white", anchor="w", wraplength=300).pack(side=tk.LEFT)
             rows.append((field, value))  # Store for print/PDF use
 
-        # Buttons for Print and PDF
-        button_frame = tk.Frame(view_window, bg="white")
+        # Use CTkFrame instead of tk.Frame for consistent look
+        button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=15)
 
-        ttk.Button(button_frame, text="Print", command=lambda: self.print_booking(rows)).pack(side=tk.LEFT, padx=10)
-        ttk.Button(button_frame, text="Export to PDF", command=lambda: self.export_booking_to_pdf(rows)).pack(side=tk.LEFT, padx=10)
+        # Rounded CTkButton
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print to PDF",
+            command=lambda: self.export_booking_to_pdf(rows),
+            fg_color="#2c3e50",       # Background color
+            text_color="white",       # Text color
+            corner_radius=20,         # Roundness
+            font=("Arial", 12, "bold"),
+            width=140,
+            height=30
+        )
+        pdf_button.pack(padx=10)
 
-    def print_booking(self, data):
-        # Create a temporary file with formatted booking details
-        text = "Booking Details Report\n\n"
-        for field, value in data:
-            text += f"{field}: {value}\n"
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as tmp:
-            tmp.write(text)
-            tmp_path = tmp.name
 
-        # Send to default printer (platform dependent)
-        if platform.system() == "Windows":
-            os.startfile(tmp_path, "print")
-        elif platform.system() == "Darwin":  # macOS
-            os.system(f"lpr {tmp_path}")
-        else:  # Linux
-            os.system(f"lp {tmp_path}")
-
+    
+    
 
     def export_booking_to_pdf(self, data):
         filename = tempfile.mktemp(suffix=".pdf")
-        c = canvas.Canvas(filename, pagesize=A4)
-        width, height = A4
 
-        textobject = c.beginText(40, height - 50)
-        textobject.setFont("Helvetica", 12)
-        textobject.textLine("Booking Details Report")
-        textobject.moveCursor(0, 20)
+        doc = SimpleDocTemplate(filename, pagesize=A4,
+                                rightMargin=40, leftMargin=40, topMargin=60, bottomMargin=40)
 
+        styles = getSampleStyleSheet()
+
+        # Custom centered styles
+        centered_title_style = ParagraphStyle(
+            name="CenteredTitle",
+            parent=styles["Title"],
+            alignment=TA_CENTER,
+            fontSize=18,
+            spaceAfter=10
+        )
+
+        centered_heading_style = ParagraphStyle(
+            name="CenteredHeading",
+            parent=styles["Heading2"],
+            alignment=TA_CENTER,
+            fontSize=14,
+            spaceAfter=10
+        )
+
+        normal_style = styles['Normal']
+
+        elements = []
+
+        # Hotel name (centered)
+        hotel_name = Paragraph("<b>Destone Hotel & Suite</b>", centered_title_style)
+        elements.append(hotel_name)
+
+        # Report Title (centered)
+        report_title = Paragraph("Booking Details Report", centered_heading_style)
+        elements.append(report_title)
+
+        # Extract and show booking date
+        booking_date = ""
         for field, value in data:
-            textobject.textLine(f"{field}: {value}")
+            if field.lower() == "booking date":
+                booking_date = str(value)
+                break
 
-        c.drawText(textobject)
-        c.showPage()
-        c.save()
+        if booking_date:
+            date_para = Paragraph(f"<b>Booking Date:</b> {booking_date}", normal_style)
+            elements.append(date_para)
+            elements.append(Spacer(1, 15))
 
-        # Open the PDF after export
-        os.startfile(filename) if platform.system() == "Windows" else os.system(f"open {filename}" if platform.system() == "Darwin" else f"xdg-open {filename}")
+        # Booking details table
+        table_data = [[Paragraph(f"<b>{field}</b>", normal_style), Paragraph(str(value), normal_style)] for field, value in data]
+        table = Table(table_data, colWidths=[150, 300])
+        table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(table)
+
+        # Signature section
+        elements.append(Spacer(1, 30))
+        signature_table = Table([
+            ["Guest Signature: ____________________", "Receptionist Signature: ____________________"]
+        ], colWidths=[250, 250])
+        elements.append(signature_table)
+
+        # Build and open the PDF
+        doc.build(elements)
+        webbrowser.open_new(r'file://%s' % filename)
 
 
         
