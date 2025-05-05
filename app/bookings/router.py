@@ -12,9 +12,10 @@ from app.rooms import models as room_models  # Import room models
 from app.bookings import schemas, models as  booking_models
 from app.payments import models as payment_models
 from loguru import logger
-from sqlalchemy.sql import func
+from fastapi import UploadFile, File, Form
 from datetime import datetime
 import os
+import shutil
 
 router = APIRouter()
 
@@ -25,13 +26,12 @@ logger.add("app.log", rotation="500 MB", level="DEBUG")
 #log_path = os.path.join(os.getenv("LOCALAPPDATA", "C:\\Temp"), "app.log")
 #logger.add(log_path, rotation="500 MB", level="DEBUG")
 
-
-
 @router.post("/create/")
 def create_booking(
-    booking_request: schemas.BookingSchema,
+    booking_request: schemas.BookingSchema = Depends(),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    attachment: Optional[UploadFile] = File(None),
 ):
     room_number_input = booking_request.room_number.strip()
     normalized_room_number = room_number_input.lower()
@@ -44,28 +44,24 @@ def create_booking(
             detail="Departure date must be later than the arrival date.",
         )
 
-    # Restrict checked-in bookings to today
     if booking_request.booking_type == "checked-in" and booking_request.arrival_date != today:
         raise HTTPException(
             status_code=400,
             detail="Checked-in bookings can only be created for today's date.",
         )
 
-    # Restrict reservations to future dates
     if booking_request.booking_type == "reservation" and booking_request.arrival_date <= today:
         raise HTTPException(
             status_code=400,
             detail="Reservation bookings must be scheduled for a future date.",
         )
 
-    # Complimentary bookings must be for today
     if booking_request.booking_type == "complimentary" and booking_request.arrival_date != today:
         raise HTTPException(
             status_code=400,
             detail="Complimentary bookings can only be made for today's date.",
         )
 
-    # Validate room existence
     room = (
         db.query(room_models.Room)
         .filter(func.lower(room_models.Room.room_number) == normalized_room_number)
@@ -74,7 +70,6 @@ def create_booking(
     if not room:
         raise HTTPException(status_code=404, detail=f"Room {room_number_input} not found.")
 
-    # Check if the room is available during the requested period
     overlapping_booking = (
         db.query(booking_models.Booking)
         .filter(
@@ -94,10 +89,10 @@ def create_booking(
         raise HTTPException(
             status_code=400,
             detail=f"Room {room_number_input} is already booked for the requested dates."
-                f"Check Booking ID: {overlapping_booking.id}",
+                   f"Check Booking ID: {overlapping_booking.id}",
         )
 
-    # Calculate booking cost and determine status
+    # Booking cost logic
     if booking_request.booking_type == "complimentary":
         booking_cost = 0
         payment_status = "complimentary"
@@ -106,6 +101,15 @@ def create_booking(
         booking_cost = room.amount * booking_request.number_of_days
         payment_status = "pending"
         booking_status = "reserved" if booking_request.booking_type == "reservation" else "checked-in"
+
+    # Save the attachment file if present
+    attachment_path = None
+    if attachment:
+        upload_dir = "uploads/"
+        os.makedirs(upload_dir, exist_ok=True)
+        attachment_path = os.path.join(upload_dir, attachment.filename)
+        with open(attachment_path, "wb") as buffer:
+            shutil.copyfileobj(attachment.file, buffer)
 
     try:
         new_booking = booking_models.Booking(
@@ -122,11 +126,12 @@ def create_booking(
             room_price=room.amount if booking_request.booking_type != "complimentary" else 0,
             booking_cost=booking_cost,
             payment_status=payment_status,
-            created_by=current_user.username,  # Save the user who created the booking
+            created_by=current_user.username,
+            vehicle_no=booking_request.vehicle_no,
+            attachment=attachment_path
         )
         db.add(new_booking)
 
-        # Update room status based on booking type
         room.status = booking_status
         db.commit()
         db.refresh(new_booking)
@@ -150,7 +155,9 @@ def create_booking(
                 "status": new_booking.status,
                 "booking_cost": new_booking.booking_cost,
                 "payment_status": new_booking.payment_status,
-                "created_by": new_booking.created_by,  # Include in the response
+                "created_by": new_booking.created_by,
+                "vehicle_no": new_booking.vehicle_no,
+                "attachment": new_booking.attachment
             },
         }
     except Exception as e:
@@ -220,6 +227,8 @@ def list_bookings(
                 "address": booking.address,
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
+                "vehicle_no": booking.vehicle_no,
+                "attachment": booking.attachment
             }
             for booking in bookings
         ]
@@ -291,6 +300,8 @@ def list_bookings_by_status(
                 "address": booking.address,
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
+                "vehicle_no": booking.vehicle_no,
+                "attachment": booking.attachment
             }
             for booking in bookings
         ]
@@ -350,6 +361,8 @@ def search_guest_name(
                 "address": booking.address,
                 "booking_cost":booking.booking_cost,
                 "created_by": booking.created_by,
+                "vehicle_no": booking.vehicle_no,
+                "attachment": booking.attachment
             })
 
         return {
@@ -399,6 +412,8 @@ def list_booking_by_id(
         "address": booking.address,
         "booking_cost": booking.booking_cost,
         "created_by": booking.created_by,
+        "vehicle_no": booking.vehicle_no,
+        "attachment": booking.attachment
     }
 
     return {"message": f"Booking details for ID {booking_id} retrieved successfully.", "booking": formatted_booking}
@@ -475,6 +490,8 @@ def list_bookings_by_room(
                 "address": booking.address,
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
+                "vehicle_no": booking.vehicle_no,
+                "attachment": booking.attachment
             }
             for booking in bookings
         ]

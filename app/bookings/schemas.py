@@ -6,12 +6,7 @@ from pydantic import BaseModel, validator
 from datetime import datetime, timezone
 
 
-
-
 class BookingSchema(BaseModel):
-    """
-    Unified schema for both reservations and check-ins.
-    """
     room_number: str
     guest_name: str
     gender: Literal["Male", "Female"]
@@ -21,19 +16,16 @@ class BookingSchema(BaseModel):
     departure_date: date
     booking_type: Literal["checked-in", "reservation", "complimentary"]
     phone_number: str
-    #payment_status: Optional[str] = "pending"  # Optional for check-ins
-    number_of_days: Optional[int] = None  # Optional for input
-    created_by: Optional[str] = None  # Remove manual input, get from `current_user`
-    #booking_cost: Optional[float]
-    #booking_date: datetime
+    number_of_days: Optional[int] = None
+    created_by: Optional[str] = None
+    vehicle_no: Optional[str] = None  # ✅ NEW FIELD
+    attachment: Optional[str] = None  # ✅ NEW FIELD (should be a file path or URL)
 
     class Config:
-        from_attributes = True  # Replaces `orm_mode = True` for newer Pydantic versions
-    
-        
+        from_attributes = True
+
     @root_validator(pre=True)
     def calculate_number_of_days(cls, values):
-        # Parse dates if they are strings
         arrival_date = values.get("arrival_date")
         departure_date = values.get("departure_date")
         if isinstance(arrival_date, str):
@@ -42,19 +34,17 @@ class BookingSchema(BaseModel):
         if isinstance(departure_date, str):
             departure_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
             values["departure_date"] = departure_date
-
-        # Calculate the number of days
         if arrival_date and departure_date:
             values["number_of_days"] = (departure_date - arrival_date).days
-        return values    
-        
+        return values
+
 
 class BookingSchemaResponse(BaseModel):
     id: int
     room_number: str
     guest_name: str
     gender: Literal["Male", "Female"]
-    identification_number: str
+    identification_number: Optional[str]
     address: str
     arrival_date: date
     departure_date: date
@@ -62,17 +52,16 @@ class BookingSchemaResponse(BaseModel):
     phone_number: str
     status: Optional[str] = "reserved"
     payment_status: Optional[str] = "pending"
-    number_of_days: int  # Ensured as part of the response
+    number_of_days: int
     booking_cost: Optional[float] = None
     is_checked_out: Optional[bool] = False
     cancellation_reason: Optional[str] = None
-    created_by: str  # Add this field
+    created_by: str
+    vehicle_no: Optional[str] = None  # ✅ NEW FIELD
+    attachment: Optional[str] = None  # ✅ NEW FIELD
 
     class Config:
-        from_attributes = True  # Enable `from_orm` functionality
-
-
-
+        from_attributes = True
 
 
 class UserDisplaySchema(BaseModel):

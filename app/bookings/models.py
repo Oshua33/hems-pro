@@ -31,6 +31,8 @@ class Booking(Base):
     booking_type = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
     status = Column(String, default="reserved")
+    vehicle_no = Column(String, nullable=True)
+    attachment = Column(String, nullable=True)  # e.g., path to file or cloud URL
     payment_status = Column(String, default="pending")
     booking_date = Column(DateTime, default=get_local_time)  # Store with timezone
     is_checked_out = Column(Boolean, default=False)
