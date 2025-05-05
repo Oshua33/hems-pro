@@ -722,24 +722,33 @@ class BookingManagement:
         booking_data = self.tree.item(selected_item, "values")
         field_names = [
             "Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
-            "Departure", "Status", "Days", "Booking Type", "Phone Number", "Booking Date",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
             "Payment Status", "Identification No", "Address", "Created by"
         ]
 
         # Modern popup window
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("520x600")
+        view_window.geometry("500x610+147+89")  # Position at the left- top corner of the screen (0, 0)
         view_window.configure(fg_color="white")
+
+        # Hotel Name label at top of popup
+        hotel_label = ctk.CTkLabel(
+            view_window,
+            text=HOTEL_NAME,
+            font=("Arial", 17, "bold"),
+            text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(3, 0))
 
         # Title
         title_label = ctk.CTkLabel(
             view_window,
-            text="Booking Details Report",
+            text="Guest Details Report",
             font=("Arial", 15, "bold"),
             text_color="#1e3d59"
         )
-        title_label.pack(pady=(10, 5))
+        title_label.pack(pady=(5, 2))
 
         # Modern card-like frame for form
         content_frame = ctk.CTkFrame(
@@ -754,12 +763,12 @@ class BookingManagement:
         rows = []
         for field, value in zip(field_names, booking_data):
             row = ctk.CTkFrame(content_frame, fg_color="white")
-            row.pack(fill="x", padx=10, pady=1)  # Tight spacing
+            row.pack(fill="x", padx=5, pady=1)  # Tight spacing
 
             label_field = ctk.CTkLabel(
                 row,
-                text=f"{field}:", 
-                font=("Arial", 11, "bold"),
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
                 text_color="#2c3e50",
                 width=130,
                 anchor="w"
@@ -767,7 +776,7 @@ class BookingManagement:
             label_value = ctk.CTkLabel(
                 row,
                 text=str(value),
-                font=("Arial", 11),
+                font=("Arial", 12, "bold"),
                 text_color="#34495e",
                 anchor="w"
             )
@@ -817,7 +826,7 @@ class BookingManagement:
         elements.append(Spacer(1, 3))
 
         # Booking report title (centered)
-        title = Paragraph("<para alignment='center'>Booking Details Report</para>", styles['Heading2'])
+        title = Paragraph("<para alignment='center'>Guest Details Report</para>", styles['Heading2'])
         elements.append(title)
         elements.append(Spacer(1, 3))
 
