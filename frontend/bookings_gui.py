@@ -712,6 +712,7 @@ class BookingManagement:
         view_button = ctk.CTkButton(frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
         view_button.pack(pady=10)
 
+
     def view_selected_booking(self):
         selected_item = self.tree.focus()
         if not selected_item:
@@ -725,39 +726,74 @@ class BookingManagement:
             "Payment Status", "Identification No", "Address", "Created by"
         ]
 
-        # Create a new window to display the booking details
-        view_window = tk.Toplevel(self.root)
+        # Modern popup window
+        view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("500x600")
-        view_window.config(bg="white")
+        view_window.geometry("520x600")
+        view_window.configure(fg_color="white")
 
-        tk.Label(view_window, text="Booking Details Report", font=("Arial", 14, "bold"), bg="white").pack(pady=10)
+        # Title
+        title_label = ctk.CTkLabel(
+            view_window,
+            text="Booking Details Report",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(10, 5))
+
+        # Modern card-like frame for form
+        content_frame = ctk.CTkFrame(
+            master=view_window,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=5)
 
         rows = []
         for field, value in zip(field_names, booking_data):
-            row = tk.Frame(view_window, bg="white")
-            row.pack(fill=tk.X, padx=20, pady=2)
-            tk.Label(row, text=f"{field}:", font=("Arial", 11, "bold"), bg="white", anchor="w", width=15).pack(side=tk.LEFT)
-            tk.Label(row, text=value, font=("Arial", 11), bg="white", anchor="w", wraplength=300).pack(side=tk.LEFT)
-            rows.append((field, value))  # Store for print/PDF use
+            row = ctk.CTkFrame(content_frame, fg_color="white")
+            row.pack(fill="x", padx=10, pady=1)  # Tight spacing
 
-        # Use CTkFrame instead of tk.Frame for consistent look
+            label_field = ctk.CTkLabel(
+                row,
+                text=f"{field}:", 
+                font=("Arial", 11, "bold"),
+                text_color="#2c3e50",
+                width=130,
+                anchor="w"
+            )
+            label_value = ctk.CTkLabel(
+                row,
+                text=str(value),
+                font=("Arial", 11),
+                text_color="#34495e",
+                anchor="w"
+            )
+            label_field.pack(side="left")
+            label_value.pack(side="left", fill="x", expand=True)
+
+            rows.append((field, value))
+
+        # PDF Button section
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
-        button_frame.pack(pady=15)
+        button_frame.pack(pady=(10, 15))
 
-        # Rounded CTkButton
         pdf_button = ctk.CTkButton(
             master=button_frame,
             text="Print to PDF",
             command=lambda: self.export_booking_to_pdf(rows),
-            fg_color="#2c3e50",       # Background color
-            text_color="white",       # Text color
-            corner_radius=20,         # Roundness
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
             font=("Arial", 12, "bold"),
-            width=140,
-            height=30
+            width=150,
+            height=32
         )
-        pdf_button.pack(padx=10)
+        pdf_button.pack()
+
+
 
 
 
