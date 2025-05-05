@@ -52,7 +52,7 @@ class BookingSchemaResponse(BaseModel):
     phone_number: str
     status: Optional[str] = "reserved"
     payment_status: Optional[str] = "pending"
-    number_of_days: int
+    number_of_days: Optional[int] = None  # ✅ supported and computed
     booking_cost: Optional[float] = None
     is_checked_out: Optional[bool] = False
     cancellation_reason: Optional[str] = None

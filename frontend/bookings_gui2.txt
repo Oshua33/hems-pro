@@ -36,8 +36,13 @@ from tkinter import filedialog
 
 
 
+
+
+
 # Global hotel name
 HOTEL_NAME = "Destone Hotel & Suite"
+
+
 
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text, command, radius=12, padding=5, 
@@ -527,8 +532,6 @@ class BookingManagement:
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Booking Fields Layout
-
-        
         self.entries = {}  # Store entry widgets
 
         # Combo box values
@@ -539,48 +542,28 @@ class BookingManagement:
 
         # Form Grid Layout
         form_data = [
-            ("Room Number", ctk.CTkEntry, 0, 0), 
-            ("Guest Name", ctk.CTkEntry, 0, 2),
-            ("Identification Number", ctk.CTkEntry, 1, 0), 
-            ("Gender", ctk.CTkComboBox, 1, 2),
+            ("Room Number", ctk.CTkEntry, 0, 0), ("Guest Name", ctk.CTkEntry, 0, 2),
+            ("Identification Number", ctk.CTkEntry, 1, 0), ("Gender", ctk.CTkComboBox, 1, 2),
             ("Address", ctk.CTkEntry, 2, 0, 3),  # Span across columns
-            ("Phone Number", ctk.CTkEntry, 3, 0), 
-            ("Booking Type", ctk.CTkComboBox, 3, 2),
-            ("Arrival Date", DateEntry, 4, 0), 
-            ("Departure Date", DateEntry, 4, 2),
-            ("Vehicle No", ctk.CTkEntry, 5, 0), 
-            ("Attachment", ctk.CTkEntry, 5, 2),
+            ("Phone Number", ctk.CTkEntry, 3, 0), ("Booking Type", ctk.CTkComboBox, 3, 2),
+            ("Arrival Date", DateEntry, 4, 0), ("Departure Date", DateEntry, 4, 2),
         ]
 
         for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
 
+            # Create input fields
             if field_type == ctk.CTkComboBox:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
                                         font=("Helvetica", 12), width=200)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue',
-                                foreground='white', borderwidth=2)
+                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue', foreground='white', borderwidth=2)
             else:
-                entry = field_type(frame, font=("Helvetica", 12),
-                                width=22 if label_text != "Address" else 50)
+                entry = field_type(frame, font=("Helvetica", 12), width=22 if label_text != "Address" else 50)
 
             entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="ew")
-            self.entries[label_text] = entry
-
-        # Define file picker function and bind it
-        def browse_file(event=None):
-            file_path = filedialog.askopenfilename()
-            if file_path:
-                self.attachment_full_path = file_path  # Store full path for later upload
-                attachment_entry.configure(state="normal")
-                attachment_entry.delete(0, "end")
-                attachment_entry.insert(0, os.path.basename(file_path))  # Show only filename
-                attachment_entry.configure(state="readonly")
-
-        attachment_entry = self.entries["Attachment"]
-        attachment_entry.bind("<1>", browse_file)
+            self.entries[label_text] = entry  # Store entry
 
         # Submit Button
         submit_btn = ctk.CTkButton(
@@ -595,69 +578,73 @@ class BookingManagement:
             width=450,
             height=40
         )
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
+        submit_btn.grid(row=5, column=0, columnspan=4, pady=25, padx=30, sticky="ew")  # Center button
 
-    
 
-    
 
     def submit_booking(self, create_window):
+        """Collects form data and sends a request to create a booking, then closes the pop-up."""
         try:
-            url = "http://127.0.0.1:8000/bookings/create/"
-            headers = {"Authorization": f"Bearer {self.token}"}  # Don't set Content-Type
+            created_by = self.username
 
-            # Collect form data
-            data = {
+            # Ensure entries dictionary exists
+            if not hasattr(self, "entries"):
+                CTkMessagebox(title="Error", message="Entry fields are not initialized properly.", icon="cancel")
+                return
+
+            # Extract data from form
+            booking_data = {
                 "room_number": self.entries["Room Number"].get(),
                 "guest_name": self.entries["Guest Name"].get(),
                 "gender": self.entries["Gender"].get(),
                 "identification_number": self.entries["Identification Number"].get(),
                 "address": self.entries["Address"].get(),
+                "phone_number": self.entries["Phone Number"].get(),
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
                 "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
                 "booking_type": self.entries["Booking Type"].get(),
-                "phone_number": self.entries["Phone Number"].get(),
-                "vehicle_no": self.entries["Vehicle No"].get() or None,
-                "attachment": self.entries["Attachment"].get() or None,
+                "created_by": created_by,
             }
 
-            # Validate required fields
-            required_fields = ["room_number", "guest_name", "gender", "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
-            missing = [k for k in required_fields if not data[k]]
-            if missing:
-                messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
+            # Check for empty fields
+            if not all(booking_data.values()):
+                CTkMessagebox(title="Missing Fields", message="Please fill in all required fields before submitting.", icon="warning")
                 return
 
-            # File handling
-            files = {}
-            if hasattr(self, 'attachment_full_path') and self.attachment_full_path:
-                try:
-                    files["attachment"] = (
-                        os.path.basename(self.attachment_full_path),
-                        open(self.attachment_full_path, "rb")
-                    )
-                except FileNotFoundError:
-                    messagebox.showerror("File Error", "Attachment file not found.")
-                    return
+            api_url = "http://127.0.0.1:8000/bookings/create/"
+            headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
-            # Send the request with form data and optional file
-            response = requests.post(url, data=data, files=files, headers=headers)
+            # Send POST request
+            response = requests.post(api_url, json=booking_data, headers=headers)
 
-            if files:
-                files["attachment"][1].close()  # Close file after upload
-
-            # Check response
             if response.status_code == 200:
-                messagebox.showinfo("Success", "Booking created successfully.")
-                create_window.destroy()
+                response_data = response.json()
+                booking_id = response_data.get("booking_details", {}).get("id")
+
+                if booking_id:
+                    create_window.destroy()  # Close pop-up window
+                    CTkMessagebox(
+                        title="Success",
+                        message=f"Booking created successfully!\nBooking ID: {booking_id}",
+                        icon="check"
+                    )
+
+                    # Reset form if method exists
+                    if hasattr(self, "reset_booking_form"):
+                        self.reset_booking_form()
+
+                else:
+                    CTkMessagebox(title="Error", message="Booking ID missing in response.", icon="cancel")
+
             else:
-                messagebox.showerror("Error", f"Failed to create booking:\n{response.text}")
+                error_message = response.json().get("detail", "Booking failed.")
+                CTkMessagebox(title="Error", message=error_message, icon="warning")
+
+        except KeyError as e:
+            CTkMessagebox(title="Error", message=f"Missing entry field: {e}", icon="warning")
 
         except requests.exceptions.RequestException as e:
-            messagebox.showerror("Request Error", str(e))
-        except Exception as e:
-            messagebox.showerror("Unexpected Error", str(e))
-
+            CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="warning")
 
 
 
@@ -892,77 +879,91 @@ class BookingManagement:
 
         
 
-    def fetch_bookings(self, start_date_entry, end_date_entry):
-        """Fetch bookings from the API and populate the table, while calculating total booking cost."""
-        api_url ="http://127.0.0.1:8000/bookings/list"  # Ensure correct endpoint
-        params = {
-            "start_date": start_date_entry.get_date().strftime("%Y-%m-%d"),
-            "end_date": end_date_entry.get_date().strftime("%Y-%m-%d"),
-        }
-        headers = {"Authorization": f"Bearer {self.token}"}
-
+    def submit_booking(self, create_window):
+        """Collects form data and sends a request to create a booking, then closes the pop-up."""
         try:
-            response = requests.get(api_url, params=params, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                # print("API Response:", data)  # Debugging output
+            created_by = self.username
 
-                if isinstance(data, dict) and "bookings" in data:
-                    bookings = data["bookings"]
-                    total_booking_cost = data.get("total_booking_cost", 0)  # Get total cost from API
-                else:
-                    messagebox.showerror("Error", "Unexpected API response format")
-                    return
+            if not hasattr(self, "entries"):
+                CTkMessagebox(title="Error", message="Form not initialized properly.", icon="cancel")
+                return
 
-                # Check if bookings list is empty
-                if not bookings:
-                    self.total_booking_cost_label.config(text="Total Booking Cost: 0.00")  # Reset label
-                    messagebox.showinfo("No Results", "No bookings found for the selected filters.")
-                    return
+            # Get field values safely
+            room_number = self.entries.get("Room Number").get()
+            guest_name = self.entries.get("Guest Name").get()
+            gender = self.entries.get("Gender").get()
+            identification_number = self.entries.get("Identification Number").get()
+            address = self.entries.get("Address").get()
+            phone_number = self.entries.get("Phone Number").get()
+            booking_type = self.entries.get("Booking Type").get()
+            arrival_date = self.entries.get("Arrival Date").get_date().strftime("%Y-%m-%d")
+            departure_date = self.entries.get("Departure Date").get_date().strftime("%Y-%m-%d")
+            vehicle_no = self.entries.get("Vehicle No").get()
+            attachment = self.entries.get("Attachment").get()
 
-                self.tree.delete(*self.tree.get_children())  # Clear table
+            # Build the data dictionary
+            booking_data = {
+                "room_number": room_number,
+                "guest_name": guest_name,
+                "gender": gender,
+                "identification_number": identification_number,
+                "address": address,
+                "phone_number": phone_number,
+                "arrival_date": arrival_date,
+                "departure_date": departure_date,
+                "booking_type": booking_type,
+                "created_by": created_by,
+                "vehicle_no": vehicle_no,
+                "attachment": attachment,
+            }
 
-                for booking in bookings:
-                    self.tree.insert("", "end", values=(
-                        booking.get("id", ""),
-                        booking.get("room_number", ""),
-                        booking.get("guest_name", ""),
-                        booking.get("gender", ""),
-                        f"{float(booking.get('booking_cost', 0)) :,.2f}",
-                        booking.get("arrival_date", ""),
-                        booking.get("departure_date", ""),
-                        booking.get("status", ""),
-                        booking.get("number_of_days", ""),
-                        booking.get("booking_type", ""),
-                        booking.get("phone_number", ""),
-                        booking.get("booking_date", ""),
-                        booking.get("payment_status", ""), 
-                        booking.get("identification_number", ""),  
-                        booking.get("address", ""),                 
-                        booking.get("created_by", ""),
-                        booking.get("vehicle_no", ""),
-                        booking.get("attachment", ""),
+            # Print the data to verify
+            print("Booking data:", booking_data)
 
-                    ))
-
-                # Apply grid effect after inserting data
-                self.apply_grid_effect()
-
-                # Display total booking cost
-                self.total_booking_cost_label.config(
-                    text=f"Total Booking Cost: {total_booking_cost:,.2f}"
+            # Validate: check for empty fields
+            missing_fields = [k for k, v in booking_data.items() if not v]
+            if missing_fields:
+                CTkMessagebox(
+                    title="Missing Fields",
+                    message=f"The following fields are empty: {', '.join(missing_fields)}",
+                    icon="warning"
                 )
-            
+                return
+
+            # Send to API
+            api_url = "http://127.0.0.1:8000/bookings/create/"
+            headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+
+            response = requests.post(api_url, json=booking_data, headers=headers)
+
+            if response.status_code == 200:
+                response_data = response.json()
+                booking_id = response_data.get("booking_details", {}).get("id")
+                create_window.destroy()
+
+                if booking_id:
+                    CTkMessagebox(
+                        title="Success",
+                        message=f"Booking created successfully!\nBooking ID: {booking_id}",
+                        icon="check"
+                    )
+                    if hasattr(self, "reset_booking_form"):
+                        self.reset_booking_form()
+                else:
+                    CTkMessagebox(title="Error", message="No booking ID returned.", icon="cancel")
+
             else:
-                messagebox.showerror("Error", response.json().get("detail", "Failed to retrieve bookings."))
+                create_window.destroy()
+                CTkMessagebox(title="Error", message=response.json().get("detail", "Failed to create booking."), icon="warning")
 
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Error", f"Request failed: {e}")
+        except Exception as e:
+            create_window.destroy()
+            CTkMessagebox(title="Error", message=f"Exception: {e}", icon="warning")
 
 
-    def clear_right_frame(self):
-        for widget in self.right_frame.winfo_children():
-            widget.pack_forget()
+        def clear_right_frame(self):
+            for widget in self.right_frame.winfo_children():
+                widget.pack_forget()
 
     
     
@@ -1019,7 +1020,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
 
 
         # ✅ Prevent recreation of table on every call
@@ -1105,9 +1106,6 @@ class BookingManagement:
                                 booking.get("identification_number", ""),  
                                 booking.get("address", ""),                               
                                 booking.get("created_by", ""),
-                                booking.get("vehicle_no", ""),
-                                booking.get("attachment", ""),
-
                             ), tags=(tag,))
 
                         # Apply grid effect after inserting data
@@ -1159,7 +1157,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
         
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
@@ -1214,9 +1212,6 @@ class BookingManagement:
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                               
                         booking.get("created_by", ""),
-                        booking.get("vehicle_no", ""),
-                        booking.get("attachment", ""),
-
 
                        
                     ))
@@ -1255,7 +1250,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
         
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
 
         if hasattr(self, "tree"):
             self.tree.destroy()
@@ -1316,9 +1311,6 @@ class BookingManagement:
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                                                   
                         booking.get("created_by", ""),
-                        booking.get("vehicle_no", ""),
-                        booking.get("attachment", ""),
-
                     ))
 
                  # Apply grid effect after inserting data
@@ -1378,7 +1370,7 @@ class BookingManagement:
 
         # Define table columns
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days",
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by", "Vehicle No", "Attachment")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -1469,9 +1461,6 @@ class BookingManagement:
                             booking.get("identification_number", ""),  
                             booking.get("address", ""),                                                   
                             booking.get("created_by", ""),
-                            booking.get("vehicle_no", ""),
-                            booking.get("attachment", ""),
-
 
                             
                         ))
@@ -1513,7 +1502,7 @@ class BookingManagement:
         # Create a new pop-up window
         update_window = ctk.CTkToplevel(self.root)
         update_window.title("Update Booking")
-        update_window.geometry("650x430")  # Match create_booking window size
+        update_window.geometry("650x400")  # Match create_booking window size
         update_window.resizable(False, False)
         update_window.configure(fg_color="#f5f5f5")
 
@@ -1522,7 +1511,7 @@ class BookingManagement:
         screen_height = update_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        update_window.geometry(f"650x430+{x_coordinate}+{y_coordinate}")
+        update_window.geometry(f"650x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         update_window.transient(self.root)
@@ -1547,61 +1536,33 @@ class BookingManagement:
             "Booking Type": ["checked-in", "reservation", "complimentary"]
         }
 
-        # --- Update Booking Form Grid Layout (Styled to match Create Booking) ---
+        # Form Grid Layout
         form_data = [
-            ("Booking ID", ctk.CTkEntry, -1, 0),  # Extra row for Update only
-            ("Room Number", ctk.CTkEntry, 0, 0), 
-            ("Guest Name", ctk.CTkEntry, 0, 2),
-            ("Identification Number", ctk.CTkEntry, 1, 0), 
-            ("Gender", ctk.CTkComboBox, 1, 2),
-            ("Address", ctk.CTkEntry, 2, 0, 3),  # Full row (colspan 3)
-            ("Phone Number", ctk.CTkEntry, 3, 0), 
-            ("Booking Type", ctk.CTkComboBox, 3, 2),
-            ("Arrival Date", DateEntry, 4, 0), 
-            ("Departure Date", DateEntry, 4, 2),
-            ("Vehicle No", ctk.CTkEntry, 5, 0), 
-            ("Attachment", ctk.CTkEntry, 5, 2),
+            ("Booking ID", ctk.CTkEntry, 0, 0),
+            ("Room Number", ctk.CTkEntry, 1, 0), ("Guest Name", ctk.CTkEntry, 1, 2),
+            ("Identification Number", ctk.CTkEntry, 2, 0), ("Gender", ctk.CTkComboBox, 2, 2),
+            ("Address", ctk.CTkEntry, 3, 0, 3),  # Span across columns
+            ("Phone Number", ctk.CTkEntry, 4, 0), ("Booking Type", ctk.CTkComboBox, 4, 2),
+            ("Arrival Date", DateEntry, 5, 0), ("Departure Date", DateEntry, 5, 2),
         ]
 
-        # Adjust row indexing to shift all rows if Booking ID is included
-        adjusted_form_data = []
-        for label_text, field_type, row, col, *rest in form_data:
-            colspan = rest[0] if rest else 1
-            adjusted_row = row + 1 if row >= 0 else 0  # Shift for Booking ID at top
-            adjusted_form_data.append((label_text, field_type, adjusted_row, col, colspan))
-
-        # Create form fields
-        for label_text, field_type, row, col, colspan in adjusted_form_data:
+        for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
 
+            # Create input fields
             if field_type == ctk.CTkComboBox:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
                                         font=("Helvetica", 12), width=200)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue',
-                                foreground='white', borderwidth=2)
+                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue', foreground='white', borderwidth=2)
             else:
-                entry = field_type(frame, font=("Helvetica", 12),
-                                width=22 if label_text != "Address" else 50)
+                entry = field_type(frame, font=("Helvetica", 12), width=22 if label_text != "Address" else 50)
 
             entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="ew")
-            self.entries[label_text] = entry
+            self.entries[label_text] = entry  # Store entry
 
-        # File Picker (same as Create Booking)
-        def browse_file(event=None):
-            file_path = filedialog.askopenfilename()
-            if file_path:
-                self.attachment_full_path = file_path
-                attachment_entry.configure(state="normal")
-                attachment_entry.delete(0, "end")
-                attachment_entry.insert(0, os.path.basename(file_path))
-                attachment_entry.configure(state="readonly")
-
-        attachment_entry = self.entries["Attachment"]
-        attachment_entry.bind("<1>", browse_file)
-
-        # Submit Button (styled to match Create Booking)
+        # Submit Button
         submit_btn = ctk.CTkButton(
             frame,
             text="Submit Update",
@@ -1614,9 +1575,8 @@ class BookingManagement:
             width=450,
             height=40
         )
+        submit_btn.grid(row=6, column=0, columnspan=4, pady=25, padx=30, sticky="ew")  # Center button
 
-        # Place Submit button at next row after form fields
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
 
 
 
@@ -1634,8 +1594,6 @@ class BookingManagement:
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
                 "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
                 "booking_type": self.entries["Booking Type"].get(),
-                "vehicle_no": self.entries["Vehicle No"].get() or None,
-                "attachment": self.entries["Attachment"].get() or None,
             }
 
             # Validate required fields

@@ -28,39 +28,48 @@ logger.add("app.log", rotation="500 MB", level="DEBUG")
 
 @router.post("/create/")
 def create_booking(
-    booking_request: schemas.BookingSchema = Depends(),
+    room_number: str = Form(...),
+    guest_name: str = Form(...),
+    gender: str = Form(...),
+    identification_number: Optional[str] = Form(None),
+    address: str = Form(...),
+    arrival_date: date = Form(...),
+    departure_date: date = Form(...),
+    booking_type: str = Form(...),
+    phone_number: str = Form(...),
+    vehicle_no: Optional[str] = Form(None),
+    attachment: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
-    attachment: Optional[UploadFile] = File(None),
 ):
-    room_number_input = booking_request.room_number.strip()
-    normalized_room_number = room_number_input.lower()
     today = date.today()
 
     # Validate dates
-    if booking_request.departure_date <= booking_request.arrival_date:
+    if departure_date <= arrival_date:
         raise HTTPException(
             status_code=400,
             detail="Departure date must be later than the arrival date.",
         )
 
-    if booking_request.booking_type == "checked-in" and booking_request.arrival_date != today:
+    if booking_type == "checked-in" and arrival_date != today:
         raise HTTPException(
             status_code=400,
             detail="Checked-in bookings can only be created for today's date.",
         )
 
-    if booking_request.booking_type == "reservation" and booking_request.arrival_date <= today:
+    if booking_type == "reservation" and arrival_date <= today:
         raise HTTPException(
             status_code=400,
             detail="Reservation bookings must be scheduled for a future date.",
         )
 
-    if booking_request.booking_type == "complimentary" and booking_request.arrival_date != today:
+    if booking_type == "complimentary" and arrival_date != today:
         raise HTTPException(
             status_code=400,
             detail="Complimentary bookings can only be made for today's date.",
         )
+
+    normalized_room_number = room_number.strip().lower()
 
     room = (
         db.query(room_models.Room)
@@ -68,18 +77,16 @@ def create_booking(
         .first()
     )
     if not room:
-        raise HTTPException(status_code=404, detail=f"Room {room_number_input} not found.")
+        raise HTTPException(status_code=404, detail=f"Room {room_number} not found.")
 
     overlapping_booking = (
         db.query(booking_models.Booking)
         .filter(
             func.lower(booking_models.Booking.room_number) == normalized_room_number,
             booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
-            or_(
-                and_(
-                    booking_models.Booking.arrival_date < booking_request.departure_date,
-                    booking_models.Booking.departure_date > booking_request.arrival_date,
-                )
+            and_(
+                booking_models.Booking.arrival_date < departure_date,
+                booking_models.Booking.departure_date > arrival_date,
             ),
         )
         .first()
@@ -88,21 +95,22 @@ def create_booking(
     if overlapping_booking:
         raise HTTPException(
             status_code=400,
-            detail=f"Room {room_number_input} is already booked for the requested dates."
+            detail=f"Room {room_number} is already booked for the requested dates. "
                    f"Check Booking ID: {overlapping_booking.id}",
         )
 
-    # Booking cost logic
-    if booking_request.booking_type == "complimentary":
+    number_of_days = (departure_date - arrival_date).days
+
+    if booking_type == "complimentary":
         booking_cost = 0
         payment_status = "complimentary"
         booking_status = "checked-in"
     else:
-        booking_cost = room.amount * booking_request.number_of_days
+        booking_cost = room.amount * number_of_days
         payment_status = "pending"
-        booking_status = "reserved" if booking_request.booking_type == "reservation" else "checked-in"
+        booking_status = "reserved" if booking_type == "reservation" else "checked-in"
 
-    # Save the attachment file if present
+    # Handle attachment
     attachment_path = None
     if attachment:
         upload_dir = "uploads/"
@@ -114,24 +122,25 @@ def create_booking(
     try:
         new_booking = booking_models.Booking(
             room_number=room.room_number,
-            guest_name=booking_request.guest_name,
-            gender=booking_request.gender,
-            address=booking_request.address,
-            identification_number=booking_request.identification_number,
-            arrival_date=booking_request.arrival_date,
-            departure_date=booking_request.departure_date,
-            booking_type=booking_request.booking_type,
-            phone_number=booking_request.phone_number,
+            guest_name=guest_name,
+            gender=gender,
+            identification_number=identification_number,
+            address=address,
+            arrival_date=arrival_date,
+            departure_date=departure_date,
+            booking_type=booking_type,
+            phone_number=phone_number,
+            number_of_days=number_of_days,
             status=booking_status,
-            room_price=room.amount if booking_request.booking_type != "complimentary" else 0,
+            room_price=room.amount if booking_type != "complimentary" else 0,
             booking_cost=booking_cost,
             payment_status=payment_status,
             created_by=current_user.username,
-            vehicle_no=booking_request.vehicle_no,
-            attachment=attachment_path
+            vehicle_no=vehicle_no,
+            attachment=attachment_path,
         )
-        db.add(new_booking)
 
+        db.add(new_booking)
         room.status = booking_status
         db.commit()
         db.refresh(new_booking)
@@ -157,7 +166,7 @@ def create_booking(
                 "payment_status": new_booking.payment_status,
                 "created_by": new_booking.created_by,
                 "vehicle_no": new_booking.vehicle_no,
-                "attachment": new_booking.attachment
+                "attachment": new_booking.attachment,
             },
         }
     except Exception as e:
@@ -301,7 +310,7 @@ def list_bookings_by_status(
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
                 "vehicle_no": booking.vehicle_no,
-                "attachment": booking.attachment
+                #"attachment": booking.attachment
             }
             for booking in bookings
         ]
@@ -362,7 +371,7 @@ def search_guest_name(
                 "booking_cost":booking.booking_cost,
                 "created_by": booking.created_by,
                 "vehicle_no": booking.vehicle_no,
-                "attachment": booking.attachment
+                #"attachment": booking.attachment
             })
 
         return {
@@ -413,7 +422,7 @@ def list_booking_by_id(
         "booking_cost": booking.booking_cost,
         "created_by": booking.created_by,
         "vehicle_no": booking.vehicle_no,
-        "attachment": booking.attachment
+        #"attachment": booking.attachment
     }
 
     return {"message": f"Booking details for ID {booking_id} retrieved successfully.", "booking": formatted_booking}
@@ -491,7 +500,7 @@ def list_bookings_by_room(
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
                 "vehicle_no": booking.vehicle_no,
-                "attachment": booking.attachment
+                #"attachment": booking.attachment
             }
             for booking in bookings
         ]

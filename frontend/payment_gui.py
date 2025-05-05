@@ -20,6 +20,28 @@ import requests
 import pytz
 from datetime import datetime
 
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import tempfile
+import os
+import platform
+
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+import webbrowser
+from tkinter import filedialog
+
+
+
+# Global hotel name
+HOTEL_NAME = "Destone Hotel & Suite"
+
+
 # Set Africa/Lagos as default timezone in your Python application
 os.environ["TZ"] = "Africa/Lagos"
 
@@ -676,7 +698,7 @@ class PaymentManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("Payment ID", "Guest Name", "Room Number", "Booking Cost", "Amount Paid", "Discount Allowed",
-                "Balance Due", "Payment Method", "Payment Date", "Status", "Void Date", "Booking ID", "Created_by")
+                "Balance Due", "Payment Method", "Payment Date", "Status",  "Booking ID", "Created_by", "Void Date")
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -710,6 +732,153 @@ class PaymentManagement:
 
         self.total_label = tk.Label(breakdown_frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_label.grid(row=0, column=3, padx=10)
+
+
+        # View button using CustomTkinter (inside list Payment)
+        view_button = ctk.CTkButton(frame, text="View Payment", corner_radius=20, command=self.view_selected_payment)
+        view_button.pack(pady=10)
+
+    def view_selected_payment(self):
+        selected_item = self.tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No selection", "Please select a payment to view.")
+            return
+
+        payment_data = self.tree.item(selected_item, "values")
+        field_names = (
+            "Payment ID", "Guest Name", "Room Number", "Booking Cost", "Amount Paid", "Discount Allowed", "Balance Due",
+            "Payment Method", "Payment Date", "Status", "Booking ID",  "Created By"
+        )
+
+        # Popup Window
+        view_window = ctk.CTkToplevel(self.root)
+        view_window.title("Payment Details")
+        view_window.geometry("500x550+147+40")
+        view_window.configure(fg_color="white")
+
+        # Hotel Name Header
+        hotel_label = ctk.CTkLabel(
+            view_window,
+            text=HOTEL_NAME,
+            font=("Arial", 17, "bold"),
+            text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(3, 0))
+
+        # Title
+        title_label = ctk.CTkLabel(
+            view_window,
+            text="Payment Details Report",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(5, 2))
+
+        # Card Frame
+        content_frame = ctk.CTkFrame(
+            master=view_window,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=5)
+
+        rows = []
+        for i, (field, value) in enumerate(zip(field_names, payment_data)):
+            label_field = ctk.CTkLabel(
+                content_frame,
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
+                text_color="#2c3e50",
+                anchor="w"
+            )
+            label_field.grid(row=i, column=0, sticky="w", padx=(10, 5), pady=3)
+
+            label_value = ctk.CTkLabel(
+                content_frame,
+                text=str(value),
+                font=("Arial", 12),
+                text_color="#34495e",
+                anchor="w"
+            )
+            label_value.grid(row=i, column=1, sticky="w", padx=(0, 10), pady=3)
+
+            rows.append((field, value))
+
+        # PDF Export Button
+        button_frame = ctk.CTkFrame(view_window, fg_color="white")
+        button_frame.pack(pady=(10, 15))
+
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print to PDF",
+            command=lambda: self.export_payment_to_pdf(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=150,
+            height=32
+        )
+        pdf_button.pack()
+
+
+    def export_payment_to_pdf(self, data):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+                filename = temp.name
+
+            doc = SimpleDocTemplate(filename, pagesize=A4,
+                                    rightMargin=40, leftMargin=40, topMargin=25, bottomMargin=25)
+
+            styles = getSampleStyleSheet()
+            elements = []
+
+            # Hotel Name Header
+            hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
+            elements.append(hotel_name)
+            elements.append(Spacer(1, 3))
+
+            # Title
+            title = Paragraph("<para alignment='center'>Payment Details Report</para>", styles['Heading2'])
+            elements.append(title)
+            elements.append(Spacer(1, 3))
+
+            # Payment Date extraction
+            payment_date = ""
+            for field, value in data:
+                if field.lower() == "payment date":
+                    payment_date = str(value)
+                    break
+
+            if payment_date:
+                date_paragraph = Paragraph(f"<para alignment='center'><b>Payment Date:</b> {payment_date}</para>", styles['Normal'])
+                elements.append(date_paragraph)
+                elements.append(Spacer(1, 5))
+
+            # Table of fields
+            table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
+            table = Table(table_data, colWidths=[120, 330])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 20))
+
+            # Signature Line
+            signature_table = Table([
+                ["Cashier Signature ________________________"]
+            ], colWidths=[260, 260])
+            elements.append(signature_table)
+
+            doc.build(elements)
+
+            webbrowser.open_new(f'file://{os.path.abspath(filename)}')
+        
 
 
     def fetch_payments(self):
@@ -763,9 +932,10 @@ class PaymentManagement:
                         payment.get("payment_method", ""),
                         payment.get("payment_date", ""),
                         payment.get("status", ""),
-                        payment.get("void_date", ""),
+                        
                         payment.get("booking_id", ""),
                         payment.get("created_by", "N/A"),
+                        payment.get("void_date", ""),
                     ))
 
                 # Apply the effect to the correct treeview (payment_tree)
