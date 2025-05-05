@@ -34,6 +34,9 @@ from reportlab.lib.enums import TA_CENTER
 import webbrowser
 
 
+# Global hotel name
+HOTEL_NAME = "Destone Hotel & Suite"
+
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text, command, radius=12, padding=5, 
                  color="#34495E", hover_color="#1ABC9C", text_color="white", 
@@ -762,43 +765,27 @@ class BookingManagement:
     
 
     def export_booking_to_pdf(self, data):
-        filename = tempfile.mktemp(suffix=".pdf")
+        # Use NamedTemporaryFile for safer temp file handling
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            filename = temp.name
 
         doc = SimpleDocTemplate(filename, pagesize=A4,
-                                rightMargin=40, leftMargin=40, topMargin=60, bottomMargin=40)
+                                rightMargin=40, leftMargin=40, topMargin=25, bottomMargin=25)
 
         styles = getSampleStyleSheet()
-
-        # Custom centered styles
-        centered_title_style = ParagraphStyle(
-            name="CenteredTitle",
-            parent=styles["Title"],
-            alignment=TA_CENTER,
-            fontSize=18,
-            spaceAfter=10
-        )
-
-        centered_heading_style = ParagraphStyle(
-            name="CenteredHeading",
-            parent=styles["Heading2"],
-            alignment=TA_CENTER,
-            fontSize=14,
-            spaceAfter=10
-        )
-
-        normal_style = styles['Normal']
-
         elements = []
 
-        # Hotel name (centered)
-        hotel_name = Paragraph("<b>Destone Hotel & Suite</b>", centered_title_style)
+        # Hotel name (centered and bold)
+        hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
         elements.append(hotel_name)
+        elements.append(Spacer(1, 3))
 
-        # Report Title (centered)
-        report_title = Paragraph("Booking Details Report", centered_heading_style)
-        elements.append(report_title)
+        # Booking report title (centered)
+        title = Paragraph("<para alignment='center'>Booking Details Report</para>", styles['Heading2'])
+        elements.append(title)
+        elements.append(Spacer(1, 3))
 
-        # Extract and show booking date
+        # Extract booking date if present
         booking_date = ""
         for field, value in data:
             if field.lower() == "booking date":
@@ -806,31 +793,36 @@ class BookingManagement:
                 break
 
         if booking_date:
-            date_para = Paragraph(f"<b>Booking Date:</b> {booking_date}", normal_style)
-            elements.append(date_para)
-            elements.append(Spacer(1, 15))
+            date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
+            elements.append(date_paragraph)
+            elements.append(Spacer(1, 5))
 
-        # Booking details table
-        table_data = [[Paragraph(f"<b>{field}</b>", normal_style), Paragraph(str(value), normal_style)] for field, value in data]
-        table = Table(table_data, colWidths=[150, 300])
+        # Format data into table
+        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
+
+        table = Table(table_data, colWidths=[120, 330])
         table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ]))
-        elements.append(table)
 
-        # Signature section
-        elements.append(Spacer(1, 30))
+        elements.append(table)
+        elements.append(Spacer(1, 20))
+
+        # Add signature lines
         signature_table = Table([
-            ["Guest Signature: ____________________", "Receptionist Signature: ____________________"]
-        ], colWidths=[250, 250])
+            ["Guest Signature ________________________", "Receptionist Signature ____________________"]
+        ], colWidths=[260, 260])
         elements.append(signature_table)
 
-        # Build and open the PDF
+        # Build PDF
         doc.build(elements)
-        webbrowser.open_new(r'file://%s' % filename)
+
+        # Open PDF in default viewer
+        webbrowser.open_new(f'file://{os.path.abspath(filename)}')
 
 
         
