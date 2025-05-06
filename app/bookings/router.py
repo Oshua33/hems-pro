@@ -546,92 +546,146 @@ def list_bookings_by_room(
 
 @router.put("/update/")
 def update_booking(
-    booking_id: int,
-    updated_data: schemas.BookingSchema,
+    booking_id: int = Form(...),
+    room_number: str = Form(...),
+    guest_name: str = Form(...),
+    gender: str = Form(...),
+    mode_of_identification: str = Form(...),
+    identification_number: Optional[str] = Form(None),
+    address: str = Form(...),
+    arrival_date: date = Form(...),
+    departure_date: date = Form(...),
+    booking_type: str = Form(...),
+    phone_number: str = Form(...),
+    vehicle_no: Optional[str] = Form(None),
+    attachment: Optional[Union[UploadFile, str]] = File(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    """
-    Update booking details (reservation or check-in) by booking ID.
-    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
     try:
+        today = date.today()
+
+        if isinstance(attachment, str) and attachment == "":
+            attachment = None
+
         booking = db.query(booking_models.Booking).filter(booking_models.Booking.id == booking_id).first()
         if not booking:
             raise HTTPException(status_code=404, detail=f"Booking with ID {booking_id} not found.")
 
-        room = None  # Variable to store the room instance
+        # Validate date logic
+        if departure_date <= arrival_date:
+            raise HTTPException(status_code=400, detail="Departure date must be after arrival date.")
+        if booking_type == "checked-in" and arrival_date != today:
+            raise HTTPException(status_code=400, detail="Checked-in bookings must be for today.")
+        if booking_type == "reservation" and arrival_date <= today:
+            raise HTTPException(status_code=400, detail="Reservations must be for a future date.")
+        if booking_type == "complimentary" and arrival_date != today:
+            raise HTTPException(status_code=400, detail="Complimentary bookings are only allowed for today.")
 
-        # Step 1: Handle Room Number Update
-        if updated_data.room_number:
-            room_number_input = updated_data.room_number.strip()
-            normalized_room_number = room_number_input.lower()
-
-            # Fetch the new room
-            room = (
-                db.query(room_models.Room)
-                .filter(func.lower(room_models.Room.room_number) == normalized_room_number)
-                .first()
-            )
-            if not room:
-                raise HTTPException(status_code=404, detail=f"Room {room_number_input} not found.")
-
-            # Check for conflicting bookings
-            overlapping_booking = db.query(booking_models.Booking).filter(
-                func.lower(booking_models.Booking.room_number) == normalized_room_number,
-                booking_models.Booking.id != booking_id,  # Exclude the current booking
-                booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
-                or_(
-                    and_(
-                        booking_models.Booking.arrival_date < updated_data.departure_date,
-                        booking_models.Booking.departure_date > updated_data.arrival_date,
-                    )
-                ),
-            ).first()
-
-            if overlapping_booking:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Room {room_number_input} is already booked for the requested dates.",
-                )
-
-            # Update room number with correct case
-            updated_data.room_number = room.room_number
-
-        # Step 2: Fetch Existing Room if Room Number is NOT Changed
+        normalized_room_number = room_number.strip().lower()
+        room = (
+            db.query(room_models.Room)
+            .filter(func.lower(room_models.Room.room_number) == normalized_room_number)
+            .first()
+        )
         if not room:
-            room = db.query(room_models.Room).filter(room_models.Room.room_number == booking.room_number).first()
-            if not room:
-                raise HTTPException(status_code=404, detail=f"Room {booking.room_number} not found.")
+            raise HTTPException(status_code=404, detail=f"Room {room_number} not found.")
 
-        # Step 3: Ensure Number of Days is Valid
-        number_of_days = updated_data.number_of_days if updated_data.number_of_days is not None else booking.number_of_days
-        if number_of_days is None or number_of_days <= 0:
+        overlapping_booking = (
+            db.query(booking_models.Booking)
+            .filter(
+                func.lower(booking_models.Booking.room_number) == normalized_room_number,
+                booking_models.Booking.id != booking_id,
+                booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
+                and_(
+                    booking_models.Booking.arrival_date < departure_date,
+                    booking_models.Booking.departure_date > arrival_date,
+                ),
+            )
+            .first()
+        )
+        if overlapping_booking:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Room {room_number} is already booked for the requested dates. "
+                       f"Check Booking ID: {overlapping_booking.id}",
+            )
+
+        number_of_days = (departure_date - arrival_date).days
+        if number_of_days <= 0:
             raise HTTPException(status_code=400, detail="Number of days must be greater than zero.")
 
-        # Step 4: Calculate Booking Cost
-        booking_cost = number_of_days * room.amount
+        if booking_type == "complimentary":
+            booking_cost = 0
+            payment_status = "complimentary"
+            status = "checked-in"
+        else:
+            booking_cost = room.amount * number_of_days
+            payment_status = booking.payment_status or "pending"
+            status = "reserved" if booking_type == "reservation" else "checked-in"
 
-        # Step 5: Update Booking Fields
-        for field, value in updated_data.dict(exclude_unset=True).items():
-            setattr(booking, field, value)
+        # Save attachment if provided
+        if attachment and attachment.filename != "":
+            upload_dir = "uploads/"
+            os.makedirs(upload_dir, exist_ok=True)
+            attachment_path = os.path.join(upload_dir, attachment.filename)
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
+        else:
+            attachment_path = booking.attachment  # keep existing attachment if none provided
 
-        # Ensure Booking Cost is Updated
+        # Update fields
+        booking.room_number = room.room_number
+        booking.guest_name = guest_name
+        booking.gender = gender
+        booking.mode_of_identification = mode_of_identification
+        booking.identification_number = identification_number
+        booking.address = address
+        booking.arrival_date = arrival_date
+        booking.departure_date = departure_date
+        booking.booking_type = booking_type
+        booking.phone_number = phone_number
+        booking.number_of_days = number_of_days
+        booking.status = status
+        booking.room_price = room.amount if booking_type != "complimentary" else 0
         booking.booking_cost = booking_cost
+        booking.payment_status = payment_status
+        booking.vehicle_no = vehicle_no
+        booking.attachment = attachment_path
+        booking.updated_by = current_user.username
 
         db.commit()
         db.refresh(booking)
 
-        # Step 6: Serialize Response
-        serialized_booking = schemas.BookingSchemaResponse.from_orm(booking)
-
         return {
-            "message": "Booking updated successfully.",
-            "updated_booking": serialized_booking.dict()
+            "message": f"Booking updated successfully for room {room.room_number}.",
+            "updated_booking": {
+                "id": booking.id,
+                "room_number": booking.room_number,
+                "guest_name": booking.guest_name,
+                "gender": booking.gender,
+                "address": booking.address,
+                "mode_of_identification": booking.mode_of_identification,
+                "identification_number": booking.identification_number,
+                "room_price": booking.room_price,
+                "arrival_date": booking.arrival_date,
+                "departure_date": booking.departure_date,
+                "booking_type": booking.booking_type,
+                "phone_number": booking.phone_number,
+                "number_of_days": booking.number_of_days,
+                "status": booking.status,
+                "booking_cost": booking.booking_cost,
+                "payment_status": booking.payment_status,
+                "vehicle_no": booking.vehicle_no,
+                "attachment": booking.attachment,
+            },
         }
-
     except Exception as e:
         db.rollback()
-        print(f"Error updating booking: {str(e)}")  # Debugging Output
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
     
