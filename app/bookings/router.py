@@ -12,10 +12,11 @@ from app.rooms import models as room_models  # Import room models
 from app.bookings import schemas, models as  booking_models
 from app.payments import models as payment_models
 from loguru import logger
-from fastapi import UploadFile, File, Form
 from datetime import datetime
 import os
 import shutil
+from fastapi import UploadFile, File, Form
+from typing import Optional, Union
 
 router = APIRouter()
 
@@ -38,12 +39,26 @@ def create_booking(
     departure_date: date = Form(...),
     booking_type: str = Form(...),
     phone_number: str = Form(...),
+    #attachment: Optional[UploadFile] = File(None),
     vehicle_no: Optional[str] = Form(None),
-    attachment: Optional[UploadFile] = File(None),
+    attachment: Optional[Union[UploadFile, str]] = File(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     today = date.today()
+
+    # ✅ Normalize empty string input from Swagger to None
+    if isinstance(attachment, str) and attachment == "":
+        attachment = None
+
+    # Later in the code...
+    attachment_path = None
+    if isinstance(attachment, UploadFile):
+        upload_dir = "uploads/"
+        os.makedirs(upload_dir, exist_ok=True)
+        attachment_path = os.path.join(upload_dir, attachment.filename)
+        with open(attachment_path, "wb") as buffer:
+            shutil.copyfileobj(attachment.file, buffer)
 
     # Validate dates
     if departure_date <= arrival_date:
@@ -113,12 +128,13 @@ def create_booking(
 
     # Handle attachment
     attachment_path = None
-    if attachment:
+    if attachment and attachment.filename:  # ✅ Check filename is non-empty
         upload_dir = "uploads/"
         os.makedirs(upload_dir, exist_ok=True)
         attachment_path = os.path.join(upload_dir, attachment.filename)
         with open(attachment_path, "wb") as buffer:
             shutil.copyfileobj(attachment.file, buffer)
+
 
     try:
         new_booking = booking_models.Booking(

@@ -17,7 +17,6 @@ import os
 import sys
 import pandas as pd
 from payment_gui import PaymentManagement  # Import the Payment GUI
-##
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import tempfile
@@ -33,6 +32,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 import webbrowser
 from tkinter import filedialog
+
+
 
 
 
@@ -127,6 +128,10 @@ class BookingManagement:
         x_coordinate = (screen_width // 2) - (window_width // 2)
         y_coordinate = (screen_height // 2) - (window_height // 2)
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+
+        from tkinter import filedialog
+
+    
         
         # ========== Main Layout ==========
         self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
@@ -204,7 +209,7 @@ class BookingManagement:
                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
         self.subheading_label.pack(pady=10)
 
-        
+    
 
         # Sidebar Buttons
         buttons = [
@@ -300,7 +305,15 @@ class BookingManagement:
         
 
 
-            
+    def select_attachment(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            self.attachment_full_path = file_path
+            self.attachment_label.configure(text=os.path.basename(file_path))  # Optional UI feedback
+        else:
+            self.attachment_full_path = None
+            self.attachment_label.configure(text="No file selected")
+        
              
         self.fetch_and_display_bookings()
 
@@ -534,7 +547,7 @@ class BookingManagement:
         # Combo box values
         combo_box_values = {
             "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Booking Type": ["checked-in", "reservation", "romplimentary"],
             "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
         }
 
@@ -571,6 +584,39 @@ class BookingManagement:
             "Attachment": 150
         }
 
+        # Form Grid Layout
+        form_data = [
+            ("Room Number", ctk.CTkEntry, 0, 0), 
+            ("Guest Name", ctk.CTkEntry, 0, 2),
+            ("Identification Number", ctk.CTkEntry, 1, 0), 
+            ("Mode of Identification", ctk.CTkComboBox, 1, 2),  # 👈 NEW
+            ("Gender", ctk.CTkComboBox, 2, 0),
+            ("Address", ctk.CTkEntry, 2, 2),
+            ("Phone Number", ctk.CTkEntry, 3, 0), 
+            ("Booking Type", ctk.CTkComboBox, 3, 2),
+            ("Arrival Date", DateEntry, 4, 0), 
+            ("Departure Date", DateEntry, 4, 2),
+            ("Vehicle No", ctk.CTkEntry, 5, 0), 
+            ("Attachment", ctk.CTkEntry, 5, 2),
+        ]
+
+
+        # Field-specific widths
+        field_widths = {
+            "Room Number": 50,
+            "Guest Name": 150,
+            "Identification Number": 150,
+            "Mode of Identification": 130,
+            "Gender":100,
+            "Address": 170,
+            "Phone Number": 120,
+            "Booking Type": 120,
+            "Arrival Date": 10,
+            "Departure Date": 10,
+            "Vehicle No": 120,
+            "Attachment": 150
+        }
+
         for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
@@ -581,10 +627,13 @@ class BookingManagement:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
                                         font=("Helvetica", 12), width=width)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=width, background='darkblue',
-                                foreground='white', borderwidth=2)
+                entry = DateEntry(frame, font=("Helvetica", 12), background='darkblue',
+                                foreground='white', borderwidth=2)  # Removed width
             else:
                 entry = field_type(frame, font=("Helvetica", 12), width=width)
+                if label_text == "Attachment":
+                    entry.insert(0, "Select file...")
+                    entry.configure(text_color="gray")
 
             entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
             self.entries[label_text] = entry
@@ -645,29 +694,43 @@ class BookingManagement:
 
 
             # Validate required fields
-            required_fields = ["room_number", "guest_name", "gender", "mode_of_identification","address", "arrival_date", "departure_date", "booking_type", "phone_number"]
-            missing = [k for k in required_fields if not data[k]]
+            required_fields = ["room_number", "guest_name", "gender", "mode_of_identification",
+                            "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
+
+            missing = [k for k in required_fields if not data.get(k)]
             if missing:
                 messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
                 return
+            
+    
 
-            # File handling
+            # Check if attachment_full_path is set
+            attachment_path = getattr(self, 'attachment_full_path', None)
+
             files = {}
-            if hasattr(self, 'attachment_full_path') and self.attachment_full_path:
+            file_obj = None
+
+            if attachment_path and os.path.isfile(attachment_path):
                 try:
+                    file_obj = open(attachment_path, "rb")
                     files["attachment"] = (
-                        os.path.basename(self.attachment_full_path),
-                        open(self.attachment_full_path, "rb")
+                        os.path.basename(attachment_path),
+                        file_obj,
+                        "application/octet-stream"
                     )
-                except FileNotFoundError:
-                    messagebox.showerror("File Error", "Attachment file not found.")
+                except Exception as e:
+                    messagebox.showerror("File Error", f"Attachment file error: {str(e)}")
                     return
+            else:
+                # Send empty string to match backend's expected fallback
+                files["attachment"] = ("", "", "application/octet-stream")
 
-            # Send the request with form data and optional file
-            response = requests.post(url, data=data, files=files, headers=headers)
-
-            if files:
-                files["attachment"][1].close()  # Close file after upload
+            # Proceed with POST request
+            try:
+                response = requests.post(url, data=data, files=files, headers=headers)
+            finally:
+                if file_obj:
+                    file_obj.close()
 
             # Check response
             if response.status_code == 200:
