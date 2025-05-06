@@ -547,7 +547,7 @@ class BookingManagement:
         # Combo box values
         combo_box_values = {
             "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "romplimentary"],
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
             "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
         }
 
