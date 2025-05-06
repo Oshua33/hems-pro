@@ -14,6 +14,7 @@ def get_local_time():
     return datetime.now(lagos_tz)
 
 
+
 class Booking(Base):
     __tablename__ = "bookings"
 
@@ -21,6 +22,7 @@ class Booking(Base):
     room_number = Column(String, ForeignKey("rooms.room_number", ondelete="CASCADE"), nullable=False)
     guest_name = Column(String, nullable=False)
     gender = Column(String, nullable=False)
+    mode_of_identification = Column(String, nullable=True)
     identification_number = Column(String)
     address= Column(String, nullable=False)
     room_price = Column(Float, nullable=False)

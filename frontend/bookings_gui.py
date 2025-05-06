@@ -510,7 +510,7 @@ class BookingManagement:
         screen_height = create_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        create_window.geometry(f"650x400+{x_coordinate}+{y_coordinate}")
+        create_window.geometry(f"670x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         create_window.transient(self.root)
@@ -534,7 +534,8 @@ class BookingManagement:
         # Combo box values
         combo_box_values = {
             "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"]
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
         }
 
         # Form Grid Layout
@@ -542,8 +543,9 @@ class BookingManagement:
             ("Room Number", ctk.CTkEntry, 0, 0), 
             ("Guest Name", ctk.CTkEntry, 0, 2),
             ("Identification Number", ctk.CTkEntry, 1, 0), 
-            ("Gender", ctk.CTkComboBox, 1, 2),
-            ("Address", ctk.CTkEntry, 2, 0, 3),  # Span across columns
+            ("Mode of Identification", ctk.CTkComboBox, 1, 2),  # 👈 NEW
+            ("Gender", ctk.CTkComboBox, 2, 0),
+            ("Address", ctk.CTkEntry, 2, 2),
             ("Phone Number", ctk.CTkEntry, 3, 0), 
             ("Booking Type", ctk.CTkComboBox, 3, 2),
             ("Arrival Date", DateEntry, 4, 0), 
@@ -552,22 +554,41 @@ class BookingManagement:
             ("Attachment", ctk.CTkEntry, 5, 2),
         ]
 
+
+        # Field-specific widths
+        field_widths = {
+            "Room Number": 50,
+            "Guest Name": 150,
+            "Identification Number": 150,
+            "Mode of Identification": 130,
+            "Gender":100,
+            "Address": 170,
+            "Phone Number": 120,
+            "Booking Type": 120,
+            "Arrival Date": 10,
+            "Departure Date": 10,
+            "Vehicle No": 100,
+            "Attachment": 150
+        }
+
         for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
 
+            width = field_widths.get(label_text, 20)
+
             if field_type == ctk.CTkComboBox:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
-                                        font=("Helvetica", 12), width=200)
+                                        font=("Helvetica", 12), width=width)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue',
+                entry = DateEntry(frame, font=("Helvetica", 12), width=width, background='darkblue',
                                 foreground='white', borderwidth=2)
             else:
-                entry = field_type(frame, font=("Helvetica", 12),
-                                width=22 if label_text != "Address" else 50)
+                entry = field_type(frame, font=("Helvetica", 12), width=width)
 
-            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="ew")
+            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
             self.entries[label_text] = entry
+
 
         # Define file picker function and bind it
         def browse_file(event=None):
@@ -611,6 +632,7 @@ class BookingManagement:
                 "room_number": self.entries["Room Number"].get(),
                 "guest_name": self.entries["Guest Name"].get(),
                 "gender": self.entries["Gender"].get(),
+                "mode_of_identification": self.entries["Mode of Identification"].get(),  # 👈 NEW
                 "identification_number": self.entries["Identification Number"].get(),
                 "address": self.entries["Address"].get(),
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
@@ -621,8 +643,9 @@ class BookingManagement:
                 "attachment": self.entries["Attachment"].get() or None,
             }
 
+
             # Validate required fields
-            required_fields = ["room_number", "guest_name", "gender", "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
+            required_fields = ["room_number", "guest_name", "gender", "mode_of_identification","address", "arrival_date", "departure_date", "booking_type", "phone_number"]
             missing = [k for k in required_fields if not data[k]]
             if missing:
                 messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
@@ -695,7 +718,7 @@ class BookingManagement:
 
         # Define Treeview columns
         columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification No", "Address","Created_by", "Vehicle No", "Attachment" )
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment","Created_by" )
 
         # Create a Treeview widget
         style = ttk.Style()
@@ -743,7 +766,7 @@ class BookingManagement:
         field_names = [
             "Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
             "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
-            "Payment Status", "Identification No", "Address", "Created by" , "Vehicle No", "Attachment"
+            "Payment Status", "Mode of Identification","Identification No", "Address",  "Vehicle No", "Attachment", "Created by"
         ]
 
         # Modern popup window
@@ -937,11 +960,13 @@ class BookingManagement:
                         booking.get("phone_number", ""),
                         booking.get("booking_date", ""),
                         booking.get("payment_status", ""), 
+                        booking.get("mode_of_identification", ""), 
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                 
-                        booking.get("created_by", ""),
+                        
                         booking.get("vehicle_no", ""),
                         booking.get("attachment", ""),
+                        booking.get("created_by", ""),
 
                     ))
 

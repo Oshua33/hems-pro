@@ -768,7 +768,7 @@ class PaymentManagement:
         # Title
         title_label = ctk.CTkLabel(
             view_window,
-            text="Payment Details Report",
+            text="Guest Payment Details",
             font=("Arial", 15, "bold"),
             text_color="#1e3d59"
         )
@@ -840,7 +840,7 @@ class PaymentManagement:
             elements.append(Spacer(1, 3))
 
             # Title
-            title = Paragraph("<para alignment='center'>Payment Details Report</para>", styles['Heading2'])
+            title = Paragraph("<para alignment='center'>Guest Payment Details</para>", styles['Heading2'])
             elements.append(title)
             elements.append(Spacer(1, 3))
 
