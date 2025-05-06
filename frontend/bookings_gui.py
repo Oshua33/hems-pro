@@ -835,7 +835,7 @@ class BookingManagement:
         # Modern popup window
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("500x670+147+40")  # Position at the left- top corner of the screen (0, 0)
+        view_window.geometry("500x695+147+10")  # Position at the left- top corner of the screen (0, 0)
         view_window.configure(fg_color="white")
 
         # Hotel Name label at top of popup
@@ -929,12 +929,12 @@ class BookingManagement:
         # Hotel name (centered and bold)
         hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
         elements.append(hotel_name)
-        elements.append(Spacer(1, 3))
+        elements.append(Spacer(1, 1))
 
         # Booking report title (centered)
         title = Paragraph("<para alignment='center'>Guest Details Report</para>", styles['Heading2'])
         elements.append(title)
-        elements.append(Spacer(1, 3))
+        elements.append(Spacer(1, 1))
 
         # Extract booking date if present
         booking_date = ""
@@ -946,7 +946,7 @@ class BookingManagement:
         if booking_date:
             date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
             elements.append(date_paragraph)
-            elements.append(Spacer(1, 5))
+            elements.append(Spacer(1, 2))
 
         # Format data into table
         table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
@@ -961,7 +961,7 @@ class BookingManagement:
         ]))
 
         elements.append(table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 5))
 
         # Add signature lines
         signature_table = Table([
