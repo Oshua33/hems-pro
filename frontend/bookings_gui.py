@@ -933,13 +933,14 @@ class BookingManagement:
             except Exception as e:
                 print(f"Image preview failed: {e}")
 
-        # --- Buttons ---
+                # --- Buttons ---
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=(10, 15))
 
+        # Print Details Button
         pdf_button = ctk.CTkButton(
             master=button_frame,
-            text="Print to PDF",
+            text="Print Details",
             command=lambda: self.export_booking_to_pdf(rows),
             fg_color="#1e3d59",
             text_color="white",
@@ -948,8 +949,23 @@ class BookingManagement:
             width=150,
             height=32
         )
-        pdf_button.grid(row=0, column=0, padx=10)
+        pdf_button.grid(row=0, column=0, padx=5)
 
+        # Guest Form Button
+        guest_form_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Guest Form",
+            command=lambda: self.export_guest_form(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=150,
+            height=32
+        )
+        guest_form_btn.grid(row=0, column=1, padx=5)
+
+        # Open Attachment Button (smaller width)
         if attachment_url:
             open_attachment_btn = ctk.CTkButton(
                 master=button_frame,
@@ -959,10 +975,72 @@ class BookingManagement:
                 text_color="white",
                 corner_radius=20,
                 font=("Arial", 12, "bold"),
-                width=150,
+                width=130,
                 height=32
             )
-            open_attachment_btn.grid(row=0, column=1, padx=10)
+            open_attachment_btn.grid(row=0, column=2, padx=5)
+
+
+    def export_guest_form(self, data):
+        # Use NamedTemporaryFile for safer temp file handling
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            filename = temp.name
+
+        doc = SimpleDocTemplate(filename, pagesize=A4,
+                                rightMargin=40, leftMargin=40, topMargin=25, bottomMargin=25)
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Hotel name (centered and bold)
+        hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
+        elements.append(hotel_name)
+        elements.append(Spacer(1, 1))
+
+        # Booking report title (centered)
+        title = Paragraph("<para alignment='center'>Guest Details Report</para>", styles['Heading2'])
+        elements.append(title)
+        elements.append(Spacer(1, 1))
+
+        # Extract booking date if present
+        booking_date = ""
+        for field, value in data:
+            if field.lower() == "booking date":
+                booking_date = str(value)
+                break
+
+        if booking_date:
+            date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
+            elements.append(date_paragraph)
+            elements.append(Spacer(1, 2))
+
+        # Format data into table
+        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
+
+        table = Table(table_data, colWidths=[120, 330])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+
+        elements.append(table)
+        elements.append(Spacer(1, 5))
+
+        # Add signature lines
+        signature_table = Table([
+            ["Guest Signature ________________________", "Receptionist Signature ____________________"]
+        ], colWidths=[260, 260])
+        elements.append(signature_table)
+
+        # Build PDF
+        doc.build(elements)
+
+        # Open PDF in default viewer
+        webbrowser.open_new(f'file://{os.path.abspath(filename)}')
+        
 
 
     def open_attachment(self, attachment_path):
@@ -1044,7 +1122,7 @@ class BookingManagement:
         ]))
 
         elements.append(table)
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 15))
 
         # Add attachment image if available
         # Display attachment image
@@ -1061,10 +1139,10 @@ class BookingManagement:
 
 
         # Add signature lines
-        signature_table = Table([
-            ["Guest Signature ________________________", "Receptionist Signature ____________________"]
-        ], colWidths=[260, 260])
-        elements.append(signature_table)
+        #signature_table = Table([
+            #["Guest Signature ________________________", "Receptionist Signature ____________________"]
+        #], colWidths=[260, 260])
+        #elements.append(signature_table)
 
         # Build PDF
         doc.build(elements)
