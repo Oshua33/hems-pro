@@ -32,20 +32,18 @@ def create_booking(
     room_number: str = Form(...),
     guest_name: str = Form(...),
     gender: str = Form(...),
-    mode_of_identification: str =Form(...),
+    mode_of_identification: str = Form(...),
     identification_number: Optional[str] = Form(None),
     address: str = Form(...),
     arrival_date: date = Form(...),
     departure_date: date = Form(...),
     booking_type: str = Form(...),
     phone_number: str = Form(...),
-    #attachment: Optional[UploadFile] = File(None),
     vehicle_no: Optional[str] = Form(None),
-    attachment: Optional[Union[UploadFile, str]] = File(None),
+    attachment: Optional[UploadFile] = File(None),  # Accept attachment file
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    today = date.today()
+):    
 
     # ✅ Normalize empty string input from Swagger to None
     if isinstance(attachment, str) and attachment == "":
@@ -59,6 +57,11 @@ def create_booking(
         attachment_path = os.path.join(upload_dir, attachment.filename)
         with open(attachment_path, "wb") as buffer:
             shutil.copyfileobj(attachment.file, buffer)
+
+
+            
+
+    today = date.today()
 
     # Validate dates
     if departure_date <= arrival_date:
@@ -126,17 +129,18 @@ def create_booking(
         payment_status = "pending"
         booking_status = "reserved" if booking_type == "reservation" else "checked-in"
 
-    # Handle attachment
-    attachment_path = None
-    if attachment and attachment.filename:  # ✅ Check filename is non-empty
-        upload_dir = "uploads/"
-        os.makedirs(upload_dir, exist_ok=True)
-        attachment_path = os.path.join(upload_dir, attachment.filename)
-        with open(attachment_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
-
-
     try:
+        # Handle attachment saving
+        attachment_path = None
+        if attachment and attachment.filename:
+            upload_dir = "uploads/attachments/"
+            os.makedirs(upload_dir, exist_ok=True)
+            attachment_path = os.path.join(upload_dir, attachment.filename)
+
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
+
+        # Create booking object
         new_booking = booking_models.Booking(
             room_number=room.room_number,
             guest_name=guest_name,
@@ -159,7 +163,6 @@ def create_booking(
         )
 
         db.add(new_booking)
-        room.status = booking_status
         db.commit()
         db.refresh(new_booking)
 
@@ -558,10 +561,12 @@ def update_booking(
     booking_type: str = Form(...),
     phone_number: str = Form(...),
     vehicle_no: Optional[str] = Form(None),
-    attachment: Optional[Union[UploadFile, str]] = File(None),
+    attachment: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    
+    
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
@@ -628,15 +633,16 @@ def update_booking(
             payment_status = booking.payment_status or "pending"
             status = "reserved" if booking_type == "reservation" else "checked-in"
 
-        # Save attachment if provided
-        if attachment and attachment.filename != "":
-            upload_dir = "uploads/"
+        # Handle attachment update if a new file is provided
+        attachment_path = booking.attachment
+        if attachment and attachment.filename:
+            upload_dir = "uploads/attachments/"
             os.makedirs(upload_dir, exist_ok=True)
             attachment_path = os.path.join(upload_dir, attachment.filename)
+
             with open(attachment_path, "wb") as buffer:
                 shutil.copyfileobj(attachment.file, buffer)
-        else:
-            attachment_path = booking.attachment  # keep existing attachment if none provided
+
 
         # Update fields
         booking.room_number = room.room_number
@@ -656,7 +662,7 @@ def update_booking(
         booking.payment_status = payment_status
         booking.vehicle_no = vehicle_no
         booking.attachment = attachment_path
-        booking.updated_by = current_user.username
+        booking.created_by = current_user.username
 
         db.commit()
         db.refresh(booking)
