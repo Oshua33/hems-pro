@@ -11,10 +11,17 @@ from app.eventpayment.router import router as eventpayment_router
 import uvicorn
 import sys
 import os
+from fastapi.staticfiles import StaticFiles
+#from app.bookings import router as booking_router
 
 
 import pytz
 from datetime import datetime
+
+
+os.makedirs("uploads/attachments", exist_ok=True)
+
+
 
 # Set Africa/Lagos as default timezone in your Python application
 os.environ["TZ"] = "Africa/Lagos"
@@ -51,6 +58,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+app.mount("/files", StaticFiles(directory="uploads"), name="files")
 
 # ✅ Add CORS middleware
 app.add_middleware(

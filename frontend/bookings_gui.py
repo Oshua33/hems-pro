@@ -820,34 +820,36 @@ class BookingManagement:
 
 
     def view_selected_booking(self):
+        import os
+        import webbrowser
+
         selected_item = self.tree.focus()
         if not selected_item:
             messagebox.showwarning("No selection", "Please select a booking to view.")
             return
 
         booking_data = self.tree.item(selected_item, "values")
+
         field_names = [
             "Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
             "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
-            "Payment Status", "Mode of Identification","Identification No", "Address",  "Vehicle No", "Attachment", "Created by"
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by"
         ]
 
-        # Modern popup window
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("500x695+147+10")  # Position at the left- top corner of the screen (0, 0)
+        view_window.geometry("540x730+100+10")
         view_window.configure(fg_color="white")
 
-        # Hotel Name label at top of popup
+        # Hotel Name label
         hotel_label = ctk.CTkLabel(
             view_window,
             text=HOTEL_NAME,
             font=("Arial", 17, "bold"),
             text_color="#0f2e4d"
         )
-        hotel_label.pack(pady=(3, 0))
+        hotel_label.pack(pady=(5, 0))
 
-        # Title
         title_label = ctk.CTkLabel(
             view_window,
             text="Guest Details Report",
@@ -856,45 +858,53 @@ class BookingManagement:
         )
         title_label.pack(pady=(5, 2))
 
-        # Modern card-like frame for form
+        # Scrollable Frame (if needed for long data)
         content_frame = ctk.CTkFrame(
-            master=view_window,
+            view_window,
             fg_color="white",
             border_color="#cccccc",
             border_width=1,
             corner_radius=12
         )
-        content_frame.pack(fill="both", expand=False, padx=15, pady=5)
+        content_frame.pack(fill="both", expand=True, padx=15, pady=5)
 
         rows = []
         for field, value in zip(field_names, booking_data):
             row = ctk.CTkFrame(content_frame, fg_color="white")
-            row.pack(fill="x", padx=5, pady=1)  # Tight spacing
+            row.pack(fill="x", padx=5, pady=1)
 
             label_field = ctk.CTkLabel(
                 row,
                 text=f"{field}:",
                 font=("Arial", 12, "bold"),
                 text_color="#2c3e50",
-                width=130,
+                width=150,
                 anchor="w"
             )
             label_value = ctk.CTkLabel(
                 row,
                 text=str(value),
-                font=("Arial", 12, "bold"),
+                font=("Arial", 12),
                 text_color="#34495e",
-                anchor="w"
+                anchor="w",
+                wraplength=320
             )
             label_field.pack(side="left")
             label_value.pack(side="left", fill="x", expand=True)
-
             rows.append((field, value))
 
-        # PDF Button section
+        # Extract attachment filename
+        attachment_url = None
+        for field, value in rows:
+            if field.lower() == "attachment" and value:
+                attachment_url = value  # should be like: "uploads/attachments/image.png"
+                break
+
+        # Action Buttons Frame
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=(10, 15))
 
+        # PDF Button
         pdf_button = ctk.CTkButton(
             master=button_frame,
             text="Print to PDF",
@@ -906,7 +916,40 @@ class BookingManagement:
             width=150,
             height=32
         )
-        pdf_button.pack()
+        pdf_button.grid(row=0, column=0, padx=10)
+
+        # Attachment Button (only if available)
+        if attachment_url:
+            open_attachment_btn = ctk.CTkButton(
+                master=button_frame,
+                text="Open Attachment",
+                command=lambda: self.open_attachment(attachment_url),
+                fg_color="#1e3d59",
+                text_color="white",
+                corner_radius=20,
+                font=("Arial", 12, "bold"),
+                width=150,
+                height=32
+            )
+            open_attachment_btn.grid(row=0, column=1, padx=10)
+
+    def open_attachment(self, attachment_path):
+        import os
+        import webbrowser
+
+        if not attachment_path:
+            messagebox.showerror("Attachment Error", "No attachment found.")
+            return
+
+        filename = os.path.basename(attachment_path)
+        url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+        print("Opening attachment at:", url)
+
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open attachment: {e}")
+
 
 
 
