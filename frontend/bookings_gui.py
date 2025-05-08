@@ -822,6 +822,9 @@ class BookingManagement:
     def view_selected_booking(self):
         import os
         import webbrowser
+        from PIL import Image, ImageTk
+        import requests
+        from io import BytesIO
 
         selected_item = self.tree.focus()
         if not selected_item:
@@ -838,10 +841,9 @@ class BookingManagement:
 
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("540x730+100+10")
+        view_window.geometry("560x720+100+10")
         view_window.configure(fg_color="white")
 
-        # Hotel Name label
         hotel_label = ctk.CTkLabel(
             view_window,
             text=HOTEL_NAME,
@@ -858,7 +860,6 @@ class BookingManagement:
         )
         title_label.pack(pady=(5, 2))
 
-        # Scrollable Frame (if needed for long data)
         content_frame = ctk.CTkFrame(
             view_window,
             fg_color="white",
@@ -866,7 +867,7 @@ class BookingManagement:
             border_width=1,
             corner_radius=12
         )
-        content_frame.pack(fill="both", expand=True, padx=15, pady=5)
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 0))
 
         rows = []
         for field, value in zip(field_names, booking_data):
@@ -893,18 +894,31 @@ class BookingManagement:
             label_value.pack(side="left", fill="x", expand=True)
             rows.append((field, value))
 
-        # Extract attachment filename
-        attachment_url = None
-        for field, value in rows:
-            if field.lower() == "attachment" and value:
-                attachment_url = value  # should be like: "uploads/attachments/image.png"
-                break
+        # --- Attachment Preview (Top-right corner) ---
+        attachment_url = next((v for k, v in rows if k.lower() == "attachment" and v), None)
 
-        # Action Buttons Frame
+        if attachment_url:
+            try:
+                filename = os.path.basename(attachment_url)
+                url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+                response = requests.get(url)
+                img = Image.open(BytesIO(response.content)).resize((100, 100))
+                preview = ctk.CTkImage(light_image=img, size=(100, 100))
+
+                attachment_preview = ctk.CTkLabel(
+                    view_window,
+                    image=preview,
+                    text="",
+                    corner_radius=8
+                )
+                attachment_preview.place(x=430, y=20)  # Top-right corner
+            except Exception as e:
+                print(f"Image preview failed: {e}")
+
+        # --- Buttons ---
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=(10, 15))
 
-        # PDF Button
         pdf_button = ctk.CTkButton(
             master=button_frame,
             text="Print to PDF",
@@ -918,7 +932,6 @@ class BookingManagement:
         )
         pdf_button.grid(row=0, column=0, padx=10)
 
-        # Attachment Button (only if available)
         if attachment_url:
             open_attachment_btn = ctk.CTkButton(
                 master=button_frame,
@@ -943,8 +956,6 @@ class BookingManagement:
 
         filename = os.path.basename(attachment_path)
         url = f"http://127.0.0.1:8000/files/attachments/{filename}"
-        print("Opening attachment at:", url)
-
         try:
             webbrowser.open(url)
         except Exception as e:
