@@ -33,6 +33,17 @@ from reportlab.lib.enums import TA_CENTER
 import webbrowser
 from tkinter import filedialog
 
+import tempfile
+from io import BytesIO
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
+import webbrowser
+import os
+
+
 
 
 
@@ -975,6 +986,7 @@ class BookingManagement:
     
     
 
+
     def export_booking_to_pdf(self, data):
         # Use NamedTemporaryFile for safer temp file handling
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
@@ -996,20 +1008,31 @@ class BookingManagement:
         elements.append(title)
         elements.append(Spacer(1, 1))
 
-        # Extract booking date if present
+        # Extract booking date and attachment
         booking_date = ""
+        attachment_data = None
+
+        filtered_data = []
         for field, value in data:
             if field.lower() == "booking date":
                 booking_date = str(value)
-                break
+            elif field.lower() == "attachment":
+                if isinstance(value, str) and os.path.exists(value):
+                    with open(value, "rb") as f:
+                        attachment_data = f.read()
+                elif isinstance(value, bytes):
+                    attachment_data = value
+
+            else:
+                filtered_data.append((field, value))
 
         if booking_date:
             date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
             elements.append(date_paragraph)
             elements.append(Spacer(1, 2))
 
-        # Format data into table
-        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
+        # Format data into table (excluding image)
+        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in filtered_data]
 
         table = Table(table_data, colWidths=[120, 330])
         table.setStyle(TableStyle([
@@ -1022,6 +1045,20 @@ class BookingManagement:
 
         elements.append(table)
         elements.append(Spacer(1, 5))
+
+        # Add attachment image if available
+        # Display attachment image
+        if attachment_data:
+            try:
+                image_stream = BytesIO(attachment_data)
+                img = Image(image_stream, width=200, height=150)  # ✅ Corrected line
+                elements.append(Spacer(1, 12))
+                elements.append(Paragraph("Attachment Photo:", styles['Heading2']))
+                elements.append(img)
+            except Exception as e:
+                print("Image error:", e)
+                elements.append(Paragraph("Could not display the attachment image.", styles["Normal"]))
+
 
         # Add signature lines
         signature_table = Table([
