@@ -870,6 +870,7 @@ class BookingManagement:
         content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 0))
 
         rows = []
+        attachment_url = None
         for field, value in zip(field_names, booking_data):
             row = ctk.CTkFrame(content_frame, fg_color="white")
             row.pack(fill="x", padx=5, pady=1)
@@ -894,24 +895,30 @@ class BookingManagement:
             label_value.pack(side="left", fill="x", expand=True)
             rows.append((field, value))
 
-        # --- Attachment Preview (Top-right corner) ---
-        attachment_url = next((v for k, v in rows if k.lower() == "attachment" and v), None)
+            if field.lower() == "attachment" and value:
+                attachment_url = value
 
+        # --- Display Attachment Image (Top-right corner) ---
         if attachment_url:
             try:
                 filename = os.path.basename(attachment_url)
                 url = f"http://127.0.0.1:8000/files/attachments/{filename}"
                 response = requests.get(url)
-                img = Image.open(BytesIO(response.content)).resize((100, 100))
-                preview = ctk.CTkImage(light_image=img, size=(100, 100))
+
+                img = Image.open(BytesIO(response.content))
+                img.thumbnail((120, 120))  # Resize while maintaining aspect ratio
+
+                # Keep image reference attached to window
+                view_window.preview_image = ImageTk.PhotoImage(img)
 
                 attachment_preview = ctk.CTkLabel(
-                    view_window,
-                    image=preview,
+                    master=view_window,
+                    image=view_window.preview_image,
                     text="",
-                    corner_radius=8
+                    width=120,
+                    height=120
                 )
-                attachment_preview.place(x=430, y=20)  # Top-right corner
+                attachment_preview.place(x=420, y=20)  # Top-right position
             except Exception as e:
                 print(f"Image preview failed: {e}")
 
@@ -946,6 +953,7 @@ class BookingManagement:
             )
             open_attachment_btn.grid(row=0, column=1, padx=10)
 
+
     def open_attachment(self, attachment_path):
         import os
         import webbrowser
@@ -960,8 +968,6 @@ class BookingManagement:
             webbrowser.open(url)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open attachment: {e}")
-
-
 
 
 
