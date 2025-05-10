@@ -51,12 +51,16 @@ def create_booking(
 
     # Later in the code...
     attachment_path = None
-    if isinstance(attachment, UploadFile):
-        upload_dir = "uploads/"
+    if attachment and attachment.filename:
+        upload_dir = "uploads/attachments/"
         os.makedirs(upload_dir, exist_ok=True)
         attachment_path = os.path.join(upload_dir, attachment.filename)
+
         with open(attachment_path, "wb") as buffer:
             shutil.copyfileobj(attachment.file, buffer)
+
+        # ✅ Set the public URL path
+        attachment_path = f"/files/attachments/{attachment.filename}"
 
 
             
@@ -547,6 +551,7 @@ def list_bookings_by_room(
 
 
 
+
 @router.put("/update/")
 def update_booking(
     booking_id: int = Form(...),
@@ -565,32 +570,27 @@ def update_booking(
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    
-    
+    # Check if the user is an admin
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-
 
     try:
         today = date.today()
 
+        # Normalize attachment if it's an empty string
         if isinstance(attachment, str) and attachment == "":
             attachment = None
 
+        # Fetch the existing booking from the database
         booking = db.query(booking_models.Booking).filter(booking_models.Booking.id == booking_id).first()
         if not booking:
             raise HTTPException(status_code=404, detail=f"Booking with ID {booking_id} not found.")
 
-        # Validate date logic
+        # Validate date logic (only arrival and departure date check remains)
         if departure_date <= arrival_date:
             raise HTTPException(status_code=400, detail="Departure date must be after arrival date.")
-        if booking_type == "checked-in" and arrival_date != today:
-            raise HTTPException(status_code=400, detail="Checked-in bookings must be for today.")
-        if booking_type == "reservation" and arrival_date <= today:
-            raise HTTPException(status_code=400, detail="Reservations must be for a future date.")
-        if booking_type == "complimentary" and arrival_date != today:
-            raise HTTPException(status_code=400, detail="Complimentary bookings are only allowed for today.")
 
+        # Normalize the room number and check if the room exists
         normalized_room_number = room_number.strip().lower()
         room = (
             db.query(room_models.Room)
@@ -600,6 +600,7 @@ def update_booking(
         if not room:
             raise HTTPException(status_code=404, detail=f"Room {room_number} not found.")
 
+        # Check if there are any overlapping bookings in the same room for the given dates
         overlapping_booking = (
             db.query(booking_models.Booking)
             .filter(
@@ -616,14 +617,15 @@ def update_booking(
         if overlapping_booking:
             raise HTTPException(
                 status_code=400,
-                detail=f"Room {room_number} is already booked for the requested dates. "
-                       f"Check Booking ID: {overlapping_booking.id}",
+                detail=f"Room {room_number} is already booked for the requested dates. Check Booking ID: {overlapping_booking.id}",
             )
 
+        # Calculate the number of days and validate it
         number_of_days = (departure_date - arrival_date).days
         if number_of_days <= 0:
             raise HTTPException(status_code=400, detail="Number of days must be greater than zero.")
 
+        # Determine booking status and cost based on the type
         if booking_type == "complimentary":
             booking_cost = 0
             payment_status = "complimentary"
@@ -639,12 +641,10 @@ def update_booking(
             upload_dir = "uploads/attachments/"
             os.makedirs(upload_dir, exist_ok=True)
             attachment_path = os.path.join(upload_dir, attachment.filename)
-
             with open(attachment_path, "wb") as buffer:
                 shutil.copyfileobj(attachment.file, buffer)
 
-
-        # Update fields
+        # Update the booking record
         booking.room_number = room.room_number
         booking.guest_name = guest_name
         booking.gender = gender
@@ -664,6 +664,7 @@ def update_booking(
         booking.attachment = attachment_path
         booking.created_by = current_user.username
 
+        # Commit the changes to the database
         db.commit()
         db.refresh(booking)
 
@@ -694,6 +695,40 @@ def update_booking(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
+
+
+
+@router.get("/booking/{booking_id}")
+def get_booking_by_id(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    booking = db.query(booking_models.Booking).filter(booking_models.Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail=f"Booking with ID {booking_id} not found.")
+
+    return {
+        "id": booking.id,
+        "room_number": booking.room_number,
+        "guest_name": booking.guest_name,
+        "gender": booking.gender,
+        "mode_of_identification": booking.mode_of_identification,
+        "identification_number": booking.identification_number,
+        "address": booking.address,
+        "arrival_date": booking.arrival_date,
+        "departure_date": booking.departure_date,
+        "booking_type": booking.booking_type,
+        "phone_number": booking.phone_number,
+        "vehicle_no": booking.vehicle_no,
+        "number_of_days": booking.number_of_days,
+        "status": booking.status,
+        "room_price": booking.room_price,
+        "booking_cost": booking.booking_cost,
+        "payment_status": booking.payment_status,
+        "attachment": booking.attachment,
+        "created_by": booking.created_by,
+    }
     
   
 @router.put("/{room_number}/")

@@ -3,8 +3,9 @@ from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 import requests
 from utils import BASE_URL
-import datetime 
+import datetime
 from datetime import datetime
+from datetime import date
 
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
@@ -120,11 +121,14 @@ class BookingManagement:
         self.root.title("Booking Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
+
+
         
         self.token = token
         self.username = "current_user"
 
         self.tree = ttk.Treeview(self.root)  # Treeview (make sure it's defined)
+        self.attachment_path_var = ctk.StringVar()  # or Tkinter.StringVar()
 
         # Set application icon
         icon_path = os.path.abspath("frontend/icon.ico")
@@ -518,13 +522,40 @@ class BookingManagement:
 
 
 
-    def create_booking(self):
+    def create_booking(self, booking_data=None):
+
         """Opens a pop-up window for creating a new booking with CustomTkinter."""
         self.clear_right_frame()
 
+        title_text = "Update Booking" if booking_data else "Create Booking"
+
+
+
+        # Fields to display in both create and update modes
+        fields = [
+            ("Room Number", "room_number"),
+            ("Guest Name", "guest_name"),
+            ("Gender", "gender"),
+            ("Booking Cost", "booking_cost"),
+            ("Arrival Date", "arrival_date"),
+            ("Departure Date", "departure_date"),
+            ("Booking Type", "booking_type"),
+            ("Phone Number", "phone_number"),
+            ("Mode of Identification", "mode_of_identification"),
+            ("Identification Number", "identification_number"),
+            ("Address", "address"),
+            ("Vehicle No", "vehicle_no"),
+            ("Attachment", "attachment"),
+        ]
+
+        
+
+
+
         # Create a new pop-up window
         create_window = ctk.CTkToplevel(self.root)
-        create_window.title("Create Booking")
+        create_window.title(title_text)
+
         create_window.geometry("650x400")
         create_window.resizable(False, False)
         create_window.configure(fg_color="#f5f5f5")
@@ -543,7 +574,8 @@ class BookingManagement:
         # Header
         header_frame = ctk.CTkFrame(create_window, fg_color="#2c3e50", height=50, corner_radius=8)
         header_frame.pack(fill="x", padx=10, pady=10)
-        header_label = ctk.CTkLabel(header_frame, text="Create Booking", font=("Arial", 16, "bold"), text_color="white")
+        header_label = ctk.CTkLabel(header_frame, text=title_text, font=("Arial", 16, "bold"), text_color="white")
+
         header_label.pack(pady=10)
 
         # Main Content Frame
@@ -649,6 +681,16 @@ class BookingManagement:
             entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
             self.entries[label_text] = entry
 
+            # 👇 Pre-fill the entry if booking_data is provided (for update mode)
+        if booking_data:
+            key = label_text.lower().replace(" ", "_")
+            value = booking_data.get(key, "")
+            try:
+                entry.set(value)  # For CTkComboBox or DateEntry
+            except:
+                entry.insert(0, value)  # For CTkEntry
+
+
 
         # Define file picker function and bind it
         def browse_file(event=None):
@@ -682,17 +724,21 @@ class BookingManagement:
 
     
 
-    def submit_booking(self, create_window):
+    def submit_booking(self, create_window, booking_data=None):
         try:
-            url = "http://127.0.0.1:8000/bookings/create/"
-            headers = {"Authorization": f"Bearer {self.token}"}  # Don't set Content-Type
+            is_update = booking_data is not None
+            url = (
+                f"http://127.0.0.1:8000/bookings/update/{booking_data['id']}/"
+                if is_update else
+                "http://127.0.0.1:8000/bookings/create/"
+            )
+            headers = {"Authorization": f"Bearer {self.token}"}
 
-            # Collect form data
             data = {
                 "room_number": self.entries["Room Number"].get(),
                 "guest_name": self.entries["Guest Name"].get(),
                 "gender": self.entries["Gender"].get(),
-                "mode_of_identification": self.entries["Mode of Identification"].get(),  # 👈 NEW
+                "mode_of_identification": self.entries["Mode of Identification"].get(),
                 "identification_number": self.entries["Identification Number"].get(),
                 "address": self.entries["Address"].get(),
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
@@ -703,8 +749,6 @@ class BookingManagement:
                 "attachment": self.entries["Attachment"].get() or None,
             }
 
-
-            # Validate required fields
             required_fields = ["room_number", "guest_name", "gender", "mode_of_identification",
                             "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
 
@@ -712,12 +756,8 @@ class BookingManagement:
             if missing:
                 messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
                 return
-            
-    
 
-            # Check if attachment_full_path is set
             attachment_path = getattr(self, 'attachment_full_path', None)
-
             files = {}
             file_obj = None
 
@@ -733,22 +773,22 @@ class BookingManagement:
                     messagebox.showerror("File Error", f"Attachment file error: {str(e)}")
                     return
             else:
-                # Send empty string to match backend's expected fallback
                 files["attachment"] = ("", "", "application/octet-stream")
 
-            # Proceed with POST request
             try:
-                response = requests.post(url, data=data, files=files, headers=headers)
+                if is_update:
+                    response = requests.put(url, data=data, files=files, headers=headers)
+                else:
+                    response = requests.post(url, data=data, files=files, headers=headers)
             finally:
                 if file_obj:
                     file_obj.close()
 
-            # Check response
             if response.status_code == 200:
-                messagebox.showinfo("Success", "Booking created successfully.")
+                messagebox.showinfo("Success", f"Booking {'updated' if is_update else 'created'} successfully.")
                 create_window.destroy()
             else:
-                messagebox.showerror("Error", f"Failed to create booking:\n{response.text}")
+                messagebox.showerror("Error", f"Failed to {'update' if is_update else 'create'} booking:\n{response.text}")
 
         except requests.exceptions.RequestException as e:
             messagebox.showerror("Request Error", str(e))
@@ -825,10 +865,242 @@ class BookingManagement:
         self.total_booking_cost_label.pack(pady=10)
 
             
-        # View button using CustomTkinter (inside list_bookings)
-        view_button = ctk.CTkButton(frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
-        view_button.pack(pady=10)
+        # Assuming `frame` is where your booking buttons are being placed
+        button_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        button_frame.pack(pady=10)
 
+        view_button = ctk.CTkButton(button_frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
+        view_button.pack(side="left", padx=10)
+
+        update_button = ctk.CTkButton(button_frame, text="Update Booking", corner_radius=20, command=self.update_selected_booking)
+        update_button.pack(side="left", padx=10)
+
+
+
+    def update_selected_booking(self):
+        selected_booking = self.get_selected_booking()
+        if selected_booking:
+            self.update_booking_form(selected_booking)
+
+        else:
+            messagebox.showwarning("No Selection", "Please select a booking to update.")
+
+    def get_selected_booking(self):
+        selected_item = self.tree.focus()
+        if not selected_item:
+            return None
+
+        values = self.tree.item(selected_item, "values")
+
+        field_keys = [
+            "booking_id", "room_number", "guest_name", "gender", "booking_cost", "arrival_date",
+            "departure_date", "status", "no_of_days", "booking_type", "phone_number", "booking_date",
+            "payment_status", "mode_of_identification", "identification_number", "address",
+            "vehicle_no", "attachment", "created_by"
+        ]
+
+        return dict(zip(field_keys, values))
+    
+
+    def update_booking_form(self, booking_data):
+        def browse_attachment_file(event=None):
+            file_path = filedialog.askopenfilename(
+                title="Select Attachment",
+                filetypes=[("All Files", "*.*"), ("Images", "*.png;*.jpg;*.jpeg"), ("PDFs", "*.pdf")]
+            )
+            if file_path:
+                attachment_entry = self.update_entries.get("Attachment")
+                if attachment_entry:
+                    attachment_entry.delete(0, "end")
+                    attachment_entry.insert(0, file_path)
+                    attachment_entry.configure(text_color="black")  # Make text visible
+
+        window = ctk.CTkToplevel(self.root)
+        window.title("Update Booking")
+        window.geometry("750x500+150+30")
+        window.configure(fg_color="#1e1e1e")
+        window.resizable(False, False)
+
+        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#f1f1f1")
+        title.pack(pady=(10, 5))
+
+        form_frame = ctk.CTkFrame(window, fg_color="#2c2c2c", corner_radius=15)
+        form_frame.pack(fill="both", expand=True, padx=20, pady=15)
+
+        for i in range(4):
+            form_frame.grid_columnconfigure(i, weight=1)
+
+        combo_box_values = {
+            "Gender": ["Male", "Female"],
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
+        }
+
+        self.update_entries = {}
+
+        def add_form_row(row, label1, field1, label2=None, field2=None):
+            col = 0
+            for label_text, field_type in [(label1, field1), (label2, field2) if label2 else (None, None)]:
+                if label_text:
+                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#dddddd")
+                    label.grid(row=row, column=col, sticky="w", padx=10, pady=6)
+
+                    width = 180
+                    if field_type == ctk.CTkComboBox:
+                        entry = ctk.CTkComboBox(
+                            form_frame,
+                            values=combo_box_values.get(label_text, []),
+                            state="readonly",
+                            font=("Segoe UI", 11),
+                            width=width,
+                            dropdown_fg_color="#3a3a3a",
+                            dropdown_text_color="#f1f1f1"
+                        )
+                    elif field_type == DateEntry:
+                        entry = DateEntry(
+                            form_frame,
+                            font=("Segoe UI", 10),
+                            background='darkblue',
+                            foreground='white',
+                            borderwidth=2
+                        )
+                    else:
+                        entry = field_type(form_frame, font=("Segoe UI", 11), width=width)
+                        if label_text == "Attachment":
+                            entry.insert(0, "Select file...")
+                            entry.configure(text_color="gray")
+                            entry.bind("<Button-1>", browse_attachment_file)
+                        if label_text == "Booking ID":
+                            entry.configure(state="readonly")
+
+                    entry.grid(row=row, column=col + 1, sticky="w", padx=10, pady=6)
+                    self.update_entries[label_text] = entry
+                    col += 2
+
+        # Form layout rows
+        add_form_row(0, "Booking ID", ctk.CTkEntry)
+        add_form_row(1, "Room Number", ctk.CTkEntry, "Guest Name", ctk.CTkEntry)
+        add_form_row(2, "Identification Number", ctk.CTkEntry, "Mode of Identification", ctk.CTkComboBox)
+        add_form_row(3, "Gender", ctk.CTkComboBox, "Phone Number", ctk.CTkEntry)
+        add_form_row(4, "Address", ctk.CTkEntry, "Booking Type", ctk.CTkComboBox)
+        add_form_row(5, "Arrival Date", DateEntry, "Departure Date", DateEntry)
+        add_form_row(6, "Vehicle No", ctk.CTkEntry, "Attachment", ctk.CTkEntry)
+
+        # Submit button
+        submit_button = ctk.CTkButton(
+            form_frame,
+            text="Update",
+            width=140,
+            height=36,
+            corner_radius=10,
+            font=("Segoe UI", 12, "bold"),
+            text_color="white",
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            command=lambda: self.save_updated_booking(window)
+
+        )
+        submit_button.grid(row=7, column=0, columnspan=4, pady=20, sticky="n")
+
+        # Populate fields from booking_data
+        if booking_data:
+            for label_text, entry in self.update_entries.items():
+                key = label_text.lower().replace(" ", "_")
+                value = booking_data.get(key, "")
+
+                if isinstance(entry, DateEntry):
+                    try:
+                        date_obj = datetime.strptime(value, "%Y-%m-%d")
+                        entry.set_date(date_obj)
+                    except Exception as e:
+                        print(f"Failed to parse date for {label_text}: {e}")
+                elif isinstance(entry, ctk.CTkComboBox):
+                    entry.set(value)
+                elif label_text == "Attachment":
+                    entry.delete(0, "end")
+                    entry.insert(0, value or "Select file...")
+                    entry.configure(text_color="gray" if not value else "white")
+                else:
+                    entry.configure(state="normal")
+                    entry.delete(0, "end")
+                    entry.insert(0, value)
+                    if label_text == "Booking ID":
+                        entry.configure(state="readonly")
+
+
+
+    
+
+
+    def save_updated_booking(self, window):
+        try:
+            url = "http://127.0.0.1:8000/bookings/update/"
+
+            # Extract raw form values
+            booking_id = self.update_entries["Booking ID"].get()
+            room_number = self.update_entries["Room Number"].get()
+            guest_name = self.update_entries["Guest Name"].get()
+            gender = self.update_entries["Gender"].get()
+            mode_of_identification = self.update_entries["Mode of Identification"].get()
+            identification_number = self.update_entries["Identification Number"].get()
+            address = self.update_entries["Address"].get()
+            arrival_date = self.update_entries["Arrival Date"].get()
+            departure_date = self.update_entries["Departure Date"].get()
+            booking_type = self.update_entries["Booking Type"].get()
+            phone_number = self.update_entries["Phone Number"].get()
+            vehicle_no = self.update_entries["Vehicle No"].get()
+            attachment_path = self.update_entries["Attachment"].get()
+
+            # ✅ Convert date to YYYY-MM-DD
+            arrival_date = self.update_entries["Arrival Date"].get_date().strftime("%Y-%m-%d")
+            departure_date = self.update_entries["Departure Date"].get_date().strftime("%Y-%m-%d")
+
+
+
+            if not self.token:
+                messagebox.showerror("Authentication Error", "You are not authenticated. Please log in again.")
+                return
+
+            headers = {"Authorization": f"Bearer {self.token}"}
+
+            data = {
+                "booking_id": booking_id,
+                "room_number": room_number,
+                "guest_name": guest_name,
+                "gender": gender,
+                "mode_of_identification": mode_of_identification,
+                "identification_number": identification_number,
+                "address": address,
+                "arrival_date": arrival_date,
+                "departure_date": departure_date,
+                "booking_type": booking_type,
+                "phone_number": phone_number,
+                "vehicle_no": vehicle_no,
+            }
+
+            files = None
+            if attachment_path and os.path.exists(attachment_path):
+                file_name = os.path.basename(attachment_path)
+                files = {
+                    "attachment": (file_name, open(attachment_path, "rb"), "application/octet-stream")
+                }
+
+            response = requests.put(url, data=data, files=files, headers=headers)
+
+            if response.status_code == 200:
+                messagebox.showinfo("Success", "Booking updated successfully.")
+                window.destroy()  # Close the update popup
+
+                
+                #self.refresh_booking_list()
+            else:
+                messagebox.showerror("Error", f"Failed to update booking:\n{response.text}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred while updating the booking:\n{str(e)}")
+
+
+    
 
     def view_selected_booking(self):
         import os
