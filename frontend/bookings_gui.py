@@ -825,40 +825,35 @@ class BookingManagement:
             command=lambda: self.fetch_bookings(self.start_date, self.end_date)
         )
         fetch_btn.grid(row=0, column=4, padx=10, pady=5)
-
-        # Create a frame to hold the treeview and scrollbars
-        table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")  # Solid border for grid effect
+# === Table Frame ===
+        table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")
         table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        # Define Treeview columns
+        # Create Treeview
         columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment","Created_by" )
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Mode of Identification", "Identification No", 
+                "Address", "Vehicle No", "Attachment", "Created_by")
 
-        # Create a Treeview widget
         style = ttk.Style()
         style.configure("Treeview", rowheight=25, background="white", fieldbackground="white", borderwidth=1)
         style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background="#2c3e50", foreground="white")
         style.map("Treeview", background=[("selected", "#b3d1ff")])
 
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)  # Set height for visibility
-
-        # Define headings and set column widths
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col, anchor="center")
-            self.tree.column(col, width=70, anchor="center")  # Adjust column width
+            self.tree.column(col, width=100, anchor="center")  # Widened slightly for readability
 
-        # Pack the Treeview inside a scrollable frame
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        # Add vertical scrollbar
+        # Add scrollbars INSIDE same frame
         y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscroll=y_scroll.set)
+        x_scroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
 
-        # Add horizontal scrollbar
-        x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.tree.xview)
-        x_scroll.pack(fill=tk.X)
-        self.tree.configure(xscroll=x_scroll.set)
+        # Pack them properly
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
 
         # Label to display total booking cost
         self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
