@@ -234,7 +234,7 @@ class BookingManagement:
             ("Sort Guest Name", self.search_booking),
             ("Sort by ID", self.search_booking_by_id),
             ("Sort By Room", self.search_booking_by_room),
-            ("Update Booking", self.update_booking),
+            #("Update Booking", self.update_booking),
             ("Guest Checkout", self.guest_checkout),
             ("Cancel Booking", self.cancel_booking),
         ]
@@ -579,7 +579,7 @@ class BookingManagement:
         header_label.pack(pady=10)
 
         # Main Content Frame
-        frame = ctk.CTkFrame(create_window, fg_color="white", corner_radius=10)
+        frame = ctk.CTkFrame(create_window, fg_color="#eeeeee", corner_radius=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Booking Fields Layout
@@ -917,7 +917,7 @@ class BookingManagement:
 
         window = ctk.CTkToplevel(self.root)
         window.title("Update Booking")
-        window.geometry("750x500+150+30")
+        window.geometry("750x450+150+30")
         window.configure(fg_color="#1e1e1e")
         window.resizable(False, False)
 
@@ -968,7 +968,7 @@ class BookingManagement:
                         entry = field_type(form_frame, font=("Segoe UI", 11), width=width)
                         if label_text == "Attachment":
                             entry.insert(0, "Select file...")
-                            entry.configure(text_color="gray")
+                            entry.configure(text_color="black")
                             entry.bind("<Button-1>", browse_attachment_file)
                         if label_text == "Booking ID":
                             entry.configure(state="readonly")
@@ -2040,9 +2040,9 @@ class BookingManagement:
 
 
 
-
+    """
     def update_booking(self):
-        """Opens a pop-up window for updating an existing booking with CustomTkinter."""
+        Opens a pop-up window for updating an existing booking with CustomTkinter.
         self.clear_right_frame()
 
         update_window = ctk.CTkToplevel(self.root)
@@ -2065,7 +2065,7 @@ class BookingManagement:
         header_frame.pack(fill="x", padx=10, pady=10)
         header_label = ctk.CTkLabel(header_frame, text="Update Booking", font=("Arial", 16, "bold"), text_color="white")
         header_label.pack(pady=10)
-
+        
         frame = ctk.CTkFrame(update_window, fg_color="white", corner_radius=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -2172,7 +2172,7 @@ class BookingManagement:
     
 
     def submit_update_booking(self, update_window):
-        """Collects form data and sends a multipart/form-data request to update a booking."""
+        Collects form data and sends a multipart/form-data request to update a booking.
         try:
             # Basic data collection
             data = {
@@ -2241,68 +2241,85 @@ class BookingManagement:
         except Exception as e:
             update_window.grab_release()
             CTkMessagebox(title="Error", message=f"Unexpected error: {str(e)}", icon="cancel", option_1="OK")
-
+"""
 
     
 #from CTkMessagebox import CTkMessagebox
 
 
     def guest_checkout(self):
-        """Opens a professional pop-up window for guest checkout using CustomTkinter."""
+        """Open a compact, professional pop-up window for guest checkout."""
         self.clear_right_frame()
 
-        # 🔹 Create a pop-up window
+        # 🔷 Create the popup window
         checkout_window = ctk.CTkToplevel(self.root)
         checkout_window.title("Guest Checkout")
-        checkout_window.geometry("400x250")  # Adjusted for better spacing
+        checkout_window.geometry("360x210")
         checkout_window.resizable(False, False)
-        checkout_window.configure(fg_color="#f5f5f5")  # Light background color
+        checkout_window.configure(fg_color="#f2f2f2")  # Light gray background
 
-        # Center the window on the screen
-        window_width = 400
-        window_height = 250
+        # Center the window
         screen_width = checkout_window.winfo_screenwidth()
         screen_height = checkout_window.winfo_screenheight()
-        x_coordinate = (screen_width - window_width) // 2
-        y_coordinate = (screen_height - window_height) // 2
-        checkout_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+        x_coordinate = (screen_width - 360) // 2
+        y_coordinate = (screen_height - 200) // 2
+        checkout_window.geometry(f"360x210+{x_coordinate}+{y_coordinate}")
 
-        # Make the window modal
         checkout_window.transient(self.root)
         checkout_window.grab_set()
 
-        # 🔹 Dark Header
-        header_frame = ctk.CTkFrame(checkout_window, fg_color="#2c3e50", height=50, corner_radius=8)
-        header_frame.pack(fill="x", padx=10, pady=10)
+        # 🔹 Header with dark background
+        header_frame = ctk.CTkFrame(checkout_window, fg_color="#1f2937", corner_radius=10)
+        header_frame.pack(fill="x", padx=20, pady=(15, 10))
 
-        header_label = ctk.CTkLabel(header_frame, text="Guest Checkout", font=("Arial", 16, "bold"), text_color="white")
-        header_label.pack(pady=10)
-
-        # 🔹 Main Content Frame
-        frame = ctk.CTkFrame(checkout_window, fg_color="white", corner_radius=10)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # 📌 Room Number Field
-        label = ctk.CTkLabel(frame, text="Room Number", font=("Helvetica", 12, "bold"), text_color="#2c3e50")
-        label.pack(anchor="w", pady=5, padx=10)
-
-        self.room_number_entry = ctk.CTkEntry(frame, font=("Helvetica", 12), width=200)
-        self.room_number_entry.pack(pady=5, padx=10)
-
-        # 🔹 Checkout Button with Hover Effect
-        submit_btn = ctk.CTkButton(
-            frame,
-            text="Checkout Guest",
-            command=lambda: self.submit_guest_checkout(checkout_window),
-            font=("Arial", 14, "bold"),
-            fg_color="#e74c3c",
-            hover_color="#c0392b",
-            text_color="white",
-            corner_radius=10,
-            width=250,
-            height=40
+        header_label = ctk.CTkLabel(
+            header_frame,
+            text="Guest Checkout",
+            font=("Segoe UI", 15, "bold"),
+            text_color="white"
         )
-        submit_btn.pack(pady=20)  # Space for better UI
+        header_label.pack(pady=8)
+
+        # 🔸 Content frame
+        content_frame = ctk.CTkFrame(checkout_window, fg_color="white", corner_radius=12)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Room number input
+        room_label = ctk.CTkLabel(
+            content_frame,
+            text="Room Number",
+            font=("Segoe UI", 12),
+            text_color="#1f2937"
+        )
+        room_label.pack(anchor="w", padx=15, pady=(10, 2))
+
+        self.room_number_entry = ctk.CTkEntry(
+            content_frame,
+            placeholder_text="enter room number",
+            font=("Segoe UI", 12),
+            height=32,
+            corner_radius=10,
+            width=220
+        )
+        self.room_number_entry.pack(pady=(0, 10))
+
+        # 🔘 Compact checkout button
+        submit_btn = ctk.CTkButton(
+            content_frame,
+            text="Checkout",
+            command=lambda: self.submit_guest_checkout(checkout_window),
+            font=("Segoe UI", 12, "bold"),
+            fg_color="#3B82F6",
+            hover_color="#2563EB",
+            text_color="white",
+            corner_radius=20,
+            height=34,
+            width=140
+        )
+        submit_btn.pack(pady=(5, 15))
+
+
+
 
     def submit_guest_checkout(self, checkout_window):
         """Sends a request to checkout the guest by room number."""
@@ -2346,50 +2363,107 @@ class BookingManagement:
 
     def cancel_booking(self):
         self.clear_right_frame()
-        
+
         # Open pop-up window
-        cancel_window = ctk.CTkToplevel(self.root)
+        cancel_window = tk.Toplevel(self.root)
         cancel_window.title("Cancel Booking")
-        cancel_window.configure(bg="#f8f9fa")  
+        cancel_window.configure(bg="#2c3e50")
 
         # Window size and position
-        window_width, window_height = 400, 270
-        x_coordinate = (cancel_window.winfo_screenwidth() - window_width) // 2
-        y_coordinate = (cancel_window.winfo_screenheight() - window_height) // 2
+        window_width = 470
+        window_height = 260
+        screen_width = cancel_window.winfo_screenwidth()
+        screen_height = cancel_window.winfo_screenheight()
+        x_coordinate = (screen_width - window_width) // 2
+        y_coordinate = (screen_height - window_height) // 2
         cancel_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
-        # Make it modal
         cancel_window.transient(self.root)
         cancel_window.grab_set()
 
-        # Header
-        header = ctk.CTkLabel(cancel_window, text="Cancel Booking", font=("Arial", 16, "bold"), fg_color="#2c3e50", text_color="white", pady=10)
-        header.pack(fill="x")
+        # === Header Frame ===
+        header_frame = tk.Frame(cancel_window, bg="#1f2937", height=50)
+        header_frame.pack(fill=tk.X)
 
-        # Form Frame
-        form_frame = ctk.CTkFrame(cancel_window, fg_color="white", corner_radius=10)
-        form_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        header_label = tk.Label(header_frame, text="Cancel Booking", font=("Century Gothic", 16, "bold"),
+                                fg="white", bg="#1f2937", pady=10)
+        header_label.pack()
 
-        # Booking ID Field
-        ctk.CTkLabel(form_frame, text="Booking ID", font=("Arial", 12, "bold"), text_color="#2c3e50").pack(anchor="w", pady=(5, 0))
-        self.booking_id_entry = ctk.CTkEntry(form_frame, font=("Arial", 12), width=260)
-        self.booking_id_entry.pack(pady=5)
+        # === Outer Content Frame ===
+        outer_frame = tk.Frame(cancel_window, bg="#ecf0f1", padx=15, pady=20)
+        outer_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(10, 20))
 
-        # Cancellation Reason
-        ctk.CTkLabel(form_frame, text="Reason (Optional)", font=("Arial", 12, "bold"), text_color="#2c3e50").pack(anchor="w", pady=(5, 0))
-        self.cancellation_reason_entry = ctk.CTkEntry(form_frame, font=("Arial", 12), width=260)
-        self.cancellation_reason_entry.pack(pady=5)
+        # === Data Entry Section ===
+        form_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+        form_frame.pack(fill=tk.X, pady=(0, 20))
 
-        # Submit Button
-        submit_btn = ctk.CTkButton(cancel_window, text="Cancel Booking", font=("Arial", 13, "bold"), fg_color="#d9534f", hover_color="#c9302c",
-                                command=lambda: self.submit_cancel_booking(cancel_window))
-        submit_btn.pack(pady=15)
+        fields = [
+            ("Booking ID", tk.Entry),
+            ("Reason (Optional)", tk.Entry),
+        ]
+        self.entries = {}
+
+        for i, (label_text, field_type) in enumerate(fields):
+            label = tk.Label(form_frame, text=label_text, font=("Helvetica", 10, "bold"),
+                            bg="#ecf0f1", fg="#2c3e50")
+            label.grid(row=i, column=0, sticky="w", pady=5, padx=(5, 10))
+
+            # Frame around each Entry
+            entry_outer_frame = tk.Frame(form_frame, bg="white", relief="groove", borderwidth=2)
+            entry_outer_frame.grid(row=i, column=1, sticky="ew", pady=5)
+
+            entry = field_type(entry_outer_frame, font=("Helvetica", 10), width=28,
+                            bg="white", fg="black", relief="flat")
+            entry.pack(fill=tk.X, padx=4, pady=3)  # Smaller vertical padding!
+
+            self.entries[label_text] = entry
+
+        form_frame.columnconfigure(1, weight=1)
+
+        # === Buttons Frame ===
+        btn_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+        btn_frame.pack()
+
+        submit_btn = RoundedButton(
+            btn_frame,
+            text="Submit",
+            command=lambda: self.submit_cancel_booking(cancel_window),
+            radius=14,
+            padding=8,  # Slightly smaller buttons too
+            color="#1abc9c",
+            hover_color="#16a085",
+            text_color="white",
+            font=("Helvetica", 10, "bold"),
+            border_color="#16a085",
+            border_width=2,
+        )
+        submit_btn.grid(row=0, column=0, padx=15)
+
+        cancel_btn = RoundedButton(
+            btn_frame,
+            text="Cancel",
+            command=cancel_window.destroy,
+            radius=14,
+            padding=8,
+            color="#e74c3c",
+            hover_color="#c0392b",
+            text_color="white",
+            font=("Helvetica", 10, "bold"),
+            border_color="#c0392b",
+            border_width=2,
+        )
+        cancel_btn.grid(row=0, column=1, padx=15)
+
+
+
+
 
     def submit_cancel_booking(self, cancel_window):
         """Handles the booking cancellation request."""
         try:
-            booking_id = self.booking_id_entry.get().strip()
-            cancellation_reason = self.cancellation_reason_entry.get().strip()
+            booking_id = self.entries["Booking ID"].get().strip()
+
+            cancellation_reason = self.entries["Reason (Optional)"].get().strip()
 
             if not booking_id:
                 cancel_window.grab_release()  # Release before showing message
