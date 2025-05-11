@@ -993,7 +993,6 @@ class BookingManagement:
             fg_color="#3b82f6",
             hover_color="#2563eb",
             command=lambda: self.save_updated_booking(window)
-
         )
         submit_button.grid(row=7, column=0, columnspan=4, pady=20, sticky="n")
 
@@ -1012,9 +1011,16 @@ class BookingManagement:
                 elif isinstance(entry, ctk.CTkComboBox):
                     entry.set(value)
                 elif label_text == "Attachment":
-                    entry.delete(0, "end")
-                    entry.insert(0, value or "Select file...")
-                    entry.configure(text_color="gray" if not value else "white")
+                    # Modified logic for Attachment field
+                    attachment_value = booking_data.get("attachment") or ""
+                    if attachment_value and attachment_value.lower() != "none":
+                        entry.delete(0, "end")
+                        entry.insert(0, attachment_value)
+                        entry.configure(text_color="black")
+                    else:
+                        entry.delete(0, "end")
+                        entry.insert(0, "")
+                        entry.configure(text_color="gray")
                 else:
                     entry.configure(state="normal")
                     entry.delete(0, "end")
