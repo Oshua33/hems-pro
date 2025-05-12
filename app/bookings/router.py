@@ -586,6 +586,7 @@ def update_booking(
     phone_number: str = Form(...),
     vehicle_no: Optional[str] = Form(None),
     attachment: Optional[UploadFile] = File(None),
+    attachment_str: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
@@ -655,13 +656,19 @@ def update_booking(
             status = "reserved" if booking_type == "reservation" else "checked-in"
 
         # Handle attachment update if a new file is provided
-        attachment_path = booking.attachment
+        attachment_path = booking.attachment  # default to existing
         if attachment and attachment.filename:
             upload_dir = "uploads/attachments/"
             os.makedirs(upload_dir, exist_ok=True)
             attachment_path = os.path.join(upload_dir, attachment.filename)
             with open(attachment_path, "wb") as buffer:
                 shutil.copyfileobj(attachment.file, buffer)
+        elif attachment_str:
+            # Explicitly use string path from frontend if provided
+            attachment_path = attachment_str
+        else:
+            # If neither file nor string, clear the attachment
+            attachment_path = None
 
         # Update the booking record
         booking.room_number = room.room_number

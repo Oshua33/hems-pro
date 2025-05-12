@@ -10,6 +10,8 @@ from datetime import date
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 #from customtkinter import CTkMessagebox
+from customtkinter import CTkImage
+
 
 from tkinter import Tk, Button, messagebox
 from utils import export_to_excel, print_excel
@@ -563,7 +565,7 @@ class BookingManagement:
         # Create a new pop-up window
         create_window = ctk.CTkToplevel(self.root)
         create_window.title(title_text)
-        create_window.geometry("750x400")
+        create_window.geometry("780x400")
         create_window.resizable(False, False)
         create_window.configure(fg_color="#f5f5f5")
 
@@ -572,7 +574,7 @@ class BookingManagement:
         screen_height = create_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        create_window.geometry(f"750x400+{x_coordinate}+{y_coordinate}")
+        create_window.geometry(f"780x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         create_window.transient(self.root)
@@ -618,13 +620,13 @@ class BookingManagement:
             "Identification Number": 150,
             "Mode of Identification": 130,
             "Gender": 100,
-            "Address": 170,
+            "Address": 200,
             "Phone Number": 120,
             "Booking Type": 120,
             "Arrival Date": 10,
             "Departure Date": 10,
             "Vehicle No": 120,
-            "Attachment": 150
+            "Attachment": 200
         }
 
         # Form creation loop
@@ -678,7 +680,7 @@ class BookingManagement:
 
         # Search button for guest name
         guest_name_entry = self.entries["Guest Name"]
-        search_btn = ctk.CTkButton(frame, text="Search", command=lambda: self.search_guest(guest_name_entry.get()), font=("Arial", 10), fg_color="gray", text_color="white", width=80, height=28)
+        search_btn = ctk.CTkButton(frame, text="Search Name", command=lambda: self.search_guest(guest_name_entry.get()), font=("Arial", 10), fg_color="gray", text_color="white", width=60, height=28)
         search_btn.grid(row=0, column=4, padx=(0, 10), pady=5, sticky="w")
 
 
@@ -1232,19 +1234,24 @@ class BookingManagement:
                 response = requests.get(url)
 
                 img = Image.open(BytesIO(response.content))
-                img.thumbnail((120, 120))  # Resize while maintaining aspect ratio
-
-                # Keep image reference attached to window
-                view_window.preview_image = ImageTk.PhotoImage(img)
+                img = img.convert("RGBA")  # Ensure compatibility
+                ctk_image = CTkImage(light_image=img, size=(120, 120))
 
                 attachment_preview = ctk.CTkLabel(
                     master=view_window,
-                    image=view_window.preview_image,
+                    image=ctk_image,
                     text="",
                     width=120,
                     height=120
                 )
-                attachment_preview.place(x=420, y=20)  # Top-right position
+                attachment_preview= ctk_image  # Prevent garbage collection
+                attachment_preview.place(x=420, y=20)
+            except Exception as e:
+                print(f"Image preview failed: {e}")
+
+            except Exception as e:
+                print(f"Image preview failed: {e}")
+
             except Exception as e:
                 print(f"Image preview failed: {e}")
 
@@ -1451,7 +1458,7 @@ class BookingManagement:
         if attachment_data:
             try:
                 image_stream = BytesIO(attachment_data)
-                img = Image(image_stream, width=200, height=150)  # ✅ Corrected line
+                img = Image(image_stream, width=300, height=250)  # ✅ Corrected line
                 elements.append(Spacer(1, 12))
                 elements.append(Paragraph("Attachment Photo:", styles['Heading2']))
                 elements.append(img)
@@ -2089,210 +2096,6 @@ class BookingManagement:
     
 
 
-
-    """
-    def update_booking(self):
-        Opens a pop-up window for updating an existing booking with CustomTkinter.
-        self.clear_right_frame()
-
-        update_window = ctk.CTkToplevel(self.root)
-        update_window.title("Update Booking")
-        update_window.geometry("670x400")
-        update_window.resizable(False, False)
-        update_window.configure(fg_color="#f5f5f5")
-
-        # Center the window on the screen
-        screen_width = update_window.winfo_screenwidth()
-        screen_height = update_window.winfo_screenheight()
-        x_coordinate = (screen_width - 670) // 2
-        y_coordinate = (screen_height - 450) // 2
-        update_window.geometry(f"670x450+{x_coordinate}+{y_coordinate}")
-
-        update_window.transient(self.root)
-        update_window.grab_set()
-
-        header_frame = ctk.CTkFrame(update_window, fg_color="#2c3e50", height=50, corner_radius=8)
-        header_frame.pack(fill="x", padx=10, pady=10)
-        header_label = ctk.CTkLabel(header_frame, text="Update Booking", font=("Arial", 16, "bold"), text_color="white")
-        header_label.pack(pady=10)
-        
-        frame = ctk.CTkFrame(update_window, fg_color="white", corner_radius=10)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        combo_box_values = {
-            "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"],
-            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
-        }
-
-        self.entries = {}
-
-        form_data = [
-            ("Booking ID", ctk.CTkEntry, 0, 0, 2),  # Booking ID takes full row (colspan=2)
-            ("Room Number", ctk.CTkEntry, 1, 0),
-            ("Guest Name", ctk.CTkEntry, 1, 2),
-            ("Identification Number", ctk.CTkEntry, 2, 0),
-            ("Mode of Identification", ctk.CTkComboBox, 2, 2),
-            ("Gender", ctk.CTkComboBox, 3, 0),
-            ("Address", ctk.CTkEntry, 3, 2),
-            ("Phone Number", ctk.CTkEntry, 4, 0),
-            ("Booking Type", ctk.CTkComboBox, 4, 2),
-            ("Arrival Date", DateEntry, 5, 0),
-            ("Departure Date", DateEntry, 5, 2),
-            ("Vehicle No", ctk.CTkEntry, 6, 0),
-            ("Attachment", ctk.CTkEntry, 6, 2),
-        ]
-
-        field_widths = {
-            "Booking ID": 100,
-            "Room Number": 50,
-            "Guest Name": 150,
-            "Identification Number": 150,
-            "Mode of Identification": 130,
-            "Gender": 100,
-            "Address": 170,
-            "Phone Number": 120,
-            "Booking Type": 120,
-            "Arrival Date": 10,
-            "Departure Date": 10,
-            "Vehicle No": 120,
-            "Attachment": 150
-        }
-
-        for item in form_data:
-            label_text, field_type, row, col = item[:4]
-            colspan = item[4] if len(item) == 5 else 1
-
-            label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
-            label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
-
-            width = field_widths.get(label_text, 20)
-
-            if field_type == ctk.CTkComboBox:
-                entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
-                                        font=("Helvetica", 12), width=width)
-            elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), background='darkblue',
-                                foreground='white', borderwidth=2)
-            else:
-                entry = field_type(frame, font=("Helvetica", 12), width=width)
-                if label_text == "Attachment":
-                    entry.insert(0, "Select file...")
-                    entry.configure(text_color="gray")
-                if label_text == "Booking ID":
-                    entry.configure(state="normal")  # Enable it so it's visible and editable if needed
-
-            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
-            self.entries[label_text] = entry
-
-        self.update_window = update_window
-
-        # File Picker (same as Create Booking)
-        def browse_file(event=None):
-            file_path = filedialog.askopenfilename()
-            if file_path:
-                self.attachment_full_path = file_path
-                attachment_entry.configure(state="normal")
-                attachment_entry.delete(0, "end")
-                attachment_entry.insert(0, os.path.basename(file_path))
-                attachment_entry.configure(state="readonly")
-
-        attachment_entry = self.entries["Attachment"]
-        attachment_entry.bind("<1>", browse_file)
-
-        # Submit Button (styled to match Create Booking)
-        submit_btn = ctk.CTkButton(
-            frame,
-            text="Submit Update",
-            command=lambda: self.submit_update_booking(update_window),
-            font=("Arial", 14, "bold"),
-            fg_color="#3498db",
-            hover_color="#2980b9",
-            text_color="white",
-            corner_radius=10,
-            width=450,
-            height=40
-        )
-
-        # Place Submit button at next row after form fields
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
-
-
-
-    
-
-    def submit_update_booking(self, update_window):
-        Collects form data and sends a multipart/form-data request to update a booking.
-        try:
-            # Basic data collection
-            data = {
-                "booking_id": self.entries["Booking ID"].get(),
-                "room_number": self.entries["Room Number"].get(),
-                "guest_name": self.entries["Guest Name"].get(),
-                "gender": self.entries["Gender"].get(),
-                "mode_of_identification": self.entries["Mode of Identification"].get(),
-                "identification_number": self.entries["Identification Number"].get(),
-                "address": self.entries["Address"].get(),
-                "phone_number": self.entries["Phone Number"].get(),
-                "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
-                "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
-                "booking_type": self.entries["Booking Type"].get(),
-                "vehicle_no": self.entries["Vehicle No"].get() or "",
-            }
-
-            # Validate required fields (excluding optional vehicle_no)
-            required = [k for k in data if k != "vehicle_no"]
-            if not all(data[k] for k in required):
-                update_window.grab_release()
-                CTkMessagebox(title="Error", message="Please fill in all required fields", icon="cancel", option_1="OK")
-                return
-
-            # Handle file attachment
-            attachment_path = getattr(self, 'attachment_full_path', None)
-            files = {}
-            file_obj = None
-
-            if attachment_path and os.path.isfile(attachment_path):
-                try:
-                    file_obj = open(attachment_path, "rb")
-                    files["attachment"] = (
-                        os.path.basename(attachment_path),
-                        file_obj,
-                        "application/octet-stream"
-                    )
-                except Exception as e:
-                    update_window.grab_release()
-                    CTkMessagebox(title="File Error", message=f"Attachment error: {str(e)}", icon="cancel", option_1="OK")
-                    return
-            else:
-                files["attachment"] = ("", "", "application/octet-stream")
-
-            # Send request
-            url = f"http://127.0.0.1:8000/bookings/update/?booking_id={data['booking_id']}"
-            headers = {"Authorization": f"Bearer {self.token}"}
-
-            try:
-                response = requests.put(url, data=data, files=files, headers=headers)
-
-            finally:
-                if file_obj:
-                    file_obj.close()
-
-            # Handle response
-            if response.status_code == 200:
-                update_window.grab_release()
-                msgbox = CTkMessagebox(title="Success", message="Booking updated successfully!", icon="check", option_1="OK")
-                if msgbox.get() == "OK":
-                    update_window.destroy()
-            else:
-                update_window.grab_release()
-                CTkMessagebox(title="Error", message=response.json().get("detail", "Update failed."), icon="warning", option_1="OK")
-
-        except Exception as e:
-            update_window.grab_release()
-            CTkMessagebox(title="Error", message=f"Unexpected error: {str(e)}", icon="cancel", option_1="OK")
-"""
-
     
 #from CTkMessagebox import CTkMessagebox
 
@@ -2534,17 +2337,19 @@ class BookingManagement:
                 canceled_booking = response.json().get("canceled_booking", {})
 
                 # Success message
-                CTkMessagebox(
+                msgbox = CTkMessagebox(
                     title="Success",
                     message=f"Booking {canceled_booking.get('id', booking_id)} canceled successfully!\n"
                             f"Room Status: {canceled_booking.get('room_status', 'N/A')}\n"
                             f"Booking Status: {canceled_booking.get('status', 'N/A')}\n"
                             f"Reason: {canceled_booking.get('cancellation_reason', 'None')}",
                     icon="check",
+                    option_1="OK",
                 )
+                # Wait for user to press OK before closing the window
+                if msgbox.get() == "OK":
+                    cancel_window.destroy()
 
-                # Close window after a short delay
-                cancel_window.after(500, cancel_window.destroy)
 
             else:
                 cancel_window.grab_release()  # Release before showing message
