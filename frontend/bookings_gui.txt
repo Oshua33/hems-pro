@@ -3,14 +3,13 @@ from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 import requests
 from utils import BASE_URL
-import datetime 
+import datetime
 from datetime import datetime
+from datetime import date
 
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 #from customtkinter import CTkMessagebox
-
-
 
 from tkinter import Tk, Button, messagebox
 from utils import export_to_excel, print_excel
@@ -19,8 +18,39 @@ import os
 import sys
 import pandas as pd
 from payment_gui import PaymentManagement  # Import the Payment GUI
-##
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import tempfile
+import os
+import platform
 
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+import webbrowser
+from tkinter import filedialog
+
+import tempfile
+from io import BytesIO
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
+import webbrowser
+import os
+
+
+
+
+
+
+# Global hotel name
+HOTEL_NAME = "Destone Hotel & Suite"
 
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text, command, radius=12, padding=5, 
@@ -91,9 +121,14 @@ class BookingManagement:
         self.root.title("Booking Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
+
+
         
         self.token = token
         self.username = "current_user"
+
+        self.tree = ttk.Treeview(self.root)  # Treeview (make sure it's defined)
+        self.attachment_path_var = ctk.StringVar()  # or Tkinter.StringVar()
 
         # Set application icon
         icon_path = os.path.abspath("frontend/icon.ico")
@@ -108,27 +143,36 @@ class BookingManagement:
         x_coordinate = (screen_width // 2) - (window_width // 2)
         y_coordinate = (screen_height // 2) - (window_height // 2)
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+
+        from tkinter import filedialog
+
+    
         
         # ========== Main Layout ==========
-        self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)
+        self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
         self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=50)
-        self.header_frame.pack(fill=tk.X, pady=(0, 10))
-        self.header_frame.pack_propagate(False)
+        self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
+        self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
 
-        # Menu Buttons (now on the left side)
-        self.menu_frame = tk.Frame(self.header_frame, bg="#2C3E50")
-        self.menu_frame.pack(side=tk.LEFT, padx=10)
+        # Title Label (left side of header)
+        self.title_label = tk.Label(
+            self.header_frame,
+            text="                                                                                             📅 Booking Management",
+            font=("Helvetica", 16, "bold"),
+            fg="gold",
+            bg="#2C3E50",
+            anchor="w"
+        )
+        self.title_label.pack(side=tk.LEFT, padx=20)  # Padding left so it doesn't stick to edge
 
-        for label in ["File", "List", "Edit", "Logout"]:
-            self.create_menu_button(label)
-
-        # Action Frame (Export/Print on far right)
+        # Action Frame (right side of header)
         self.action_frame = tk.Frame(self.header_frame, bg="#2C3E50")
-        self.action_frame.pack(side=tk.RIGHT, padx=10)
+        self.action_frame.pack(side=tk.RIGHT, padx=20, pady=10)
 
+        # Add buttons to action frame (example: Export and Print buttons)
         self.export_button = RoundedButton(
             self.action_frame,
             text="📊Export to Excel",
@@ -157,26 +201,30 @@ class BookingManagement:
         )
         self.print_button.pack(side=tk.LEFT, padx=5)
 
-        # ======= Main Content Frame (Sidebar + Right Content) =======
+       # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Sidebar
-        self.left_frame = tk.Frame(self.main_frame, bg="#2C3E50", width=140)
+        # Sidebar Frame
+        self.left_frame = tk.Frame(self.main_frame, bg="#2C3E50", width=140)  # Set desired width
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
-        self.left_frame.pack_propagate(False)
+        self.left_frame.pack_propagate(False)  # Prevent frame from resizing
 
+        # Sidebar Label
         self.menu_label = tk.Label(self.left_frame, text="MENU", font=("Helvetica", 12, "bold"), 
                                 fg="white", bg="#34495E", pady=5)
         self.menu_label.pack(fill=tk.X)
 
-        # Right Content
+        # Right Content Frame
         self.right_frame = tk.Frame(self.main_frame, bg="#ffffff", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
         self.subheading_label.pack(pady=10)
+
+    
 
         # Sidebar Buttons
         buttons = [
@@ -186,7 +234,7 @@ class BookingManagement:
             ("Sort Guest Name", self.search_booking),
             ("Sort by ID", self.search_booking_by_id),
             ("Sort By Room", self.search_booking_by_room),
-            ("Update Booking", self.update_booking),
+            #("Update Booking", self.update_booking),
             ("Guest Checkout", self.guest_checkout),
             ("Cancel Booking", self.cancel_booking),
         ]
@@ -199,43 +247,34 @@ class BookingManagement:
                 radius=12,
                 color="#34495E",
                 hover_color="#1ABC9C",
-                border_color="#1ABC9C",
+                border_color="#1ABC9C",  # or any color you want
                 font=("Helvetica", 9)
             )
             rb.pack(anchor="w", padx=(8, 0), pady=2)
 
-        # Dashboard Link
-        self.dashboard_label = tk.Label(
+
+            
+            # Dashboard Link
+            self.dashboard_label = tk.Label(
             self.left_frame,
             text="⬅ Dashboard",
             cursor="hand2",
             font=("Helvetica", 10, "bold"),
             fg="white",
-            bg="#1A5276",
+            bg="#1A5276",  # Deep Blue Background
             padx=10,
             pady=5,
             relief="solid",
             borderwidth=2
         )
         self.dashboard_label.pack(pady=15, padx=10, anchor="w", fill="x")
-        self.dashboard_label.bind("<Enter>", lambda e: self.dashboard_label.config(bg="#154360"))
-        self.dashboard_label.bind("<Leave>", lambda e: self.dashboard_label.config(bg="#1A5276"))
-        self.dashboard_label.bind("<Button-1>", lambda e: self.open_dashboard_window())
 
-    def create_menu_button(self, label):
-        menu_button = ctk.CTkButton(
-            self.menu_frame,
-            text=label,
-            text_color="white",
-            fg_color="#2C3E50",
-            hover_color="#34495E",
-            font=("Helvetica", 14),
-            corner_radius=5,
-            width=80,
-            height=30,
-            command=lambda l=label: self.show_dropdown_menu(l)
-        )
-        menu_button.pack(side=tk.LEFT, padx=5)
+        # Change background color when hovering over
+        self.dashboard_label.bind("<Enter>", lambda e: self.dashboard_label.config(bg="#154360"))  # Darker Blue on Hover
+        self.dashboard_label.bind("<Leave>", lambda e: self.dashboard_label.config(bg="#1A5276"))  # Reset on Leave
+
+        # Click event to open dashboard
+        self.dashboard_label.bind("<Button-1>", lambda e: self.open_dashboard_window())
 
 
     def update_subheading(self, text, command):
@@ -281,7 +320,15 @@ class BookingManagement:
         
 
 
-            
+    def select_attachment(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            self.attachment_full_path = file_path
+            self.attachment_label.configure(text=os.path.basename(file_path))  # Optional UI feedback
+        else:
+            self.attachment_full_path = None
+            self.attachment_label.configure(text="No file selected")
+        
              
         self.fetch_and_display_bookings()
 
@@ -376,6 +423,11 @@ class BookingManagement:
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
+                worksheet.set_landscape()
+
+                worksheet.center_horizontally()  # Center content horizontally on the page
+                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)  # Adjust margins in inches
+            
 
                 # === Styles ===
                 title_format = workbook.add_format({
@@ -470,13 +522,40 @@ class BookingManagement:
 
 
 
-    def create_booking(self):
+    def create_booking(self, booking_data=None):
+
         """Opens a pop-up window for creating a new booking with CustomTkinter."""
         self.clear_right_frame()
 
+        title_text = "Update Booking" if booking_data else "Create Booking"
+
+
+
+        # Fields to display in both create and update modes
+        fields = [
+            ("Room Number", "room_number"),
+            ("Guest Name", "guest_name"),
+            ("Gender", "gender"),
+            ("Booking Cost", "booking_cost"),
+            ("Arrival Date", "arrival_date"),
+            ("Departure Date", "departure_date"),
+            ("Booking Type", "booking_type"),
+            ("Phone Number", "phone_number"),
+            ("Mode of Identification", "mode_of_identification"),
+            ("Identification Number", "identification_number"),
+            ("Address", "address"),
+            ("Vehicle No", "vehicle_no"),
+            ("Attachment", "attachment"),
+        ]
+
+        
+
+
+
         # Create a new pop-up window
         create_window = ctk.CTkToplevel(self.root)
-        create_window.title("Create Booking")
+        create_window.title(title_text)
+
         create_window.geometry("650x400")
         create_window.resizable(False, False)
         create_window.configure(fg_color="#f5f5f5")
@@ -486,7 +565,7 @@ class BookingManagement:
         screen_height = create_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        create_window.geometry(f"650x400+{x_coordinate}+{y_coordinate}")
+        create_window.geometry(f"670x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         create_window.transient(self.root)
@@ -495,46 +574,136 @@ class BookingManagement:
         # Header
         header_frame = ctk.CTkFrame(create_window, fg_color="#2c3e50", height=50, corner_radius=8)
         header_frame.pack(fill="x", padx=10, pady=10)
-        header_label = ctk.CTkLabel(header_frame, text="Create Booking", font=("Arial", 16, "bold"), text_color="white")
+        header_label = ctk.CTkLabel(header_frame, text=title_text, font=("Arial", 16, "bold"), text_color="white")
+
         header_label.pack(pady=10)
 
         # Main Content Frame
-        frame = ctk.CTkFrame(create_window, fg_color="white", corner_radius=10)
+        frame = ctk.CTkFrame(create_window, fg_color="#eeeeee", corner_radius=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Booking Fields Layout
+
+        
         self.entries = {}  # Store entry widgets
 
         # Combo box values
         combo_box_values = {
             "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"]
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
         }
 
         # Form Grid Layout
         form_data = [
-            ("Room Number", ctk.CTkEntry, 0, 0), ("Guest Name", ctk.CTkEntry, 0, 2),
-            ("Identification Number", ctk.CTkEntry, 1, 0), ("Gender", ctk.CTkComboBox, 1, 2),
-            ("Address", ctk.CTkEntry, 2, 0, 3),  # Span across columns
-            ("Phone Number", ctk.CTkEntry, 3, 0), ("Booking Type", ctk.CTkComboBox, 3, 2),
-            ("Arrival Date", DateEntry, 4, 0), ("Departure Date", DateEntry, 4, 2),
+            ("Room Number", ctk.CTkEntry, 0, 0), 
+            ("Guest Name", ctk.CTkEntry, 0, 2),
+            ("Identification Number", ctk.CTkEntry, 1, 0), 
+            ("Mode of Identification", ctk.CTkComboBox, 1, 2),  # 👈 NEW
+            ("Gender", ctk.CTkComboBox, 2, 0),
+            ("Address", ctk.CTkEntry, 2, 2),
+            ("Phone Number", ctk.CTkEntry, 3, 0), 
+            ("Booking Type", ctk.CTkComboBox, 3, 2),
+            ("Arrival Date", DateEntry, 4, 0), 
+            ("Departure Date", DateEntry, 4, 2),
+            ("Vehicle No", ctk.CTkEntry, 5, 0), 
+            ("Attachment", ctk.CTkEntry, 5, 2),
         ]
+
+
+        # Field-specific widths
+        field_widths = {
+            "Room Number": 50,
+            "Guest Name": 150,
+            "Identification Number": 150,
+            "Mode of Identification": 130,
+            "Gender":100,
+            "Address": 170,
+            "Phone Number": 120,
+            "Booking Type": 120,
+            "Arrival Date": 10,
+            "Departure Date": 10,
+            "Vehicle No": 100,
+            "Attachment": 150
+        }
+
+        # Form Grid Layout
+        form_data = [
+            ("Room Number", ctk.CTkEntry, 0, 0), 
+            ("Guest Name", ctk.CTkEntry, 0, 2),
+            ("Identification Number", ctk.CTkEntry, 1, 0), 
+            ("Mode of Identification", ctk.CTkComboBox, 1, 2),  # 👈 NEW
+            ("Gender", ctk.CTkComboBox, 2, 0),
+            ("Address", ctk.CTkEntry, 2, 2),
+            ("Phone Number", ctk.CTkEntry, 3, 0), 
+            ("Booking Type", ctk.CTkComboBox, 3, 2),
+            ("Arrival Date", DateEntry, 4, 0), 
+            ("Departure Date", DateEntry, 4, 2),
+            ("Vehicle No", ctk.CTkEntry, 5, 0), 
+            ("Attachment", ctk.CTkEntry, 5, 2),
+        ]
+
+
+        # Field-specific widths
+        field_widths = {
+            "Room Number": 50,
+            "Guest Name": 150,
+            "Identification Number": 150,
+            "Mode of Identification": 130,
+            "Gender":100,
+            "Address": 170,
+            "Phone Number": 120,
+            "Booking Type": 120,
+            "Arrival Date": 10,
+            "Departure Date": 10,
+            "Vehicle No": 120,
+            "Attachment": 150
+        }
 
         for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
 
-            # Create input fields
+            width = field_widths.get(label_text, 20)
+
             if field_type == ctk.CTkComboBox:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
-                                        font=("Helvetica", 12), width=200)
+                                        font=("Helvetica", 12), width=width)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue', foreground='white', borderwidth=2)
+                entry = DateEntry(frame, font=("Helvetica", 12), background='darkblue',
+                                foreground='white', borderwidth=2)  # Removed width
             else:
-                entry = field_type(frame, font=("Helvetica", 12), width=22 if label_text != "Address" else 50)
+                entry = field_type(frame, font=("Helvetica", 12), width=width)
+                if label_text == "Attachment":
+                    entry.insert(0, "Select file...")
+                    entry.configure(text_color="gray")
 
-            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="ew")
-            self.entries[label_text] = entry  # Store entry
+            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
+            self.entries[label_text] = entry
+
+            # 👇 Pre-fill the entry if booking_data is provided (for update mode)
+        if booking_data:
+            key = label_text.lower().replace(" ", "_")
+            value = booking_data.get(key, "")
+            try:
+                entry.set(value)  # For CTkComboBox or DateEntry
+            except:
+                entry.insert(0, value)  # For CTkEntry
+
+
+
+        # Define file picker function and bind it
+        def browse_file(event=None):
+            file_path = filedialog.askopenfilename()
+            if file_path:
+                self.attachment_full_path = file_path  # Store full path for later upload
+                attachment_entry.configure(state="normal")
+                attachment_entry.delete(0, "end")
+                attachment_entry.insert(0, os.path.basename(file_path))  # Show only filename
+                attachment_entry.configure(state="readonly")
+
+        attachment_entry = self.entries["Attachment"]
+        attachment_entry.bind("<1>", browse_file)
 
         # Submit Button
         submit_btn = ctk.CTkButton(
@@ -549,73 +718,83 @@ class BookingManagement:
             width=450,
             height=40
         )
-        submit_btn.grid(row=5, column=0, columnspan=4, pady=25, padx=30, sticky="ew")  # Center button
+        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
 
+    
 
+    
 
-    def submit_booking(self, create_window):
-        """Collects form data and sends a request to create a booking, then closes the pop-up."""
+    def submit_booking(self, create_window, booking_data=None):
         try:
-            created_by = self.username
+            is_update = booking_data is not None
+            url = (
+                f"http://127.0.0.1:8000/bookings/update/{booking_data['id']}/"
+                if is_update else
+                "http://127.0.0.1:8000/bookings/create/"
+            )
+            headers = {"Authorization": f"Bearer {self.token}"}
 
-            # Ensure entries dictionary exists
-            if not hasattr(self, "entries"):
-                CTkMessagebox(title="Error", message="Entry fields are not initialized properly.", icon="cancel")
-                return
-
-            # Extract data from form
-            booking_data = {
+            data = {
                 "room_number": self.entries["Room Number"].get(),
                 "guest_name": self.entries["Guest Name"].get(),
                 "gender": self.entries["Gender"].get(),
+                "mode_of_identification": self.entries["Mode of Identification"].get(),
                 "identification_number": self.entries["Identification Number"].get(),
                 "address": self.entries["Address"].get(),
-                "phone_number": self.entries["Phone Number"].get(),
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
                 "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
                 "booking_type": self.entries["Booking Type"].get(),
-                "created_by": created_by,
+                "phone_number": self.entries["Phone Number"].get(),
+                "vehicle_no": self.entries["Vehicle No"].get() or None,
+                "attachment": self.entries["Attachment"].get() or None,
             }
 
-            # Check for empty fields
-            if not all(booking_data.values()):
-                CTkMessagebox(title="Missing Fields", message="Please fill in all required fields before submitting.", icon="warning")
+            required_fields = ["room_number", "guest_name", "gender", "mode_of_identification",
+                            "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
+
+            missing = [k for k in required_fields if not data.get(k)]
+            if missing:
+                messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
                 return
 
-            api_url = "http://127.0.0.1:8000/bookings/create/"
-            headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+            attachment_path = getattr(self, 'attachment_full_path', None)
+            files = {}
+            file_obj = None
 
-            # Send POST request
-            response = requests.post(api_url, json=booking_data, headers=headers)
+            if attachment_path and os.path.isfile(attachment_path):
+                try:
+                    file_obj = open(attachment_path, "rb")
+                    files["attachment"] = (
+                        os.path.basename(attachment_path),
+                        file_obj,
+                        "application/octet-stream"
+                    )
+                except Exception as e:
+                    messagebox.showerror("File Error", f"Attachment file error: {str(e)}")
+                    return
+            else:
+                files["attachment"] = ("", "", "application/octet-stream")
+
+            try:
+                if is_update:
+                    response = requests.put(url, data=data, files=files, headers=headers)
+                else:
+                    response = requests.post(url, data=data, files=files, headers=headers)
+            finally:
+                if file_obj:
+                    file_obj.close()
 
             if response.status_code == 200:
-                response_data = response.json()
-                booking_id = response_data.get("booking_details", {}).get("id")
-
-                if booking_id:
-                    create_window.destroy()  # Close pop-up window
-                    CTkMessagebox(
-                        title="Success",
-                        message=f"Booking created successfully!\nBooking ID: {booking_id}",
-                        icon="check"
-                    )
-
-                    # Reset form if method exists
-                    if hasattr(self, "reset_booking_form"):
-                        self.reset_booking_form()
-
-                else:
-                    CTkMessagebox(title="Error", message="Booking ID missing in response.", icon="cancel")
-
+                messagebox.showinfo("Success", f"Booking {'updated' if is_update else 'created'} successfully.")
+                create_window.destroy()
             else:
-                error_message = response.json().get("detail", "Booking failed.")
-                CTkMessagebox(title="Error", message=error_message, icon="warning")
-
-        except KeyError as e:
-            CTkMessagebox(title="Error", message=f"Missing entry field: {e}", icon="warning")
+                messagebox.showerror("Error", f"Failed to {'update' if is_update else 'create'} booking:\n{response.text}")
 
         except requests.exceptions.RequestException as e:
-            CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="warning")
+            messagebox.showerror("Request Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Unexpected Error", str(e))
+
 
 
 
@@ -646,44 +825,598 @@ class BookingManagement:
             command=lambda: self.fetch_bookings(self.start_date, self.end_date)
         )
         fetch_btn.grid(row=0, column=4, padx=10, pady=5)
-
-        # Create a frame to hold the treeview and scrollbars
-        table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")  # Solid border for grid effect
+# === Table Frame ===
+        table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")
         table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        # Define Treeview columns
+        # Create Treeview
         columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification No", "Address","Created_by")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Mode of Identification", "Identification No", 
+                "Address", "Vehicle No", "Attachment", "Created_by")
 
-        # Create a Treeview widget
         style = ttk.Style()
         style.configure("Treeview", rowheight=25, background="white", fieldbackground="white", borderwidth=1)
         style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background="#2c3e50", foreground="white")
         style.map("Treeview", background=[("selected", "#b3d1ff")])
 
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)  # Set height for visibility
-
-        # Define headings and set column widths
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col, anchor="center")
-            self.tree.column(col, width=70, anchor="center")  # Adjust column width
+            self.tree.column(col, width=100, anchor="center")  # Widened slightly for readability
 
-        # Pack the Treeview inside a scrollable frame
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        # Add vertical scrollbar
+        # Add scrollbars INSIDE same frame
         y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscroll=y_scroll.set)
+        x_scroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
 
-        # Add horizontal scrollbar
-        x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.tree.xview)
-        x_scroll.pack(fill=tk.X)
-        self.tree.configure(xscroll=x_scroll.set)
+        # Pack them properly
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
 
         # Label to display total booking cost
         self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_booking_cost_label.pack(pady=10)
+
+            
+        # Assuming `frame` is where your booking buttons are being placed
+        button_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        button_frame.pack(pady=10)
+
+        view_button = ctk.CTkButton(button_frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
+        view_button.pack(side="left", padx=10)
+
+        update_button = ctk.CTkButton(button_frame, text="Update Booking", corner_radius=20, command=self.update_selected_booking)
+        update_button.pack(side="left", padx=10)
+
+
+
+    def update_selected_booking(self):
+        selected_booking = self.get_selected_booking()
+        if selected_booking:
+            self.update_booking_form(selected_booking)
+
+        else:
+            messagebox.showwarning("No Selection", "Please select a booking to update.")
+
+    def get_selected_booking(self):
+        selected_item = self.tree.focus()
+        if not selected_item:
+            return None
+
+        values = self.tree.item(selected_item, "values")
+
+        field_keys = [
+            "booking_id", "room_number", "guest_name", "gender", "booking_cost", "arrival_date",
+            "departure_date", "status", "no_of_days", "booking_type", "phone_number", "booking_date",
+            "payment_status", "mode_of_identification", "identification_number", "address",
+            "vehicle_no", "attachment", "created_by"
+        ]
+
+        return dict(zip(field_keys, values))
+    
+
+    def update_booking_form(self, booking_data):
+        def browse_attachment_file(event=None):
+            file_path = filedialog.askopenfilename(
+                title="Select Attachment",
+                filetypes=[("All Files", "*.*"), ("Images", "*.png;*.jpg;*.jpeg"), ("PDFs", "*.pdf")]
+            )
+            if file_path:
+                attachment_entry = self.update_entries.get("Attachment")
+                if attachment_entry:
+                    attachment_entry.delete(0, "end")
+                    attachment_entry.insert(0, file_path)
+                    attachment_entry.configure(text_color="black")  # Make text visible
+
+        window = ctk.CTkToplevel(self.root)
+        window.title("Update Booking")
+        window.geometry("750x450+150+30")
+        window.configure(fg_color="#1e1e1e")
+        window.resizable(False, False)
+
+        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#f1f1f1")
+        title.pack(pady=(10, 5))
+
+        form_frame = ctk.CTkFrame(window, fg_color="#2c2c2c", corner_radius=15)
+        form_frame.pack(fill="both", expand=True, padx=20, pady=15)
+
+        for i in range(4):
+            form_frame.grid_columnconfigure(i, weight=1)
+
+        combo_box_values = {
+            "Gender": ["Male", "Female"],
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
+        }
+
+        self.update_entries = {}
+
+        def add_form_row(row, label1, field1, label2=None, field2=None):
+            col = 0
+            for label_text, field_type in [(label1, field1), (label2, field2) if label2 else (None, None)]:
+                if label_text:
+                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#dddddd")
+                    label.grid(row=row, column=col, sticky="w", padx=10, pady=6)
+
+                    width = 180
+                    if field_type == ctk.CTkComboBox:
+                        entry = ctk.CTkComboBox(
+                            form_frame,
+                            values=combo_box_values.get(label_text, []),
+                            state="readonly",
+                            font=("Segoe UI", 11),
+                            width=width,
+                            dropdown_fg_color="#3a3a3a",
+                            dropdown_text_color="#f1f1f1"
+                        )
+                    elif field_type == DateEntry:
+                        entry = DateEntry(
+                            form_frame,
+                            font=("Segoe UI", 10),
+                            background='darkblue',
+                            foreground='white',
+                            borderwidth=2
+                        )
+                    else:
+                        entry = field_type(form_frame, font=("Segoe UI", 11), width=width)
+                        if label_text == "Attachment":
+                            entry.insert(0, "Select file...")
+                            entry.configure(text_color="black")
+                            entry.bind("<Button-1>", browse_attachment_file)
+                        if label_text == "Booking ID":
+                            entry.configure(state="readonly")
+
+                    entry.grid(row=row, column=col + 1, sticky="w", padx=10, pady=6)
+                    self.update_entries[label_text] = entry
+                    col += 2
+
+        # Form layout rows
+        add_form_row(0, "Booking ID", ctk.CTkEntry)
+        add_form_row(1, "Room Number", ctk.CTkEntry, "Guest Name", ctk.CTkEntry)
+        add_form_row(2, "Identification Number", ctk.CTkEntry, "Mode of Identification", ctk.CTkComboBox)
+        add_form_row(3, "Gender", ctk.CTkComboBox, "Phone Number", ctk.CTkEntry)
+        add_form_row(4, "Address", ctk.CTkEntry, "Booking Type", ctk.CTkComboBox)
+        add_form_row(5, "Arrival Date", DateEntry, "Departure Date", DateEntry)
+        add_form_row(6, "Vehicle No", ctk.CTkEntry, "Attachment", ctk.CTkEntry)
+
+        # Submit button
+        submit_button = ctk.CTkButton(
+            form_frame,
+            text="Update",
+            width=140,
+            height=36,
+            corner_radius=10,
+            font=("Segoe UI", 12, "bold"),
+            text_color="white",
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            command=lambda: self.save_updated_booking(window)
+
+        )
+        submit_button.grid(row=7, column=0, columnspan=4, pady=20, sticky="n")
+
+        # Populate fields from booking_data
+        if booking_data:
+            for label_text, entry in self.update_entries.items():
+                key = label_text.lower().replace(" ", "_")
+                value = booking_data.get(key, "")
+
+                if isinstance(entry, DateEntry):
+                    try:
+                        date_obj = datetime.strptime(value, "%Y-%m-%d")
+                        entry.set_date(date_obj)
+                    except Exception as e:
+                        print(f"Failed to parse date for {label_text}: {e}")
+                elif isinstance(entry, ctk.CTkComboBox):
+                    entry.set(value)
+                elif label_text == "Attachment":
+                    entry.delete(0, "end")
+                    entry.insert(0, value or "Select file...")
+                    entry.configure(text_color="gray" if not value else "white")
+                else:
+                    entry.configure(state="normal")
+                    entry.delete(0, "end")
+                    entry.insert(0, value)
+                    if label_text == "Booking ID":
+                        entry.configure(state="readonly")
+
+
+
+    
+
+
+    def save_updated_booking(self, window):
+        try:
+            url = "http://127.0.0.1:8000/bookings/update/"
+
+            # Extract raw form values
+            booking_id = self.update_entries["Booking ID"].get()
+            room_number = self.update_entries["Room Number"].get()
+            guest_name = self.update_entries["Guest Name"].get()
+            gender = self.update_entries["Gender"].get()
+            mode_of_identification = self.update_entries["Mode of Identification"].get()
+            identification_number = self.update_entries["Identification Number"].get()
+            address = self.update_entries["Address"].get()
+            arrival_date = self.update_entries["Arrival Date"].get()
+            departure_date = self.update_entries["Departure Date"].get()
+            booking_type = self.update_entries["Booking Type"].get()
+            phone_number = self.update_entries["Phone Number"].get()
+            vehicle_no = self.update_entries["Vehicle No"].get()
+            attachment_path = self.update_entries["Attachment"].get()
+
+            # ✅ Convert date to YYYY-MM-DD
+            arrival_date = self.update_entries["Arrival Date"].get_date().strftime("%Y-%m-%d")
+            departure_date = self.update_entries["Departure Date"].get_date().strftime("%Y-%m-%d")
+
+
+
+            if not self.token:
+                messagebox.showerror("Authentication Error", "You are not authenticated. Please log in again.")
+                return
+
+            headers = {"Authorization": f"Bearer {self.token}"}
+
+            data = {
+                "booking_id": booking_id,
+                "room_number": room_number,
+                "guest_name": guest_name,
+                "gender": gender,
+                "mode_of_identification": mode_of_identification,
+                "identification_number": identification_number,
+                "address": address,
+                "arrival_date": arrival_date,
+                "departure_date": departure_date,
+                "booking_type": booking_type,
+                "phone_number": phone_number,
+                "vehicle_no": vehicle_no,
+            }
+
+            files = None
+            if attachment_path and os.path.exists(attachment_path):
+                file_name = os.path.basename(attachment_path)
+                files = {
+                    "attachment": (file_name, open(attachment_path, "rb"), "application/octet-stream")
+                }
+
+            response = requests.put(url, data=data, files=files, headers=headers)
+
+            if response.status_code == 200:
+                messagebox.showinfo("Success", "Booking updated successfully.")
+                window.destroy()  # Close the update popup
+
+                
+                #self.refresh_booking_list()
+            else:
+                messagebox.showerror("Error", f"Failed to update booking:\n{response.text}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred while updating the booking:\n{str(e)}")
+
+
+    
+
+    def view_selected_booking(self):
+        import os
+        import webbrowser
+        from PIL import Image, ImageTk
+        import requests
+        from io import BytesIO
+
+        selected_item = self.tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No selection", "Please select a booking to view.")
+            return
+
+        booking_data = self.tree.item(selected_item, "values")
+
+        field_names = [
+            "Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by"
+        ]
+
+        view_window = ctk.CTkToplevel(self.root)
+        view_window.title("Booking Details")
+        view_window.geometry("560x720+100+10")
+        view_window.configure(fg_color="white")
+
+        hotel_label = ctk.CTkLabel(
+            view_window,
+            text=HOTEL_NAME,
+            font=("Arial", 17, "bold"),
+            text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(5, 0))
+
+        title_label = ctk.CTkLabel(
+            view_window,
+            text="Guest Details Report",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(5, 2))
+
+        content_frame = ctk.CTkFrame(
+            view_window,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 0))
+
+        rows = []
+        attachment_url = None
+        for field, value in zip(field_names, booking_data):
+            row = ctk.CTkFrame(content_frame, fg_color="white")
+            row.pack(fill="x", padx=5, pady=1)
+
+            label_field = ctk.CTkLabel(
+                row,
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
+                text_color="#2c3e50",
+                width=150,
+                anchor="w"
+            )
+            label_value = ctk.CTkLabel(
+                row,
+                text=str(value),
+                font=("Arial", 12),
+                text_color="#34495e",
+                anchor="w",
+                wraplength=320
+            )
+            label_field.pack(side="left")
+            label_value.pack(side="left", fill="x", expand=True)
+            rows.append((field, value))
+
+            if field.lower() == "attachment" and value:
+                attachment_url = value
+
+        # --- Display Attachment Image (Top-right corner) ---
+        if attachment_url:
+            try:
+                filename = os.path.basename(attachment_url)
+                url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+                response = requests.get(url)
+
+                img = Image.open(BytesIO(response.content))
+                img.thumbnail((120, 120))  # Resize while maintaining aspect ratio
+
+                # Keep image reference attached to window
+                view_window.preview_image = ImageTk.PhotoImage(img)
+
+                attachment_preview = ctk.CTkLabel(
+                    master=view_window,
+                    image=view_window.preview_image,
+                    text="",
+                    width=120,
+                    height=120
+                )
+                attachment_preview.place(x=420, y=20)  # Top-right position
+            except Exception as e:
+                print(f"Image preview failed: {e}")
+
+                # --- Buttons ---
+        button_frame = ctk.CTkFrame(view_window, fg_color="white")
+        button_frame.pack(pady=(10, 15))
+
+        # Print Details Button
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print Details",
+            command=lambda: self.export_booking_to_pdf(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=150,
+            height=32
+        )
+        pdf_button.grid(row=0, column=0, padx=5)
+
+        # Guest Form Button
+        guest_form_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Guest Form",
+            command=lambda: self.export_guest_form(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=150,
+            height=32
+        )
+        guest_form_btn.grid(row=0, column=1, padx=5)
+
+        # Open Attachment Button (smaller width)
+        if attachment_url:
+            open_attachment_btn = ctk.CTkButton(
+                master=button_frame,
+                text="Open Attachment",
+                command=lambda: self.open_attachment(attachment_url),
+                fg_color="#1e3d59",
+                text_color="white",
+                corner_radius=20,
+                font=("Arial", 12, "bold"),
+                width=130,
+                height=32
+            )
+            open_attachment_btn.grid(row=0, column=2, padx=5)
+
+
+    def export_guest_form(self, data):
+        # Use NamedTemporaryFile for safer temp file handling
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            filename = temp.name
+
+        doc = SimpleDocTemplate(filename, pagesize=A4,
+                                rightMargin=40, leftMargin=40, topMargin=25, bottomMargin=25)
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Hotel name (centered and bold)
+        hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
+        elements.append(hotel_name)
+        elements.append(Spacer(1, 1))
+
+        # Booking report title (centered)
+        title = Paragraph("<para alignment='center'>Guest Details Report</para>", styles['Heading2'])
+        elements.append(title)
+        elements.append(Spacer(1, 1))
+
+        # Extract booking date if present
+        booking_date = ""
+        for field, value in data:
+            if field.lower() == "booking date":
+                booking_date = str(value)
+                break
+
+        if booking_date:
+            date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
+            elements.append(date_paragraph)
+            elements.append(Spacer(1, 2))
+
+        # Format data into table
+        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in data]
+
+        table = Table(table_data, colWidths=[120, 330])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+
+        elements.append(table)
+        elements.append(Spacer(1, 5))
+
+        # Add signature lines
+        signature_table = Table([
+            ["Guest Signature ________________________", "Receptionist Signature ____________________"]
+        ], colWidths=[260, 260])
+        elements.append(signature_table)
+
+        # Build PDF
+        doc.build(elements)
+
+        # Open PDF in default viewer
+        webbrowser.open_new(f'file://{os.path.abspath(filename)}')
+        
+
+
+    def open_attachment(self, attachment_path):
+        import os
+        import webbrowser
+
+        if not attachment_path:
+            messagebox.showerror("Attachment Error", "No attachment found.")
+            return
+
+        filename = os.path.basename(attachment_path)
+        url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open attachment: {e}")
+
+
+
+
+    
+    
+
+
+    def export_booking_to_pdf(self, data):
+        # Use NamedTemporaryFile for safer temp file handling
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            filename = temp.name
+
+        doc = SimpleDocTemplate(filename, pagesize=A4,
+                                rightMargin=40, leftMargin=40, topMargin=25, bottomMargin=25)
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Hotel name (centered and bold)
+        hotel_name = Paragraph(f"<para alignment='center'><b>{HOTEL_NAME}</b></para>", styles['Title'])
+        elements.append(hotel_name)
+        elements.append(Spacer(1, 1))
+
+        # Booking report title (centered)
+        title = Paragraph("<para alignment='center'>Guest Details Report</para>", styles['Heading2'])
+        elements.append(title)
+        elements.append(Spacer(1, 1))
+
+        # Extract booking date and attachment
+        booking_date = ""
+        attachment_data = None
+
+        filtered_data = []
+        for field, value in data:
+            if field.lower() == "booking date":
+                booking_date = str(value)
+            elif field.lower() == "attachment":
+                if isinstance(value, str) and os.path.exists(value):
+                    with open(value, "rb") as f:
+                        attachment_data = f.read()
+                elif isinstance(value, bytes):
+                    attachment_data = value
+
+            else:
+                filtered_data.append((field, value))
+
+        if booking_date:
+            date_paragraph = Paragraph(f"<para alignment='center'><b>Booking Date:</b> {booking_date}</para>", styles['Normal'])
+            elements.append(date_paragraph)
+            elements.append(Spacer(1, 2))
+
+        # Format data into table (excluding image)
+        table_data = [[Paragraph(f"<b>{field}</b>", styles['Normal']), Paragraph(str(value), styles['Normal'])] for field, value in filtered_data]
+
+        table = Table(table_data, colWidths=[120, 330])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+
+        elements.append(table)
+        elements.append(Spacer(1, 15))
+
+        # Add attachment image if available
+        # Display attachment image
+        if attachment_data:
+            try:
+                image_stream = BytesIO(attachment_data)
+                img = Image(image_stream, width=200, height=150)  # ✅ Corrected line
+                elements.append(Spacer(1, 12))
+                elements.append(Paragraph("Attachment Photo:", styles['Heading2']))
+                elements.append(img)
+            except Exception as e:
+                print("Image error:", e)
+                elements.append(Paragraph("Could not display the attachment image.", styles["Normal"]))
+
+
+        # Add signature lines
+        #signature_table = Table([
+            #["Guest Signature ________________________", "Receptionist Signature ____________________"]
+        #], colWidths=[260, 260])
+        #elements.append(signature_table)
+
+        # Build PDF
+        doc.build(elements)
+
+        # Open PDF in default viewer
+        webbrowser.open_new(f'file://{os.path.abspath(filename)}')
+
 
         
 
@@ -732,9 +1465,14 @@ class BookingManagement:
                         booking.get("phone_number", ""),
                         booking.get("booking_date", ""),
                         booking.get("payment_status", ""), 
+                        booking.get("mode_of_identification", ""), 
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                 
+                        
+                        booking.get("vehicle_no", ""),
+                        booking.get("attachment", ""),
                         booking.get("created_by", ""),
+
                     ))
 
                 # Apply grid effect after inserting data
@@ -811,7 +1549,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
 
 
         # ✅ Prevent recreation of table on every call
@@ -897,6 +1635,9 @@ class BookingManagement:
                                 booking.get("identification_number", ""),  
                                 booking.get("address", ""),                               
                                 booking.get("created_by", ""),
+                                booking.get("vehicle_no", ""),
+                                booking.get("attachment", ""),
+
                             ), tags=(tag,))
 
                         # Apply grid effect after inserting data
@@ -948,7 +1689,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
         
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
@@ -1003,6 +1744,9 @@ class BookingManagement:
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                               
                         booking.get("created_by", ""),
+                        booking.get("vehicle_no", ""),
+                        booking.get("attachment", ""),
+
 
                        
                     ))
@@ -1041,7 +1785,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
         
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
 
         if hasattr(self, "tree"):
             self.tree.destroy()
@@ -1102,6 +1846,9 @@ class BookingManagement:
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                                                   
                         booking.get("created_by", ""),
+                        booking.get("vehicle_no", ""),
+                        booking.get("attachment", ""),
+
                     ))
 
                  # Apply grid effect after inserting data
@@ -1161,7 +1908,7 @@ class BookingManagement:
 
         # Define table columns
         columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days",
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by")
+                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by", "Vehicle No", "Attachment")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -1252,6 +1999,9 @@ class BookingManagement:
                             booking.get("identification_number", ""),  
                             booking.get("address", ""),                                                   
                             booking.get("created_by", ""),
+                            booking.get("vehicle_no", ""),
+                            booking.get("attachment", ""),
+
 
                             
                         ))
@@ -1285,75 +2035,117 @@ class BookingManagement:
 
 
 
-
+    """
     def update_booking(self):
-        """Opens a pop-up window for updating an existing booking with CustomTkinter."""
+        Opens a pop-up window for updating an existing booking with CustomTkinter.
         self.clear_right_frame()
 
-        # Create a new pop-up window
         update_window = ctk.CTkToplevel(self.root)
         update_window.title("Update Booking")
-        update_window.geometry("650x400")  # Match create_booking window size
+        update_window.geometry("670x400")
         update_window.resizable(False, False)
         update_window.configure(fg_color="#f5f5f5")
 
         # Center the window on the screen
         screen_width = update_window.winfo_screenwidth()
         screen_height = update_window.winfo_screenheight()
-        x_coordinate = (screen_width - 650) // 2
-        y_coordinate = (screen_height - 400) // 2
-        update_window.geometry(f"650x400+{x_coordinate}+{y_coordinate}")
+        x_coordinate = (screen_width - 670) // 2
+        y_coordinate = (screen_height - 450) // 2
+        update_window.geometry(f"670x450+{x_coordinate}+{y_coordinate}")
 
-        # Make the window modal
         update_window.transient(self.root)
         update_window.grab_set()
 
-        # Header
         header_frame = ctk.CTkFrame(update_window, fg_color="#2c3e50", height=50, corner_radius=8)
         header_frame.pack(fill="x", padx=10, pady=10)
         header_label = ctk.CTkLabel(header_frame, text="Update Booking", font=("Arial", 16, "bold"), text_color="white")
         header_label.pack(pady=10)
-
-        # Main Content Frame
+        
         frame = ctk.CTkFrame(update_window, fg_color="white", corner_radius=10)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Store entries
-        self.entries = {}
-
-        # Combo box values
         combo_box_values = {
             "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"]
+            "Booking Type": ["checked-in", "reservation", "complimentary"],
+            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
         }
 
-        # Form Grid Layout
+        self.entries = {}
+
         form_data = [
-            ("Booking ID", ctk.CTkEntry, 0, 0),
-            ("Room Number", ctk.CTkEntry, 1, 0), ("Guest Name", ctk.CTkEntry, 1, 2),
-            ("Identification Number", ctk.CTkEntry, 2, 0), ("Gender", ctk.CTkComboBox, 2, 2),
-            ("Address", ctk.CTkEntry, 3, 0, 3),  # Span across columns
-            ("Phone Number", ctk.CTkEntry, 4, 0), ("Booking Type", ctk.CTkComboBox, 4, 2),
-            ("Arrival Date", DateEntry, 5, 0), ("Departure Date", DateEntry, 5, 2),
+            ("Booking ID", ctk.CTkEntry, 0, 0, 2),  # Booking ID takes full row (colspan=2)
+            ("Room Number", ctk.CTkEntry, 1, 0),
+            ("Guest Name", ctk.CTkEntry, 1, 2),
+            ("Identification Number", ctk.CTkEntry, 2, 0),
+            ("Mode of Identification", ctk.CTkComboBox, 2, 2),
+            ("Gender", ctk.CTkComboBox, 3, 0),
+            ("Address", ctk.CTkEntry, 3, 2),
+            ("Phone Number", ctk.CTkEntry, 4, 0),
+            ("Booking Type", ctk.CTkComboBox, 4, 2),
+            ("Arrival Date", DateEntry, 5, 0),
+            ("Departure Date", DateEntry, 5, 2),
+            ("Vehicle No", ctk.CTkEntry, 6, 0),
+            ("Attachment", ctk.CTkEntry, 6, 2),
         ]
 
-        for label_text, field_type, row, col, colspan in [(*fd, 1) if len(fd) == 4 else fd for fd in form_data]:
+        field_widths = {
+            "Booking ID": 100,
+            "Room Number": 50,
+            "Guest Name": 150,
+            "Identification Number": 150,
+            "Mode of Identification": 130,
+            "Gender": 100,
+            "Address": 170,
+            "Phone Number": 120,
+            "Booking Type": 120,
+            "Arrival Date": 10,
+            "Departure Date": 10,
+            "Vehicle No": 120,
+            "Attachment": 150
+        }
+
+        for item in form_data:
+            label_text, field_type, row, col = item[:4]
+            colspan = item[4] if len(item) == 5 else 1
+
             label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
             label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
 
-            # Create input fields
+            width = field_widths.get(label_text, 20)
+
             if field_type == ctk.CTkComboBox:
                 entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
-                                        font=("Helvetica", 12), width=200)
+                                        font=("Helvetica", 12), width=width)
             elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), width=12, background='darkblue', foreground='white', borderwidth=2)
+                entry = DateEntry(frame, font=("Helvetica", 12), background='darkblue',
+                                foreground='white', borderwidth=2)
             else:
-                entry = field_type(frame, font=("Helvetica", 12), width=22 if label_text != "Address" else 50)
+                entry = field_type(frame, font=("Helvetica", 12), width=width)
+                if label_text == "Attachment":
+                    entry.insert(0, "Select file...")
+                    entry.configure(text_color="gray")
+                if label_text == "Booking ID":
+                    entry.configure(state="normal")  # Enable it so it's visible and editable if needed
 
-            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="ew")
-            self.entries[label_text] = entry  # Store entry
+            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
+            self.entries[label_text] = entry
 
-        # Submit Button
+        self.update_window = update_window
+
+        # File Picker (same as Create Booking)
+        def browse_file(event=None):
+            file_path = filedialog.askopenfilename()
+            if file_path:
+                self.attachment_full_path = file_path
+                attachment_entry.configure(state="normal")
+                attachment_entry.delete(0, "end")
+                attachment_entry.insert(0, os.path.basename(file_path))
+                attachment_entry.configure(state="readonly")
+
+        attachment_entry = self.entries["Attachment"]
+        attachment_entry.bind("<1>", browse_file)
+
+        # Submit Button (styled to match Create Booking)
         submit_btn = ctk.CTkButton(
             frame,
             text="Submit Update",
@@ -1366,116 +2158,163 @@ class BookingManagement:
             width=450,
             height=40
         )
-        submit_btn.grid(row=6, column=0, columnspan=4, pady=25, padx=30, sticky="ew")  # Center button
+
+        # Place Submit button at next row after form fields
+        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
 
 
 
+    
 
     def submit_update_booking(self, update_window):
-        """Collects form data and sends a request to update a booking."""
+        Collects form data and sends a multipart/form-data request to update a booking.
         try:
-            booking_data = {
+            # Basic data collection
+            data = {
                 "booking_id": self.entries["Booking ID"].get(),
                 "room_number": self.entries["Room Number"].get(),
                 "guest_name": self.entries["Guest Name"].get(),
-                 "gender": self.entries["Gender"].get(),
+                "gender": self.entries["Gender"].get(),
+                "mode_of_identification": self.entries["Mode of Identification"].get(),
                 "identification_number": self.entries["Identification Number"].get(),
                 "address": self.entries["Address"].get(),
                 "phone_number": self.entries["Phone Number"].get(),
                 "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
                 "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
                 "booking_type": self.entries["Booking Type"].get(),
+                "vehicle_no": self.entries["Vehicle No"].get() or "",
             }
 
-            # Validate required fields
-            if not all(booking_data.values()):
-                update_window.grab_release()  # Release grab before showing message
-                CTkMessagebox(title="Error", message="Please fill in all fields", icon="cancel", option_1="OK")
+            # Validate required fields (excluding optional vehicle_no)
+            required = [k for k in data if k != "vehicle_no"]
+            if not all(data[k] for k in required):
+                update_window.grab_release()
+                CTkMessagebox(title="Error", message="Please fill in all required fields", icon="cancel", option_1="OK")
                 return
 
-            # API request
-            api_url = f"http://127.0.0.1:8000/bookings/update/?booking_id={booking_data['booking_id']}"
-            headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+            # Handle file attachment
+            attachment_path = getattr(self, 'attachment_full_path', None)
+            files = {}
+            file_obj = None
 
-            response = requests.put(api_url, json=booking_data, headers=headers)
+            if attachment_path and os.path.isfile(attachment_path):
+                try:
+                    file_obj = open(attachment_path, "rb")
+                    files["attachment"] = (
+                        os.path.basename(attachment_path),
+                        file_obj,
+                        "application/octet-stream"
+                    )
+                except Exception as e:
+                    update_window.grab_release()
+                    CTkMessagebox(title="File Error", message=f"Attachment error: {str(e)}", icon="cancel", option_1="OK")
+                    return
+            else:
+                files["attachment"] = ("", "", "application/octet-stream")
 
+            # Send request
+            url = f"http://127.0.0.1:8000/bookings/update/?booking_id={data['booking_id']}"
+            headers = {"Authorization": f"Bearer {self.token}"}
+
+            try:
+                response = requests.put(url, data=data, files=files, headers=headers)
+
+            finally:
+                if file_obj:
+                    file_obj.close()
+
+            # Handle response
             if response.status_code == 200:
-                update_window.grab_release()  # Release grab before showing message
+                update_window.grab_release()
                 msgbox = CTkMessagebox(title="Success", message="Booking updated successfully!", icon="check", option_1="OK")
                 if msgbox.get() == "OK":
                     update_window.destroy()
             else:
-                update_window.grab_release()  # Release grab before showing message
+                update_window.grab_release()
                 CTkMessagebox(title="Error", message=response.json().get("detail", "Update failed."), icon="warning", option_1="OK")
 
-        except KeyError as e:
-            update_window.grab_release()  # Release grab before showing message
-            CTkMessagebox(title="Error", message=f"Missing entry field: {e}", icon="cancel", option_1="OK")
-        except requests.exceptions.RequestException as e:
-            update_window.grab_release()  # Release grab before showing message
-            CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="cancel", option_1="OK")
-
+        except Exception as e:
+            update_window.grab_release()
+            CTkMessagebox(title="Error", message=f"Unexpected error: {str(e)}", icon="cancel", option_1="OK")
+"""
 
     
 #from CTkMessagebox import CTkMessagebox
 
 
     def guest_checkout(self):
-        """Opens a professional pop-up window for guest checkout using CustomTkinter."""
+        """Open a compact, professional pop-up window for guest checkout."""
         self.clear_right_frame()
 
-        # 🔹 Create a pop-up window
+        # 🔷 Create the popup window
         checkout_window = ctk.CTkToplevel(self.root)
         checkout_window.title("Guest Checkout")
-        checkout_window.geometry("400x250")  # Adjusted for better spacing
+        checkout_window.geometry("360x210")
         checkout_window.resizable(False, False)
-        checkout_window.configure(fg_color="#f5f5f5")  # Light background color
+        checkout_window.configure(fg_color="#f2f2f2")  # Light gray background
 
-        # Center the window on the screen
-        window_width = 400
-        window_height = 250
+        # Center the window
         screen_width = checkout_window.winfo_screenwidth()
         screen_height = checkout_window.winfo_screenheight()
-        x_coordinate = (screen_width - window_width) // 2
-        y_coordinate = (screen_height - window_height) // 2
-        checkout_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+        x_coordinate = (screen_width - 360) // 2
+        y_coordinate = (screen_height - 200) // 2
+        checkout_window.geometry(f"360x210+{x_coordinate}+{y_coordinate}")
 
-        # Make the window modal
         checkout_window.transient(self.root)
         checkout_window.grab_set()
 
-        # 🔹 Dark Header
-        header_frame = ctk.CTkFrame(checkout_window, fg_color="#2c3e50", height=50, corner_radius=8)
-        header_frame.pack(fill="x", padx=10, pady=10)
+        # 🔹 Header with dark background
+        header_frame = ctk.CTkFrame(checkout_window, fg_color="#1f2937", corner_radius=10)
+        header_frame.pack(fill="x", padx=20, pady=(15, 10))
 
-        header_label = ctk.CTkLabel(header_frame, text="Guest Checkout", font=("Arial", 16, "bold"), text_color="white")
-        header_label.pack(pady=10)
-
-        # 🔹 Main Content Frame
-        frame = ctk.CTkFrame(checkout_window, fg_color="white", corner_radius=10)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # 📌 Room Number Field
-        label = ctk.CTkLabel(frame, text="Room Number", font=("Helvetica", 12, "bold"), text_color="#2c3e50")
-        label.pack(anchor="w", pady=5, padx=10)
-
-        self.room_number_entry = ctk.CTkEntry(frame, font=("Helvetica", 12), width=200)
-        self.room_number_entry.pack(pady=5, padx=10)
-
-        # 🔹 Checkout Button with Hover Effect
-        submit_btn = ctk.CTkButton(
-            frame,
-            text="Checkout Guest",
-            command=lambda: self.submit_guest_checkout(checkout_window),
-            font=("Arial", 14, "bold"),
-            fg_color="#e74c3c",
-            hover_color="#c0392b",
-            text_color="white",
-            corner_radius=10,
-            width=250,
-            height=40
+        header_label = ctk.CTkLabel(
+            header_frame,
+            text="Guest Checkout",
+            font=("Segoe UI", 15, "bold"),
+            text_color="white"
         )
-        submit_btn.pack(pady=20)  # Space for better UI
+        header_label.pack(pady=8)
+
+        # 🔸 Content frame
+        content_frame = ctk.CTkFrame(checkout_window, fg_color="white", corner_radius=12)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Room number input
+        room_label = ctk.CTkLabel(
+            content_frame,
+            text="Room Number",
+            font=("Segoe UI", 12),
+            text_color="#1f2937"
+        )
+        room_label.pack(anchor="w", padx=15, pady=(10, 2))
+
+        self.room_number_entry = ctk.CTkEntry(
+            content_frame,
+            placeholder_text="enter room number",
+            font=("Segoe UI", 12),
+            height=32,
+            corner_radius=10,
+            width=220
+        )
+        self.room_number_entry.pack(pady=(0, 10))
+
+        # 🔘 Compact checkout button
+        submit_btn = ctk.CTkButton(
+            content_frame,
+            text="Checkout",
+            command=lambda: self.submit_guest_checkout(checkout_window),
+            font=("Segoe UI", 12, "bold"),
+            fg_color="#3B82F6",
+            hover_color="#2563EB",
+            text_color="white",
+            corner_radius=20,
+            height=34,
+            width=140
+        )
+        submit_btn.pack(pady=(5, 15))
+
+
+
 
     def submit_guest_checkout(self, checkout_window):
         """Sends a request to checkout the guest by room number."""
@@ -1519,50 +2358,107 @@ class BookingManagement:
 
     def cancel_booking(self):
         self.clear_right_frame()
-        
+
         # Open pop-up window
-        cancel_window = ctk.CTkToplevel(self.root)
+        cancel_window = tk.Toplevel(self.root)
         cancel_window.title("Cancel Booking")
-        cancel_window.configure(bg="#f8f9fa")  
+        cancel_window.configure(bg="#2c3e50")
 
         # Window size and position
-        window_width, window_height = 400, 270
-        x_coordinate = (cancel_window.winfo_screenwidth() - window_width) // 2
-        y_coordinate = (cancel_window.winfo_screenheight() - window_height) // 2
+        window_width = 470
+        window_height = 260
+        screen_width = cancel_window.winfo_screenwidth()
+        screen_height = cancel_window.winfo_screenheight()
+        x_coordinate = (screen_width - window_width) // 2
+        y_coordinate = (screen_height - window_height) // 2
         cancel_window.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
-        # Make it modal
         cancel_window.transient(self.root)
         cancel_window.grab_set()
 
-        # Header
-        header = ctk.CTkLabel(cancel_window, text="Cancel Booking", font=("Arial", 16, "bold"), fg_color="#2c3e50", text_color="white", pady=10)
-        header.pack(fill="x")
+        # === Header Frame ===
+        header_frame = tk.Frame(cancel_window, bg="#1f2937", height=50)
+        header_frame.pack(fill=tk.X)
 
-        # Form Frame
-        form_frame = ctk.CTkFrame(cancel_window, fg_color="white", corner_radius=10)
-        form_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        header_label = tk.Label(header_frame, text="Cancel Booking", font=("Century Gothic", 16, "bold"),
+                                fg="white", bg="#1f2937", pady=10)
+        header_label.pack()
 
-        # Booking ID Field
-        ctk.CTkLabel(form_frame, text="Booking ID", font=("Arial", 12, "bold"), text_color="#2c3e50").pack(anchor="w", pady=(5, 0))
-        self.booking_id_entry = ctk.CTkEntry(form_frame, font=("Arial", 12), width=260)
-        self.booking_id_entry.pack(pady=5)
+        # === Outer Content Frame ===
+        outer_frame = tk.Frame(cancel_window, bg="#ecf0f1", padx=15, pady=20)
+        outer_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(10, 20))
 
-        # Cancellation Reason
-        ctk.CTkLabel(form_frame, text="Reason (Optional)", font=("Arial", 12, "bold"), text_color="#2c3e50").pack(anchor="w", pady=(5, 0))
-        self.cancellation_reason_entry = ctk.CTkEntry(form_frame, font=("Arial", 12), width=260)
-        self.cancellation_reason_entry.pack(pady=5)
+        # === Data Entry Section ===
+        form_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+        form_frame.pack(fill=tk.X, pady=(0, 20))
 
-        # Submit Button
-        submit_btn = ctk.CTkButton(cancel_window, text="Cancel Booking", font=("Arial", 13, "bold"), fg_color="#d9534f", hover_color="#c9302c",
-                                command=lambda: self.submit_cancel_booking(cancel_window))
-        submit_btn.pack(pady=15)
+        fields = [
+            ("Booking ID", tk.Entry),
+            ("Reason (Optional)", tk.Entry),
+        ]
+        self.entries = {}
+
+        for i, (label_text, field_type) in enumerate(fields):
+            label = tk.Label(form_frame, text=label_text, font=("Helvetica", 10, "bold"),
+                            bg="#ecf0f1", fg="#2c3e50")
+            label.grid(row=i, column=0, sticky="w", pady=5, padx=(5, 10))
+
+            # Frame around each Entry
+            entry_outer_frame = tk.Frame(form_frame, bg="white", relief="groove", borderwidth=2)
+            entry_outer_frame.grid(row=i, column=1, sticky="ew", pady=5)
+
+            entry = field_type(entry_outer_frame, font=("Helvetica", 10), width=28,
+                            bg="white", fg="black", relief="flat")
+            entry.pack(fill=tk.X, padx=4, pady=3)  # Smaller vertical padding!
+
+            self.entries[label_text] = entry
+
+        form_frame.columnconfigure(1, weight=1)
+
+        # === Buttons Frame ===
+        btn_frame = tk.Frame(outer_frame, bg="#ecf0f1")
+        btn_frame.pack()
+
+        submit_btn = RoundedButton(
+            btn_frame,
+            text="Submit",
+            command=lambda: self.submit_cancel_booking(cancel_window),
+            radius=14,
+            padding=8,  # Slightly smaller buttons too
+            color="#1abc9c",
+            hover_color="#16a085",
+            text_color="white",
+            font=("Helvetica", 10, "bold"),
+            border_color="#16a085",
+            border_width=2,
+        )
+        submit_btn.grid(row=0, column=0, padx=15)
+
+        cancel_btn = RoundedButton(
+            btn_frame,
+            text="Cancel",
+            command=cancel_window.destroy,
+            radius=14,
+            padding=8,
+            color="#e74c3c",
+            hover_color="#c0392b",
+            text_color="white",
+            font=("Helvetica", 10, "bold"),
+            border_color="#c0392b",
+            border_width=2,
+        )
+        cancel_btn.grid(row=0, column=1, padx=15)
+
+
+
+
 
     def submit_cancel_booking(self, cancel_window):
         """Handles the booking cancellation request."""
         try:
-            booking_id = self.booking_id_entry.get().strip()
-            cancellation_reason = self.cancellation_reason_entry.get().strip()
+            booking_id = self.entries["Booking ID"].get().strip()
+
+            cancellation_reason = self.entries["Reason (Optional)"].get().strip()
 
             if not booking_id:
                 cancel_window.grab_release()  # Release before showing message

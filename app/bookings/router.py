@@ -134,16 +134,7 @@ def create_booking(
         booking_status = "reserved" if booking_type == "reservation" else "checked-in"
 
     try:
-        # Handle attachment saving
-        attachment_path = None
-        if attachment and attachment.filename:
-            upload_dir = "uploads/attachments/"
-            os.makedirs(upload_dir, exist_ok=True)
-            attachment_path = os.path.join(upload_dir, attachment.filename)
-
-            with open(attachment_path, "wb") as buffer:
-                shutil.copyfileobj(attachment.file, buffer)
-
+        
         # Create booking object
         new_booking = booking_models.Booking(
             room_number=room.room_number,
@@ -281,6 +272,34 @@ def list_bookings(
             status_code=500,
             detail=f" {str(e)}",
         )
+    
+    
+
+@router.get("/search-guest/")
+def search_guest(guest_name: str = Query(...), db: Session = Depends(get_db)):
+    guests = (
+        db.query(booking_models.Booking)
+        .filter(booking_models.Booking.guest_name.ilike(f"%{guest_name}%"))
+        .order_by(booking_models.Booking.id.desc())
+        .all()
+    )
+
+    if not guests:
+        raise HTTPException(status_code=404, detail="Guest not found")
+
+    result = []
+    for guest in guests:
+        result.append({
+            "gender": guest.gender,
+            "phone_number": guest.phone_number,
+            "address": guest.address,
+            "mode_of_identification": guest.mode_of_identification,
+            "identification_number": guest.identification_number,
+            "vehicle_no": guest.vehicle_no,
+            "attachment": guest.attachment,
+        })
+
+    return result
 
 
 

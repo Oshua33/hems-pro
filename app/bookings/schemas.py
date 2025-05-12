@@ -81,3 +81,5 @@ class CheckInUpdateSchema(BaseModel):
     arrival_date: Optional[date]
     departure_date: Optional[date]
     phone_number: str
+
+
