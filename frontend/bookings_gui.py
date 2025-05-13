@@ -616,7 +616,7 @@ class BookingManagement:
         # Field-specific widths
         field_widths = {
             "Room Number": 50,
-            "Guest Name": 150,
+            "Guest Name": 170,
             "Identification Number": 150,
             "Mode of Identification": 130,
             "Gender": 100,
@@ -686,6 +686,25 @@ class BookingManagement:
 
         # Search button for guest name
         guest_name_entry = self.entries["Guest Name"]
+
+        # Set placeholder text and color for Guest Name
+        guest_name_entry.insert(0, "Enter guest name to search")
+        guest_name_entry.configure(text_color="gray")
+
+        # Define focus-in and focus-out behaviors
+        def clear_placeholder(event):
+            if guest_name_entry.get() == "Enter guest name to search":
+                guest_name_entry.delete(0, "end")
+                guest_name_entry.configure(text_color="black")
+
+        def add_placeholder(event):
+            if guest_name_entry.get() == "":
+                guest_name_entry.insert(0, "Enter guest name to search")
+                guest_name_entry.configure(text_color="gray")
+
+        guest_name_entry.bind("<FocusIn>", clear_placeholder)
+        guest_name_entry.bind("<FocusOut>", add_placeholder)
+
         search_btn = ctk.CTkButton(
             frame,
             text="Search Name",
@@ -903,7 +922,7 @@ class BookingManagement:
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col, anchor="center")
-            self.tree.column(col, width=80, anchor="center")  # Widened slightly for readability
+            self.tree.column(col, width=70, anchor="center")  # Widened slightly for readability
 
         # Add scrollbars INSIDE same frame
         y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
