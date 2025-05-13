@@ -565,7 +565,7 @@ class BookingManagement:
         # Create a new pop-up window
         create_window = ctk.CTkToplevel(self.root)
         create_window.title(title_text)
-        create_window.geometry("780x400")
+        create_window.geometry("790x400")
         create_window.resizable(False, False)
         create_window.configure(fg_color="#f5f5f5")
 
@@ -574,7 +574,7 @@ class BookingManagement:
         screen_height = create_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        create_window.geometry(f"780x400+{x_coordinate}+{y_coordinate}")
+        create_window.geometry(f"790x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         create_window.transient(self.root)
@@ -682,39 +682,39 @@ class BookingManagement:
             text_color="white", corner_radius=10, 
             width=200, height=40
         )
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, sticky="n")
+        submit_btn.grid(row=7, column=0, columnspan=5, pady=25, sticky="n")
 
         # Search button for guest name
         guest_name_entry = self.entries["Guest Name"]
 
         # Set placeholder text and color for Guest Name
-        guest_name_entry.insert(0, "Enter guest name to search")
+        guest_name_entry.insert(0, "Guest name")
         guest_name_entry.configure(text_color="gray")
 
         # Define focus-in and focus-out behaviors
         def clear_placeholder(event):
-            if guest_name_entry.get() == "Enter guest name to search":
+            if guest_name_entry.get() == "Guest name":
                 guest_name_entry.delete(0, "end")
                 guest_name_entry.configure(text_color="black")
 
         def add_placeholder(event):
             if guest_name_entry.get() == "":
-                guest_name_entry.insert(0, "Enter guest name to search")
+                guest_name_entry.insert(0, "Guest name")
                 guest_name_entry.configure(text_color="gray")
 
         guest_name_entry.bind("<FocusIn>", clear_placeholder)
         guest_name_entry.bind("<FocusOut>", add_placeholder)
 
         search_btn = ctk.CTkButton(
-            frame,
-            text="Search Name",
-            command=lambda: self.search_guest(guest_name_entry.get()),
-            font=("Arial", 11),
-            fg_color="gray",
-            text_color="white",
-            width=80,
-            height=28
-        )
+        frame,
+        text="🔍Search",
+        command=lambda: self.search_guest(guest_name_entry.get()),
+        font=("Arial", 12),
+        fg_color="gray",
+        text_color="white",
+        width=90,
+        height=28
+    )
         search_btn.grid(row=0, column=4, padx=(5, 0), pady=5, sticky="w")
 
        
@@ -738,10 +738,9 @@ class BookingManagement:
             messagebox.showwarning("Authentication Error", "Please log in first.")
             return
 
-        # Cycle through previous results if same name searched again
-        if hasattr(self, "last_guest_name") and self.last_guest_name == guest_name and hasattr(self, "guest_search_results"):
-            self.guest_search_index = (self.guest_search_index + 1) % len(self.guest_search_results)
-        else:
+        is_new_search = not hasattr(self, "last_guest_name") or self.last_guest_name != guest_name
+
+        if is_new_search:
             try:
                 headers = {"Authorization": f"Bearer {token}"}
                 response = requests.get(
@@ -758,16 +757,25 @@ class BookingManagement:
                     messagebox.showinfo("Not Found", "Guest not found.")
                     return
 
+                # Close existing popup if it exists
+                if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+                    self.search_popup.destroy()
+
+                if len(self.guest_search_results) > 1:
+                    self.show_guest_search_popup()
+
             except requests.HTTPError as e:
                 if e.response.status_code == 404:
                     messagebox.showinfo("Not Found", "Guest not found.")
                 else:
                     messagebox.showerror("Error", f"Failed to fetch guest info: {str(e)}")
                 return
+        else:
+            self.guest_search_index = (self.guest_search_index + 1) % len(self.guest_search_results)
 
         selected_guest = self.guest_search_results[self.guest_search_index]
 
-        # ✅ Fill form with selected guest's data
+        # ✅ Fill form
         self.entries["Gender"].set(selected_guest.get("gender", ""))
         self.entries["Mode of Identification"].set(selected_guest.get("mode_of_identification", ""))
         self.entries["Identification Number"].delete(0, "end")
@@ -779,18 +787,45 @@ class BookingManagement:
         self.entries["Vehicle No"].delete(0, "end")
         self.entries["Vehicle No"].insert(0, selected_guest.get("vehicle_no", ""))
 
-        # ✅ Show attachment (just text, not as an image)
         attachment_url = selected_guest.get("attachment", "")
         self.entries["Attachment"].delete(0, "end")
         self.entries["Attachment"].insert(0, attachment_url)
 
         self.current_attachment = attachment_url
 
-        if len(self.guest_search_results) > 1:
-            messagebox.showinfo(
-                "Multiple Matches",
-                f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
+        # ✅ Update popup count (if open)
+        if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+            self.search_popup_label.config(
+                text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
             )
+
+    def show_guest_search_popup(self):
+        if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+            # If popup already exists, just update the label text
+            self.search_popup_label.config(
+                text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
+            )
+            return
+
+        self.search_popup = tk.Toplevel(self.root)
+        self.search_popup.title("Search Info")
+
+        # Set small fixed size and top-left position (e.g., x=10, y=10)
+        self.search_popup.geometry("200x60+160+150")
+        self.search_popup.resizable(False, False)
+        self.search_popup.attributes('-topmost', True)
+
+        self.search_popup_label = tk.Label(
+            self.search_popup,
+            text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}",
+            font=("Arial", 9),
+            padx=5, pady=5
+        )
+        self.search_popup_label.pack()
+
+    # Optional: Auto-close after a few seconds
+    # self.search_popup.after(5000, self.search_popup.destroy)
+
 
 
     
