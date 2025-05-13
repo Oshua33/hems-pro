@@ -674,15 +674,29 @@ class BookingManagement:
         attachment_entry.bind("<1>", browse_file)
 
         # Submit Button
-        submit_btn = ctk.CTkButton(frame, text="Submit Booking", command=lambda: self.submit_booking(create_window), font=("Arial", 14, "bold"),
-                                fg_color="#3498db", hover_color="#2980b9", text_color="white", corner_radius=10, width=450, height=40)
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
+        submit_btn = ctk.CTkButton(
+            frame, text="Submit Booking", 
+            command=lambda: self.submit_booking(create_window), 
+            font=("Arial", 14, "bold"),
+            fg_color="#3498db", hover_color="#2980b9", 
+            text_color="white", corner_radius=10, 
+            width=200, height=40
+        )
+        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, sticky="n")
 
         # Search button for guest name
         guest_name_entry = self.entries["Guest Name"]
-        search_btn = ctk.CTkButton(frame, text="Search Name", command=lambda: self.search_guest(guest_name_entry.get()), font=("Arial", 10), fg_color="gray", text_color="white", width=60, height=28)
-        search_btn.grid(row=0, column=4, padx=(0, 10), pady=5, sticky="w")
-
+        search_btn = ctk.CTkButton(
+            frame,
+            text="Search Name",
+            command=lambda: self.search_guest(guest_name_entry.get()),
+            font=("Arial", 11),
+            fg_color="gray",
+            text_color="white",
+            width=80,
+            height=28
+        )
+        search_btn.grid(row=0, column=4, padx=(5, 0), pady=5, sticky="w")
 
        
 
