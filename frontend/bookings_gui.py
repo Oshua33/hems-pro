@@ -960,13 +960,14 @@ class BookingManagement:
         window = ctk.CTkToplevel(self.root)
         window.title("Update Booking")
         window.geometry("750x450+150+30")
-        window.configure(fg_color="#1e1e1e")
+        window.configure(fg_color="#e0e0e0")  # Light-medium gray background
         window.resizable(False, False)
 
-        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#f1f1f1")
+        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#1e1e1e")
+
         title.pack(pady=(10, 5))
 
-        form_frame = ctk.CTkFrame(window, fg_color="#2c2c2c", corner_radius=15)
+        form_frame = ctk.CTkFrame(window, fg_color="#f5f5f5", corner_radius=15)
         form_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         for i in range(4):
@@ -984,30 +985,43 @@ class BookingManagement:
             col = 0
             for label_text, field_type in [(label1, field1), (label2, field2) if label2 else (None, None)]:
                 if label_text:
-                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#dddddd")
+                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#333333")
+
                     label.grid(row=row, column=col, sticky="w", padx=10, pady=6)
 
                     width = 180
                     if field_type == ctk.CTkComboBox:
                         entry = ctk.CTkComboBox(
-                            form_frame,
-                            values=combo_box_values.get(label_text, []),
-                            state="readonly",
-                            font=("Segoe UI", 11),
-                            width=width,
-                            dropdown_fg_color="#3a3a3a",
-                            dropdown_text_color="#f1f1f1"
-                        )
+                        form_frame,
+                        values=combo_box_values.get(label_text, []),
+                        state="readonly",
+                        font=("Segoe UI", 11),
+                        width=width,
+                        fg_color="#f8f8f8",
+                        text_color="#222222",
+                        dropdown_fg_color="#f0f0f0",
+                        dropdown_text_color="#222222"
+                    )
+
+
                     elif field_type == DateEntry:
                         entry = DateEntry(
-                            form_frame,
-                            font=("Segoe UI", 10),
-                            background='darkblue',
-                            foreground='white',
-                            borderwidth=2
-                        )
+                        form_frame,
+                        font=("Segoe UI", 10),
+                        background='white',
+                        foreground='black',
+                        borderwidth=2
+                    )
+
                     else:
-                        entry = field_type(form_frame, font=("Segoe UI", 11), width=width)
+                        entry = field_type(
+                        form_frame,
+                        font=("Segoe UI", 13),
+                        width=width,
+                        fg_color="#f8f8f8",  # Entry background
+                        text_color="#222222"  # Entry text
+                    )
+
                         if label_text == "Attachment":
                             entry.insert(0, "Select file...")
                             entry.configure(text_color="black")
@@ -1030,18 +1044,18 @@ class BookingManagement:
 
         # Submit button
         submit_button = ctk.CTkButton(
-            form_frame,
-            text="Update",
-            width=140,
-            height=36,
-            corner_radius=10,
-            font=("Segoe UI", 12, "bold"),
-            text_color="white",
-            fg_color="#3b82f6",
-            hover_color="#2563eb",
-            command=lambda: self.save_updated_booking(window)
+        form_frame,
+        text="Update",
+        width=140,
+        height=36,
+        corner_radius=10,
+        font=("Segoe UI", 12, "bold"),
+        text_color="white",
+        fg_color="#2563eb",  # Slightly lighter blue
+        hover_color="#1d4ed8",
+        command=lambda: self.save_updated_booking(window)
+    )
 
-        )
         submit_button.grid(row=7, column=0, columnspan=4, pady=20, sticky="n")
 
         # Populate fields from booking_data

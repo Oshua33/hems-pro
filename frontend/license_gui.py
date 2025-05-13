@@ -17,6 +17,34 @@ class LicenseGUI(tk.Toplevel):
         self.state('zoomed')
         self.configure(bg="#2C3E50")
 
+        # Animated Background Canvas
+        self.bg_canvas = tk.Canvas(self, bg="#2C3E50", highlightthickness=0)
+        self.bg_canvas.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.bg_lines = []
+        self.create_moving_background()
+        self.animate_background()
+
+        # Ribbon Animation Canvas
+        self.ribbon_canvas = tk.Canvas(self, bg="#2C3E50", highlightthickness=0, bd=0)
+        self.ribbon_canvas.place(relx=0, rely=0, relwidth=1, height=60)
+
+        self.ribbon_width = 100
+        self.ribbon_height = 60
+        self.ribbon_speed = 2
+        self.ribbon_stripes = []
+
+        for i in range(0, self.winfo_screenwidth(), self.ribbon_width):
+            stripe = self.ribbon_canvas.create_polygon(
+                i, 0,
+                i + self.ribbon_width, 0,
+                i + self.ribbon_width - 30, self.ribbon_height,
+                i - 30, self.ribbon_height,
+                fill="#1ABC9C", outline="", smooth=True
+            )
+            self.ribbon_stripes.append(stripe)
+
+        self.animate_ribbon()
+
         # Icon Setup
         icon_ico_path = os.path.abspath("frontend/icon.ico").replace("\\", "/")
         icon_png_path = os.path.abspath("frontend/icon.png").replace("\\", "/")
@@ -34,10 +62,11 @@ class LicenseGUI(tk.Toplevel):
         else:
             print("Error: Icon file not found!")
 
-        # License Frame
+        # License Frame (Define this BEFORE using it)
         self.license_frame = tk.Frame(self, bg="#34495E", padx=40, pady=30)
         self.license_frame.place(relx=0.5, rely=0.45, anchor="center", width=500, height=385)
 
+        # Add labels and entries AFTER license_frame is defined
         self.add_label("Admin License Password:")
         self.password_entry = self.create_entry(show="*")
 
@@ -51,30 +80,52 @@ class LicenseGUI(tk.Toplevel):
 
         self.create_rounded_button("Verify License", self.verify_license)
 
-        # Example inside a CTkFrame or CTk window (replace `self` with your container/frame)
-        ctk.CTkLabel(self, text="W  e  l  c  o  m  e   T  o", 
-                    font=ctk.CTkFont("Century Gothic", 20, "bold"), 
-                    text_color="white", 
-                    fg_color="#2C3E50", 
-                    anchor="center").place(relx=0.5, rely=0.05, anchor="n")
+        # Labels & Branding
+        ctk.CTkLabel(self, text="", font=ctk.CTkFont("Century Gothic", 20, "bold"),
+                     text_color="white", fg_color="#2C3E50", anchor="center").place(relx=0.5, rely=0.05, anchor="n")
 
-        ctk.CTkLabel(self, text="H     E     M     S", 
-                    font=ctk.CTkFont("Century Gothic", 32, "bold"), 
-                    text_color="white", 
-                    fg_color="#2C3E50", 
-                    anchor="center").place(relx=0.5, rely=0.11, anchor="n")
+        ctk.CTkLabel(self, text="H     E     M     S",
+                     font=ctk.CTkFont("Century Gothic", 32, "bold"),
+                     text_color="white", fg_color="#2C3E50", anchor="center").place(relx=0.5, rely=0.11, anchor="n")
 
-        ctk.CTkLabel(self, text="Hotel & Event Management System", 
-                    font=ctk.CTkFont("Century Gothic", 18), 
-                    text_color="white", 
-                    fg_color="#2C3E50", 
-                    anchor="center").place(relx=0.5, rely=0.17, anchor="n")
+        ctk.CTkLabel(self, text="Hotel & Event Management System",
+                     font=ctk.CTkFont("Century Gothic", 18, "bold"),
+                     text_color="gold", fg_color="#2C3E50", anchor="center").place(relx=0.5, rely=0.17, anchor="n")
 
         tk.Label(self, text="Produced & Licensed by School of Accounting Package",
                  font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.8, rely=0.94, anchor="n")
 
-        tk.Label(self, text="© 2025",
-                 font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.85, rely=0.97, anchor="n")
+        tk.Label(self, text="© 2025", font=("Arial", 10, "italic"),
+                 fg="white", bg="#2C3E50").place(relx=0.85, rely=0.97, anchor="n")
+
+        self.ribbon_canvas.master.tkraise(self.ribbon_canvas)
+        self.license_frame.master.tkraise(self.license_frame)
+
+
+
+    def create_moving_background(self):
+        self.bg_lines.clear()
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+        for i in range(0, width + 200, 100):
+            line = self.bg_canvas.create_line(i, 0, i - 200, height, fill="#34495E", width=1)
+            self.bg_lines.append(line)
+
+    def animate_background(self):
+        for line in self.bg_lines:
+            self.bg_canvas.move(line, 1, 0)
+            coords = self.bg_canvas.coords(line)
+            if coords[0] > self.winfo_screenwidth():
+                self.bg_canvas.move(line, -self.winfo_screenwidth() - 200, 0)
+        self.after(30, self.animate_background)
+
+    def animate_ribbon(self):
+        for stripe in self.ribbon_stripes:
+            self.ribbon_canvas.move(stripe, -self.ribbon_speed, 0)
+            coords = self.ribbon_canvas.coords(stripe)
+            if coords[2] < 0:
+                self.ribbon_canvas.move(stripe, self.winfo_screenwidth() + self.ribbon_width, 0)
+        self.after(50, self.animate_ribbon)
 
     def add_label(self, text):
         tk.Label(self.license_frame, text=text, font=("Arial", 12, "bold"),
@@ -82,7 +133,7 @@ class LicenseGUI(tk.Toplevel):
 
     def create_entry(self, show=None):
         entry = tk.Entry(self.license_frame, width=25, font=("Arial", 12),
-                        bg="#ECF0F1", fg="black", show=show if show else "")
+                         bg="#ECF0F1", fg="black", show=show if show else "")
         entry.pack(padx=5, pady=5)
 
         # Hover effects
