@@ -1,0 +1,198 @@
+def create_moving_background(self):
+    self.bg_lines.clear()
+    width = self.winfo_screenwidth()
+    height = self.winfo_screenheight()
+    self.bg_canvas.delete("all")
+
+    # Use lighter, elegant color and spacing variation
+    for i in range(0, width + 300, 80):
+        line = self.bg_canvas.create_line(
+            i, 0, i - 200, height,
+            fill="#95A5A6", width=1  # Softer blue-grey tone
+        )
+        self.bg_lines.append(line)
+
+def animate_background(self):
+    for line in self.bg_lines:
+        self.bg_canvas.move(line, 0.8, 0)  # Smooth horizontal movement
+        coords = self.bg_canvas.coords(line)
+        if coords[0] > self.winfo_screenwidth():
+            self.bg_canvas.move(line, -self.winfo_screenwidth() - 300, 0)
+    self.after(33, self.animate_background)  # ~30 FPS
+
+def animate_ribbon(self):
+    for stripe in self.ribbon_stripes:
+        self.ribbon_canvas.move(stripe, -self.ribbon_speed, 0)
+        coords = self.ribbon_canvas.coords(stripe)
+
+        # Optional: Add a slight vertical wave for natural effect
+        if hasattr(self, "wave_phase"):
+            dy = 2 * math.sin(self.wave_phase + coords[0] * 0.01)
+            self.ribbon_canvas.move(stripe, 0, dy)
+
+        if coords[2] < 0:
+            self.ribbon_canvas.move(stripe, self.winfo_screenwidth() + self.ribbon_width, 0)
+
+    # Update wave phase for animation (if wave is used)
+    self.wave_phase = getattr(self, "wave_phase", 0) + 0.05
+
+    self.after(40, self.animate_ribbon)  # Slightly slower for smoothness
+
+
+
+
+#with background
+
+def create_moving_background(self):
+        self.bg_lines.clear()
+        self.bg_canvas.delete("all")
+
+        # Set the desired background image size (you can tweak this)
+        img_width = self.winfo_screenwidth()
+        img_height = self.winfo_screenheight()
+
+        # Load and set background image only once
+        bg_image_path = os.path.abspath("frontend/icon.ico").replace("\\", "/")
+        if not hasattr(self, 'bg_image_loaded'):
+            try:
+                image = Image.open(bg_image_path).convert("RGBA")
+                image = image.resize((img_width, img_height), Image.Resampling.LANCZOS)
+
+                self.bg_photo = ImageTk.PhotoImage(image)
+                self.bg_image_loaded = True
+            except Exception as e:
+                print(f"Failed to load background image: {e}")
+                self.bg_photo = None
+
+        # Draw background image if loaded successfully
+        if self.bg_photo:
+            self.bg_canvas.create_image(0, 0, image=self.bg_photo, anchor='nw')
+
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+
+        # Overlay animated diagonal lines
+        for i in range(0, width + 300, 80):
+            line = self.bg_canvas.create_line(
+                i, 0, i - 200, height,
+                fill="#95A5A6", width=1  # Soft professional tone
+            )
+            self.bg_lines.append(line)
+
+
+    def animate_background(self):
+        for line in self.bg_lines:
+            self.bg_canvas.move(line, 0.8, 0)  # Smooth horizontal movement
+            coords = self.bg_canvas.coords(line)
+            if coords[0] > self.winfo_screenwidth():
+                self.bg_canvas.move(line, -self.winfo_screenwidth() - 300, 0)
+        self.after(33, self.animate_background)  # ~30 FPS
+
+
+    def animate_ribbon(self):
+        for stripe in self.ribbon_stripes:
+            self.ribbon_canvas.move(stripe, -self.ribbon_speed, 0)
+            coords = self.ribbon_canvas.coords(stripe)
+
+            # Optional: Add a slight vertical wave for natural effect
+            if hasattr(self, "wave_phase"):
+                dy = 2 * math.sin(self.wave_phase + coords[0] * 0.01)
+                self.ribbon_canvas.move(stripe, 0, dy)
+
+            if coords[2] < 0:
+                self.ribbon_canvas.move(stripe, self.winfo_screenwidth() + self.ribbon_width, 0)
+
+        self.wave_phase = getattr(self, "wave_phase", 0) + 0.05
+        self.after(40, self.animate_ribbon)
+
+
+
+
+
+    def create_moving_background(self):
+        self.bg_lines.clear()
+        self.ribbon_stripes.clear()
+
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+        self.bg_canvas.delete("all")
+        self.ribbon_canvas.delete("all")
+
+        # Elegant diagonal background lines
+        for i in range(0, width + 300, 80):
+            line = self.bg_canvas.create_line(
+                i, 0, i - 200, height,
+                fill="#95A5A6", width=1  # Soft blue-grey tone
+            )
+            self.bg_lines.append(line)
+
+        # --- Create Gradient Ribbon Stripes ---
+        num_stripes = 5
+        self.ribbon_width = 180
+        self.ribbon_height = 50
+        spacing = self.ribbon_width + 60
+        base_y = int(height * 0.2)  # Top position
+
+        # Create gradient image once for all stripes
+        gradient_image = Image.new("RGBA", (self.ribbon_width, self.ribbon_height))
+        draw = ImageDraw.Draw(gradient_image)
+        for i in range(self.ribbon_height):
+            r = 41 + int(i * 1.5)
+            g = 128 + int(i * 1.2)
+            b = 185 + int(i * 0.7)
+            draw.line([(0, i), (self.ribbon_width, i)], fill=(r, g, b, 180))
+        gradient_tk = ImageTk.PhotoImage(gradient_image)
+        self.gradient_image_ref = gradient_tk  # Prevent garbage collection
+
+        # Create top ribbons
+        for i in range(num_stripes):
+            x = width + (i * spacing)
+            y = base_y + i * 30
+            stripe = self.ribbon_canvas.create_image(x, y, image=gradient_tk, anchor="nw")
+            self.ribbon_stripes.append(stripe)
+
+        # Create bottom ribbons (shortened vertical range)
+        bottom_base_y = height - self.ribbon_height - 20  # Bottom position
+        for i in range(num_stripes):
+            x = width + (i * spacing)
+            y = bottom_base_y - i * 30
+            stripe = self.ribbon_canvas.create_image(x, y, image=gradient_tk, anchor="nw")
+            self.ribbon_stripes.append(stripe)
+
+        self.wave_phase = 0  # Reset wave phase if needed
+        self.bottom_wave_phase = 0  # Bottom wave phase
+        self.ribbon_speed = 1.5
+
+    def animate_background(self):
+        for line in self.bg_lines:
+            self.bg_canvas.move(line, 0.8, 0)
+            coords = self.bg_canvas.coords(line)
+            if coords[0] > self.winfo_screenwidth():
+                self.bg_canvas.move(line, -self.winfo_screenwidth() - 300, 0)
+        self.after(33, self.animate_background)
+
+    def animate_ribbon(self):
+        for stripe in self.ribbon_stripes:
+            self.ribbon_canvas.move(stripe, -self.ribbon_speed, 0)
+            coords = self.ribbon_canvas.coords(stripe)
+
+            if coords:
+                # Top ribbons move with wave effect
+                if coords[1] < self.winfo_screenheight() * 0.2:  # Check if stripe is in the top section
+                    dy_top = 3 * math.sin(self.wave_phase + coords[0] * 0.015)
+                    self.ribbon_canvas.move(stripe, 0, dy_top)
+
+                # Bottom ribbons move with wave effect
+                if coords[1] >= self.winfo_screenheight() - self.ribbon_height - 20:  # Check if stripe is in the bottom section
+                    dy_bottom = 3 * math.cos(self.bottom_wave_phase + coords[0] * 0.015)
+                    self.ribbon_canvas.move(stripe, 0, dy_bottom)
+
+                if coords[0] + self.ribbon_width < 0:
+                    # Move stripe to the right edge again
+                    self.ribbon_canvas.move(stripe, self.winfo_screenwidth() + self.ribbon_width, 0)
+
+        # Update wave phases for both top and bottom ribbons
+        self.wave_phase += 0.08
+        self.bottom_wave_phase += 0.08  # For bottom ribbons
+
+        self.after(40, self.animate_ribbon)  # Slightly slower for smoothness

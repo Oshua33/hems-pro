@@ -2,8 +2,12 @@ import tkinter as tk
 from CTkMessagebox import CTkMessagebox
 import requests
 from login_gui import LoginGUI
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import customtkinter as ctk
+import math
+
+
+
 import os
 
 API_URL = "http://127.0.0.1:8000/license"
@@ -16,33 +20,23 @@ class LicenseGUI(tk.Toplevel):
         self.title("License & Welcome")
         self.state('zoomed')
         self.configure(bg="#2C3E50")
-
-        # Animated Background Canvas
-        self.bg_canvas = tk.Canvas(self, bg="#2C3E50", highlightthickness=0)
-        self.bg_canvas.place(relx=0, rely=0, relwidth=1, relheight=1)
+        
+        # Initialize containers
         self.bg_lines = []
-        self.create_moving_background()
-        self.animate_background()
-
-        # Ribbon Animation Canvas
-        self.ribbon_canvas = tk.Canvas(self, bg="#2C3E50", highlightthickness=0, bd=0)
-        self.ribbon_canvas.place(relx=0, rely=0, relwidth=1, height=60)
-
-        self.ribbon_width = 100
-        self.ribbon_height = 60
-        self.ribbon_speed = 2
         self.ribbon_stripes = []
 
-        for i in range(0, self.winfo_screenwidth(), self.ribbon_width):
-            stripe = self.ribbon_canvas.create_polygon(
-                i, 0,
-                i + self.ribbon_width, 0,
-                i + self.ribbon_width - 30, self.ribbon_height,
-                i - 30, self.ribbon_height,
-                fill="#1ABC9C", outline="", smooth=True
-            )
-            self.ribbon_stripes.append(stripe)
+        # Background Canvas - full screen
+        self.bg_canvas = tk.Canvas(self, bg="#2C3E50", highlightthickness=0)
+        self.bg_canvas.place(relx=0, rely=0, relwidth=1, relheight=1)
 
+        # Ribbon Canvas - full screen (to allow bottom & top movement)
+        self.ribbon_canvas = tk.Canvas(self, width=self.winfo_screenwidth(), height=self.winfo_screenheight(),
+                                    highlightthickness=0, bd=0, bg="#2C3E50")
+        self.ribbon_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+
+        # Create background lines and animated ribbons
+        self.create_moving_background()
+        self.animate_background()
         self.animate_ribbon()
 
         # Icon Setup
@@ -103,29 +97,97 @@ class LicenseGUI(tk.Toplevel):
 
 
 
+
+
     def create_moving_background(self):
         self.bg_lines.clear()
+        self.ribbon_stripes.clear()
+
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
-        for i in range(0, width + 200, 100):
-            line = self.bg_canvas.create_line(i, 0, i - 200, height, fill="#34495E", width=1)
+        self.bg_canvas.delete("all")
+        self.ribbon_canvas.delete("all")
+
+        # Diagonal background lines (shortened to avoid covering bottom ribbons)
+        for i in range(0, width + 300, 80):
+            line = self.bg_canvas.create_line(
+                i, 0, i - 200, height - 200,  # shorten here
+                fill="#95A5A6", width=1
+            )
             self.bg_lines.append(line)
+
+        # Ribbon stripe parameters
+        num_stripes = 5
+        self.ribbon_width = 150
+        self.ribbon_height = 50
+        spacing = self.ribbon_width + 100
+
+        # Top wave-shaped ribbon polygons
+        for i in range(num_stripes):
+            x = width + (i * spacing)
+            y = int(height * 0.2) + i * 30
+
+            stripe = self.ribbon_canvas.create_polygon(
+                x, y,
+                x + self.ribbon_width, y,
+                x + self.ribbon_width - 30, y + self.ribbon_height,
+                x - 30, y + self.ribbon_height,
+                smooth=True, fill="#1ABC9C", outline=""
+            )
+            self.ribbon_stripes.append(stripe)
+
+        # Bottom wave-shaped ribbon polygons
+        for i in range(num_stripes):
+            x = width + (i * spacing)
+            y = int(height * 0.88) + (i * 10)
+
+            stripe = self.ribbon_canvas.create_polygon(
+                x, y,
+                x + self.ribbon_width, y,
+                x + self.ribbon_width - 30, y + self.ribbon_height,
+                x - 30, y + self.ribbon_height,
+                smooth=True, fill="#3498DB", outline=""
+            )
+            self.ribbon_stripes.append(stripe)
+
+        self.ribbon_canvas.update()
+        self.wave_phase = 0
+        self.ribbon_speed = 3.5
+
+
 
     def animate_background(self):
         for line in self.bg_lines:
-            self.bg_canvas.move(line, 1, 0)
+            self.bg_canvas.move(line, 0.8, 0)
             coords = self.bg_canvas.coords(line)
             if coords[0] > self.winfo_screenwidth():
-                self.bg_canvas.move(line, -self.winfo_screenwidth() - 200, 0)
-        self.after(30, self.animate_background)
+                self.bg_canvas.move(line, -self.winfo_screenwidth() - 300, 0)
+        self.after(33, self.animate_background)
+
 
     def animate_ribbon(self):
-        for stripe in self.ribbon_stripes:
+        half = len(self.ribbon_stripes) // 2
+        screen_width = self.winfo_screenwidth()
+
+        for i, stripe in enumerate(self.ribbon_stripes):
             self.ribbon_canvas.move(stripe, -self.ribbon_speed, 0)
             coords = self.ribbon_canvas.coords(stripe)
-            if coords[2] < 0:
-                self.ribbon_canvas.move(stripe, self.winfo_screenwidth() + self.ribbon_width, 0)
-        self.after(50, self.animate_ribbon)
+
+            if coords:
+                if i < half:
+                    dy = 3 * math.sin(self.wave_phase + coords[0] * 0.015)
+                else:
+                    dy = -3 * math.sin(self.wave_phase + coords[0] * 0.015)
+
+                self.ribbon_canvas.move(stripe, 0, dy)
+
+                if coords[0] + self.ribbon_width < 0:
+                    self.ribbon_canvas.move(stripe, screen_width + self.ribbon_width, 0)
+
+        self.wave_phase += 0.08
+        self.after(40, self.animate_ribbon)
+
+    
 
     def add_label(self, text):
         tk.Label(self.license_frame, text=text, font=("Arial", 12, "bold"),
