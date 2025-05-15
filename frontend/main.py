@@ -56,8 +56,10 @@ class Application:
             self.show_license_screen()
 
     def show_license_screen(self):
-        self.license_screen = LicenseGUI(self.root, self.show_login_screen)
-        self.license_screen.pack()
+        self.license_screen = LicenseGUI(on_success_callback=self.show_login_screen)
+    # ...
+
+        #self.license_screen.pack()
 
 
     def show_login_screen(self):

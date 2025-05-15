@@ -1,0 +1,233 @@
+import tkinter as tk
+import requests
+from PIL import Image, ImageTk
+from login_gui import LoginGUI
+from CTkMessagebox import CTkMessagebox
+import customtkinter as ctk
+import os
+
+API_URL = "http://127.0.0.1:8000/license"
+
+
+class RoundedButton(tk.Canvas):
+    def __init__(self, parent, text, command=None, radius=12, padding=10,
+                 color="#1ABC9C", hover_color="#16A085", text_color="white",
+                 font=("Arial", 12, "bold"), border_color=None, border_width=0, **kwargs):
+        width = 180
+        height = 40
+        super().__init__(parent, width=width, height=height,
+                         bg=parent['bg'], highlightthickness=0, **kwargs)
+        self.command = command
+        self.radius = radius
+        self.color = color
+        self.hover_color = hover_color
+        self.text_color = text_color
+        self.text = text
+        self.font = font
+        self.border_color = border_color or color
+        self.border_width = border_width
+        self.padding = padding
+
+        self.rect = None
+        self.text_id = None
+
+        self.draw_button()
+        self.bind_events()
+
+    def draw_button(self):
+        self.delete("all")
+        r = self.radius
+        w = int(self["width"])
+        h = int(self["height"])
+
+        if self.border_width > 0:
+            self.create_round_rect(0, 0, w, h, r, fill=self.border_color, outline="")
+
+        self.rect = self.create_round_rect(
+            self.border_width, self.border_width,
+            w - self.border_width, h - self.border_width,
+            r, fill=self.color, outline="")
+
+        self.text_id = self.create_text(
+            w // 2, h // 2,
+            text=self.text,
+            fill=self.text_color,
+            font=self.font
+        )
+
+    def create_round_rect(self, x1, y1, x2, y2, radius, **kwargs):
+        points = [
+            x1+radius, y1,
+            x2-radius, y1,
+            x2, y1,
+            x2, y1+radius,
+            x2, y2-radius,
+            x2, y2,
+            x2-radius, y2,
+            x1+radius, y2,
+            x1, y2,
+            x1, y2-radius,
+            x1, y1+radius,
+            x1, y1
+        ]
+        return self.create_polygon(points, smooth=True, **kwargs)
+
+    def bind_events(self):
+        self.bind("<Enter>", self.on_hover)
+        self.bind("<Leave>", self.on_leave)
+        self.bind("<Button-1>", self.on_click)
+
+    def on_hover(self, event):
+        self.itemconfig(self.rect, fill=self.hover_color)
+
+    def on_leave(self, event):
+        self.itemconfig(self.rect, fill=self.color)
+
+    def on_click(self, event):
+        if self.command:
+            self.command()
+
+
+class LicenseGUI(tk.Toplevel):
+    def __init__(self, master, on_success_callback=None):
+        super().__init__(master)
+        self.master = master
+        self.on_success_callback = on_success_callback  # Save the callback
+        self.title("HEMS License Portal")
+        self.state('zoomed')
+        self.configure(bg="#2C3E50")
+
+        # Modal behavior
+        self.grab_set()
+        self.focus_force()
+
+        self.set_icon()
+        self.create_top_menu()
+        self.create_branding_labels()
+        self.create_footer()
+
+        self.license_frame = tk.Frame(self, bg="#34495E", padx=40, pady=30)
+        self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
+
+    def set_icon(self):
+        icon_ico_path = os.path.abspath("frontend/icon.ico").replace("\\", "/")
+        icon_png_path = os.path.abspath("frontend/icon.png").replace("\\", "/")
+        if os.path.exists(icon_ico_path):
+            self.iconbitmap(icon_ico_path)
+        elif os.path.exists(icon_png_path):
+            try:
+                icon_img = Image.open(icon_png_path)
+                icon_resized = icon_img.resize((80, 80))
+                self.icon_image = ImageTk.PhotoImage(icon_resized)
+                self.iconphoto(True, self.icon_image)
+            except Exception as e:
+                print(f"Error loading PNG icon: {e}")
+
+    def create_top_menu(self):
+        menu_frame = tk.Frame(self, bg="#1ABC9C", height=50)
+        menu_frame.pack(fill="x", side="top")
+
+        options = [("Create License Key", self.show_create_license),
+                   ("Verify Key", self.show_verify_key),
+                   ("Close X", self.destroy)]
+        for i, (text, command) in enumerate(options):
+            btn = tk.Button(menu_frame, text=text, font=("Arial", 12, "bold"),
+                            bg="#1ABC9C", fg="white", bd=0, activebackground="#16A085",
+                            command=command)
+            btn.pack(side="left", padx=20, pady=10)
+
+    def create_branding_labels(self):
+        ctk.CTkLabel(self, text="H     E     M     S",
+                     font=ctk.CTkFont("Century Gothic", 38, "bold"),
+                     text_color="white", fg_color="#2C3E50").place(relx=0.5, rely=0.15, anchor="center")
+
+        ctk.CTkLabel(self, text="Hotel & Event Management System",
+                     font=ctk.CTkFont("Century Gothic", 20, "bold"),
+                     text_color="gold", fg_color="#2C3E50").place(relx=0.5, rely=0.22, anchor="center")
+
+    def create_footer(self):
+        tk.Label(self, text="Produced & Licensed by School of Accounting Package",
+                 font=("Arial", 10, "italic"), fg="white", bg="#2C3E50").place(relx=0.8, rely=0.94, anchor="n")
+        tk.Label(self, text="© 2025", font=("Arial", 10, "italic"),
+                 fg="white", bg="#2C3E50").place(relx=0.85, rely=0.97, anchor="n")
+
+    def clear_license_frame(self):
+        for widget in self.license_frame.winfo_children():
+            widget.destroy()
+
+    def show_create_license(self):
+        self.clear_license_frame()
+        self.add_label("Admin License Password:")
+        self.password_entry = self.create_entry()
+
+        self.add_label("License Key:")
+        self.key_entry = self.create_entry()
+
+        self.create_rounded_button("Generate License", self.generate_license)
+
+    def show_verify_key(self):
+        self.clear_license_frame()
+        self.add_label("Enter License Key to Verify:")
+        self.verify_key_entry = self.create_entry()
+        self.create_rounded_button("Verify License", self.verify_license)
+
+    def add_label(self, text):
+        tk.Label(self.license_frame, text=text, font=("Arial", 12, "bold"),
+                 fg="white", bg="#34495E").pack(padx=5, pady=(10, 2))
+
+    def create_entry(self, show=None):
+        entry = tk.Entry(self.license_frame, width=25, font=("Arial", 12),
+                         bg="#ECF0F1", fg="black", show=show if show else "")
+        entry.pack(padx=5, pady=5)
+        return entry
+
+    def create_rounded_button(self, text, command):
+        button = RoundedButton(self.license_frame, text=text, command=command, 
+                               radius=12, padding=10, color="#1ABC9C", hover_color="#16A085", 
+                               text_color="white", font=("Arial", 12, "bold"), border_color="#16A085", border_width=2)
+        button.pack(pady=10)
+        return button
+
+    def generate_license(self):
+        license_password = self.password_entry.get()
+        key = self.key_entry.get()
+        if not license_password or not key:
+            CTkMessagebox(title="Input Error", message="Please enter both license password and key.", icon="cancel")
+            return
+
+        try:
+            response = requests.post(
+                f"{API_URL}/generate?license_password={license_password}&key={key}",
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            new_license = response.json()
+            CTkMessagebox(title="License Generated", message=f"New License Key: {new_license['key']}", icon="check")
+        except requests.exceptions.RequestException as e:
+            CTkMessagebox(title="Error", message=str(e), icon="cancel")
+
+    def verify_license(self):
+        key = self.verify_key_entry.get()
+        if not key:
+            CTkMessagebox(title="Input Error", message="Please enter a license key.", icon="cancel")
+            return
+        try:
+            response = requests.get(f"{API_URL}/verify/{key}")
+            response.raise_for_status()
+            result = response.json()
+            if result["valid"]:
+                CTkMessagebox(title="License Valid", message="The license key is valid!", icon="check")
+                self.destroy()
+                login_window = tk.Toplevel(self.master)
+                LoginGUI(login_window)
+            else:
+                CTkMessagebox(title="Invalid License", message=result["message"], icon="warning")
+        except Exception as e:
+            CTkMessagebox(title="Error", message=str(e), icon="cancel")
+
+# ✅ Launcher
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
+    license_window = LicenseGUI(root)
+    root.mainloop()
