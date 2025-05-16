@@ -277,8 +277,8 @@ class LicenseGUI(tk.Toplevel):
             self.license_frame.destroy()
 
         # Create a new styled license frame
-        self.license_frame = ctk.CTkFrame(self, fg_color="#34495E", corner_radius=12)
-        self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
+        #self.license_frame = ctk.CTkFrame(self, fg_color="#34495E", corner_radius=12)
+        #self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
 
         # Create a card container for inputs
         form_card = ctk.CTkFrame(self.license_frame, fg_color="#34495E", corner_radius=12)

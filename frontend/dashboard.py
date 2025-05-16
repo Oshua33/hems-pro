@@ -9,18 +9,67 @@ from utils import load_token, get_user_role
 import os
 from PIL import Image, ImageTk
 
+
+
 class Dashboard:
     def __init__(self, root, username, token):
-        #self.root = tk.Toplevel(root)
         self.root = root
-        self.tree = ttk.Treeview(self.root)
-        self.token = token
         self.username = username
-        #self.root.state("zoomed")
+        self.token = token
+
         self.root.title("Hotel & Event Management System")
-        #self.root.geometry("1280x900")
-         # Maximize the window properly
-        self.root.after(100, lambda: self.root.state("zoomed"))  # Ensures full zoom
+        try:
+            self.root.state("zoomed")
+        except:
+            self.root.attributes("-zoomed", True)
+
+        self.root.configure(bg="#2c3e50")
+
+        # Loading label (same style as before)
+        self.loading_text = "Loading Dashboard: "
+        self.progress = 0
+        self.max_progress = 100
+
+        self.loading_label = tk.Label(
+            self.root,
+            text=self.loading_text + "0%",
+            font=("Segoe UI", 18, "bold"),
+            fg="white",
+            bg="#2c3e50"
+        )
+        self.loading_label.pack(expand=True, fill="both")
+
+        # Start counter animation and then load dashboard
+        self.animate_loading()
+        self.root.after(3000, self.load_dashboard)  # Delay before loading real UI
+
+    def animate_loading(self):
+        if self.progress <= self.max_progress:
+            self.loading_label.config(text=f"{self.loading_text}{self.progress}%")
+            self.progress += 1
+            self.animation_job = self.root.after(30, self.animate_loading)  # ~3 seconds total
+        else:
+            # Once at 100%, stop animation and load dashboard
+            self.load_dashboard()
+
+    def load_dashboard(self):
+        # Stop the animation if running
+        if hasattr(self, 'animation_job'):
+            self.root.after_cancel(self.animation_job)
+
+        # Build actual dashboard UI
+        self.build_ui()
+
+    def build_ui(self):
+        self.loading_label.destroy()
+        # Your dashboard UI code here
+
+
+
+
+
+
+
 
         
         self.user_role = get_user_role(self.token)

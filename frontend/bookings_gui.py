@@ -754,7 +754,7 @@ class BookingManagement:
                 self.last_guest_name = guest_name
 
                 if not self.guest_search_results:
-                    messagebox.showinfo("Not Found", "Guest not found.")
+                    messagebox.showinfo("Not Found", "Guest Name not found.")
                     return
 
                 # Close existing popup if it exists
@@ -766,7 +766,7 @@ class BookingManagement:
 
             except requests.HTTPError as e:
                 if e.response.status_code == 404:
-                    messagebox.showinfo("Not Found", "Guest not found.")
+                    messagebox.showinfo("Not Found", "Guest Name not found.")
                 else:
                     messagebox.showerror("Error", f"Failed to fetch guest info: {str(e)}")
                 return
