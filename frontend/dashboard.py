@@ -26,7 +26,7 @@ class Dashboard:
         self.root.configure(bg="#2c3e50")
 
         # Loading label (same style as before)
-        self.loading_text = "Loading Dashboard: "
+        self.loading_text = "wait...loading files.... "
         self.progress = 0
         self.max_progress = 100
 

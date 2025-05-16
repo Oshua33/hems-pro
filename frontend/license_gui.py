@@ -196,8 +196,9 @@ class LicenseGUI(tk.Toplevel):
 
     def clear_license_frame(self):
         if self.license_frame:
-            for widget in self.license_frame.winfo_children():
-                widget.destroy()
+            self.license_frame.destroy()
+            self.license_frame = None
+
 
 
     def show_welcome_screen(self):
@@ -272,16 +273,18 @@ class LicenseGUI(tk.Toplevel):
 
 
     def show_create_license(self):
+        self.clear_license_frame()
+
         # Clear previous license frame if it exists
         if hasattr(self, 'license_frame') and self.license_frame:
             self.license_frame.destroy()
 
-        # Create a new styled license frame
-        #self.license_frame = ctk.CTkFrame(self, fg_color="#34495E", corner_radius=12)
-        #self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
+        # Outer frame with a darker background for contrast
+        self.license_frame = ctk.CTkFrame(self, fg_color="#22313F", corner_radius=15)
+        self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Create a card container for inputs
-        form_card = ctk.CTkFrame(self.license_frame, fg_color="#34495E", corner_radius=12)
+        # Inner card container with lighter color
+        form_card = ctk.CTkFrame(self.license_frame, fg_color="#2C3E50", corner_radius=12)
         form_card.pack(padx=30, pady=30)
 
         # Title
@@ -333,16 +336,14 @@ class LicenseGUI(tk.Toplevel):
 
 
     def show_verify_key(self):
-        # Clear previous license frame if it exists
-        if hasattr(self, 'license_frame') and self.license_frame:
-            self.license_frame.destroy()
+        self.clear_license_frame()
 
-        # Create a new styled license frame
-        self.license_frame = ctk.CTkFrame(self, fg_color="#2C3E50", corner_radius=12)
+        # Outer frame with a subtle but visible background contrast
+        self.license_frame = ctk.CTkFrame(self, fg_color="#22313F", corner_radius=15)
         self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Create a card for the form
-        verify_card = ctk.CTkFrame(self.license_frame, fg_color="#34495E", corner_radius=12)
+        # Inner card with a lighter shade for contrast
+        verify_card = ctk.CTkFrame(self.license_frame, fg_color="#2C3E50", corner_radius=12)
         verify_card.pack(padx=30, pady=30)
 
         # Title
@@ -453,7 +454,7 @@ class LicenseGUI(tk.Toplevel):
                         icon="cancel"
                     )
             else:
-                CTkMessagebox(title="Error", message="Invailid Admin Password", icon="cancel")
+                CTkMessagebox(title="Error", message="Invalid Admin Password", icon="cancel")
 
         except requests.exceptions.RequestException:
             CTkMessagebox(title="Connection Error", message="Failed to reach the server.", icon="cancel")
