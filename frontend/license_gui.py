@@ -54,8 +54,40 @@ class LicenseGUI(tk.Toplevel):
         self.license_frame = tk.Frame(self, bg="#34495E")
         self.license_frame.place(relx=0.5, rely=0.5, anchor="center")
 
+        self.auto_return_job = None
+
+
         # Welcome screen shown on launch
         self.show_welcome_screen()
+
+
+    def schedule_auto_return(self, timeout_ms=30000):
+        # Cancel any previous auto return
+        if self.auto_return_job:
+            self.after_cancel(self.auto_return_job)
+
+        # Schedule timeout warning first
+        self.auto_return_job = self.after(timeout_ms, self.show_timeout_message)
+
+    def show_timeout_message(self):
+        # Optional: clear current frame content or fade it
+        for widget in self.license_frame.winfo_children():
+            widget.destroy()
+
+        # Show timeout message
+        ctk.CTkLabel(
+            self.license_frame,
+            text="Session timed out.\nReturning to welcome screen..",
+            font=ctk.CTkFont("Segoe UI", 18, "bold"),
+            text_color="white",
+            justify="center"
+        ).pack(pady=40, padx=20)
+
+        # Then return to welcome screen after short delay
+        self.auto_return_job = self.after(2000, self.show_welcome_screen)
+
+
+
 
     def set_icon(self):
         icon_ico_path = os.path.abspath("frontend/icon.ico").replace("\\", "/")
@@ -171,7 +203,7 @@ class LicenseGUI(tk.Toplevel):
         ]
 
         for text, command in options:
-            btn = tk.Button(menu_frame, text=text, font=("Arial", 12, "bold"),
+            btn = tk.Button(menu_frame, text=text, font=("Arial", 11, "bold"),
                             bg="#1ABC9C", fg="white", bd=0,
                             activebackground="#16A085", command=command)
             btn.pack(side="left", padx=20, pady=10)
@@ -331,6 +363,8 @@ class LicenseGUI(tk.Toplevel):
         # Raise frame above background
         self.license_frame.lift()
 
+        self.schedule_auto_return()
+
 
 
 
@@ -379,6 +413,8 @@ class LicenseGUI(tk.Toplevel):
 
         # Raise frame above background
         self.license_frame.lift()
+
+        self.schedule_auto_return()
 
 
     # --- UI helpers ---
