@@ -41,7 +41,7 @@ def create_booking(
     phone_number: str = Form(...),
     vehicle_no: Optional[str] = Form(None),
 
-    # 🔄 Use distinct field names for file and string path
+    # Attachment file upload or reuse path
     attachment_file: Optional[UploadFile] = File(None),
     attachment_str: Optional[str] = Form(None),
 
@@ -50,7 +50,7 @@ def create_booking(
 ):
     attachment_path = None
 
-    # ✅ Handle file upload if provided
+    # ✅ Handle new file upload
     if attachment_file and attachment_file.filename:
         upload_dir = "uploads/attachments/"
         os.makedirs(upload_dir, exist_ok=True)
@@ -61,23 +61,9 @@ def create_booking(
 
         attachment_path = f"/uploads/attachments/{attachment_file.filename}"
 
-    # ✅ Handle if string path was passed (e.g., reused existing uploaded file)
+    # ✅ Handle reusing previously uploaded file path
     elif attachment_str:
         attachment_path = attachment_str
-
-    # ⛔️ Optional: you can validate if one of them must be present
-    # if not attachment_path:
-    #     raise HTTPException(status_code=400, detail="Attachment is required.")
-
-    # ✅ Now proceed to create the booking using `attachment_path`
-    # booking = models.Booking(..., attachment=attachment_path)
-    # db.add(booking)
-    # db.commit()
-    # return {"message": "Booking created successfully"}
-
-   
-
-            
 
     today = date.today()
 
@@ -148,8 +134,6 @@ def create_booking(
         booking_status = "reserved" if booking_type == "reservation" else "checked-in"
 
     try:
-        
-        # Create booking object
         new_booking = booking_models.Booking(
             room_number=room.room_number,
             guest_name=guest_name,

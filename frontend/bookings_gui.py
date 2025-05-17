@@ -901,7 +901,21 @@ class BookingManagement:
             # Response Handling
             if response.status_code == 200:
                 messagebox.showinfo("Success", f"Booking {'updated' if is_update else 'created'} successfully.")
+                
+
+                # ✅ Clear any cached file path after successful booking
+                self.attachment_full_path = None
+
+                # ✅ Also clear the Attachment entry if needed
+                self.entries["Attachment"].delete(0, "end")
                 create_window.destroy()
+
+                # Close guest search popup if it's open
+                if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+                    self.search_popup.destroy()
+
+            
+
             else:
                 messagebox.showerror("Error", f"Failed to {'update' if is_update else 'create'} booking:\n{response.text}")
 
