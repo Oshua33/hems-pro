@@ -724,6 +724,7 @@ class BookingManagement:
 
     import tkinter.simpledialog as simpledialog
 
+
     def search_guest(self, guest_name):
         if not hasattr(self, "entries"):
             messagebox.showerror("Error", "Form is not initialized properly.")
@@ -827,11 +828,6 @@ class BookingManagement:
     # self.search_popup.after(5000, self.search_popup.destroy)
 
 
-
-    
-
-    
-
     def submit_booking(self, create_window, booking_data=None):
         try:
             is_update = booking_data is not None
@@ -842,11 +838,9 @@ class BookingManagement:
             )
             headers = {"Authorization": f"Bearer {self.token}"}
 
-            # If no new attachment is selected, use the existing one
-            attachment_path = getattr(self, 'attachment_full_path', None)
-            attachment_value = self.entries["Attachment"].get() or None
-            if not attachment_path and not attachment_value:
-                attachment_value = self.current_attachment  # Use the previously fetched attachment URL
+            # Fetch values
+            attachment_text = self.entries["Attachment"].get().strip()
+            attachment_path = getattr(self, "attachment_full_path", None)
 
             data = {
                 "room_number": self.entries["Room Number"].get(),
@@ -860,45 +854,51 @@ class BookingManagement:
                 "booking_type": self.entries["Booking Type"].get(),
                 "phone_number": self.entries["Phone Number"].get(),
                 "vehicle_no": self.entries["Vehicle No"].get() or None,
-                "attachment": attachment_value,
             }
 
+            # Validate required fields
             required_fields = ["room_number", "guest_name", "gender", "mode_of_identification",
                             "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
-
             missing = [k for k in required_fields if not data.get(k)]
             if missing:
                 messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
                 return
 
-            # Handle attachment if it exists
+            # --- Attachment Logic ---
             files = {}
             file_obj = None
 
             if attachment_path and os.path.isfile(attachment_path):
+                # ✅ Upload file
                 try:
                     file_obj = open(attachment_path, "rb")
-                    files["attachment"] = (
+                    files["attachment_file"] = (
                         os.path.basename(attachment_path),
                         file_obj,
                         "application/octet-stream"
                     )
+                    # No need to set attachment_str if uploading file
                 except Exception as e:
                     messagebox.showerror("File Error", f"Attachment file error: {str(e)}")
                     return
+            elif attachment_text:
+                # ✅ Send as string path (from fetched data or user input)
+                data["attachment_str"] = attachment_text
             else:
-                # If no attachment is provided, send an empty file value (or None)
-                files["attachment"] = ("", "", "application/octet-stream")
+                # ✅ Send None explicitly (user cleared it)
+                data["attachment_str"] = None
 
+            # Make request
             try:
                 if is_update:
-                    response = requests.put(url, data=data, files=files, headers=headers)
+                    response = requests.put(url, data=data, files=files if files else None, headers=headers)
                 else:
-                    response = requests.post(url, data=data, files=files, headers=headers)
+                    response = requests.post(url, data=data, files=files if files else None, headers=headers)
             finally:
                 if file_obj:
                     file_obj.close()
 
+            # Response Handling
             if response.status_code == 200:
                 messagebox.showinfo("Success", f"Booking {'updated' if is_update else 'created'} successfully.")
                 create_window.destroy()
@@ -909,6 +909,7 @@ class BookingManagement:
             messagebox.showerror("Request Error", str(e))
         except Exception as e:
             messagebox.showerror("Unexpected Error", str(e))
+
 
 
 
@@ -1230,12 +1231,7 @@ class BookingManagement:
     
 
     def view_selected_booking(self):
-        import os
-        import webbrowser
-        from PIL import Image, ImageTk
-        import requests
-        from io import BytesIO
-
+        
         selected_item = self.tree.focus()
         if not selected_item:
             messagebox.showwarning("No selection", "Please select a booking to view.")
@@ -1501,7 +1497,7 @@ class BookingManagement:
             elif field.lower() == "attachment":
                 if isinstance(value, str):
                     # 🔁 Convert public URL path to local path if necessary
-                    if value.startswith("/files/attachments/"):
+                    if value.startswith("/uploads/attachments/"):
                         local_path = os.path.join("uploads", "attachments", os.path.basename(value))
                     else:
                         local_path = value

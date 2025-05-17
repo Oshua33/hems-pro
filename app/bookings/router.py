@@ -40,28 +40,42 @@ def create_booking(
     booking_type: str = Form(...),
     phone_number: str = Form(...),
     vehicle_no: Optional[str] = Form(None),
-    attachment: Optional[UploadFile] = File(None),  # Accept attachment file
+
+    # 🔄 Use distinct field names for file and string path
+    attachment_file: Optional[UploadFile] = File(None),
+    attachment_str: Optional[str] = Form(None),
+
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
-):    
-
-    # ✅ Normalize empty string input from Swagger to None
-    if isinstance(attachment, str) and attachment == "":
-        attachment = None
-
-    # Later in the code...
+):
     attachment_path = None
-    if attachment and attachment.filename:
+
+    # ✅ Handle file upload if provided
+    if attachment_file and attachment_file.filename:
         upload_dir = "uploads/attachments/"
         os.makedirs(upload_dir, exist_ok=True)
-        attachment_path = os.path.join(upload_dir, attachment.filename)
+        file_location = os.path.join(upload_dir, attachment_file.filename)
 
-        with open(attachment_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(attachment_file.file, buffer)
 
-        # ✅ Set the public URL path
-        attachment_path = f"/files/attachments/{attachment.filename}"
+        attachment_path = f"/uploads/attachments/{attachment_file.filename}"
 
+    # ✅ Handle if string path was passed (e.g., reused existing uploaded file)
+    elif attachment_str:
+        attachment_path = attachment_str
+
+    # ⛔️ Optional: you can validate if one of them must be present
+    # if not attachment_path:
+    #     raise HTTPException(status_code=400, detail="Attachment is required.")
+
+    # ✅ Now proceed to create the booking using `attachment_path`
+    # booking = models.Booking(..., attachment=attachment_path)
+    # db.add(booking)
+    # db.commit()
+    # return {"message": "Booking created successfully"}
+
+   
 
             
 
