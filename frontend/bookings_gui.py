@@ -31,6 +31,7 @@ import io
 import requests
 
 
+
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
@@ -1245,7 +1246,6 @@ class BookingManagement:
     
 
     def view_selected_booking(self):
-        
         selected_item = self.tree.focus()
         if not selected_item:
             messagebox.showwarning("No selection", "Please select a booking to view.")
@@ -1261,8 +1261,9 @@ class BookingManagement:
 
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("560x720+100+10")
+        view_window.geometry("700x500+100+10")
         view_window.configure(fg_color="white")
+        view_window.grab_set()
 
         hotel_label = ctk.CTkLabel(
             view_window,
@@ -1270,7 +1271,7 @@ class BookingManagement:
             font=("Arial", 17, "bold"),
             text_color="#0f2e4d"
         )
-        hotel_label.pack(pady=(5, 0))
+        hotel_label.pack(pady=(10, 0))
 
         title_label = ctk.CTkLabel(
             view_window,
@@ -1278,7 +1279,7 @@ class BookingManagement:
             font=("Arial", 15, "bold"),
             text_color="#1e3d59"
         )
-        title_label.pack(pady=(5, 2))
+        title_label.pack(pady=(5, 10))
 
         content_frame = ctk.CTkFrame(
             view_window,
@@ -1287,32 +1288,40 @@ class BookingManagement:
             border_width=1,
             corner_radius=12
         )
-        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 0))
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 10))
+
+        content_frame.grid_columnconfigure(0, weight=0)
+        content_frame.grid_columnconfigure(1, weight=0)
+        content_frame.grid_columnconfigure(2, weight=0)
+        content_frame.grid_columnconfigure(3, weight=0)
+
 
         rows = []
         attachment_url = None
-        for field, value in zip(field_names, booking_data):
-            row = ctk.CTkFrame(content_frame, fg_color="white")
-            row.pack(fill="x", padx=5, pady=1)
+
+        for idx, (field, value) in enumerate(zip(field_names, booking_data)):
+            col = 0 if idx < 10 else 2
+            row = idx % 10
 
             label_field = ctk.CTkLabel(
-                row,
+                content_frame,
                 text=f"{field}:",
                 font=("Arial", 12, "bold"),
                 text_color="#2c3e50",
-                width=150,
                 anchor="w"
             )
+            label_field.grid(row=row, column=col, sticky="w", padx=(20, 15), pady=3)
+
             label_value = ctk.CTkLabel(
-                row,
+                content_frame,
                 text=str(value),
                 font=("Arial", 12),
                 text_color="#34495e",
                 anchor="w",
-                wraplength=320
+                wraplength=240
             )
-            label_field.pack(side="left")
-            label_value.pack(side="left", fill="x", expand=True)
+            label_value.grid(row=row, column=col + 1, sticky="w", padx=(0, 25), pady=3)
+
             rows.append((field, value))
 
             if field.lower() == "attachment" and value:
@@ -1326,7 +1335,7 @@ class BookingManagement:
                 response = requests.get(url)
 
                 img = Image.open(BytesIO(response.content))
-                img = img.convert("RGBA")  # Ensure compatibility
+                img = img.convert("RGBA")
                 ctk_image = CTkImage(light_image=img, size=(120, 120))
 
                 attachment_preview = ctk.CTkLabel(
@@ -1336,22 +1345,15 @@ class BookingManagement:
                     width=120,
                     height=120
                 )
-                attachment_preview= ctk_image  # Prevent garbage collection
-                attachment_preview.place(x=420, y=20)
+                attachment_preview.image = ctk_image  # prevent GC
+                attachment_preview.place(x=580, y=20)
             except Exception as e:
                 print(f"Image preview failed: {e}")
 
-            except Exception as e:
-                print(f"Image preview failed: {e}")
-
-            except Exception as e:
-                print(f"Image preview failed: {e}")
-
-                # --- Buttons ---
+        # --- Buttons ---
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=(10, 15))
 
-        # Print Details Button
         pdf_button = ctk.CTkButton(
             master=button_frame,
             text="Print Details",
@@ -1365,7 +1367,6 @@ class BookingManagement:
         )
         pdf_button.grid(row=0, column=0, padx=5)
 
-        # Guest Form Button
         guest_form_btn = ctk.CTkButton(
             master=button_frame,
             text="Guest Form",
@@ -1379,7 +1380,6 @@ class BookingManagement:
         )
         guest_form_btn.grid(row=0, column=1, padx=5)
 
-        # Open Attachment Button (smaller width)
         if attachment_url:
             open_attachment_btn = ctk.CTkButton(
                 master=button_frame,
@@ -1393,6 +1393,8 @@ class BookingManagement:
                 height=32
             )
             open_attachment_btn.grid(row=0, column=2, padx=5)
+
+
 
 
     def export_guest_form(self, data):
@@ -1817,8 +1819,10 @@ class BookingManagement:
         except requests.exceptions.RequestException as e:
             messagebox.showerror("Error", f"Request failed: {e}")
 
+
+
             
-    
+    #Search Booking by Guest Name
     def search_booking(self):
         self.clear_right_frame()
         
@@ -1859,6 +1863,112 @@ class BookingManagement:
         x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.search_tree.xview)
         x_scroll.pack(fill=tk.X)
         self.search_tree.configure(xscroll=x_scroll.set)
+
+      # --- View Booking Button using CustomTkinter ---
+        view_button = ctk.CTkButton(
+            frame,
+            text="View Booking",
+            corner_radius=20,
+            command=self.view_selected_guest_booking
+        )
+        view_button.pack(pady=10)
+
+
+
+
+        # Create a horizontal frame for the summary labels
+        summary_frame = tk.Frame(frame, bg="#ffffff")
+        summary_frame.pack(fill=tk.X, pady=10)
+
+        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 11, "bold"), fg="blue", bg="#ffffff")
+        self.total_entries_label.pack(side=tk.LEFT, padx=10)
+
+        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 11, "bold"), fg="red", bg="#ffffff")
+        self.total_cost_label.pack(side=tk.LEFT, padx=20)
+
+
+    def view_selected_guest_booking(self):
+        selected_item = self.search_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No Selection", "Please select a booking to view.")
+            return
+
+        booking_data = self.search_tree.item(selected_item)["values"]
+
+        popup = tk.Toplevel()
+        popup.title("Booking Details")
+        popup.geometry("750x430")
+        popup.configure(bg="#f5f5f5")
+        popup.grab_set()
+
+        # Center the popup
+        popup.update_idletasks()
+        x = (popup.winfo_screenwidth() // 2) - (700 // 2)
+        y = (popup.winfo_screenheight() // 2) - (500 // 2)
+        popup.geometry(f"+{x}+{y}")
+
+        # Title
+        tk.Label(
+            popup,
+            text="Booking Details",
+            font=("Arial", 14, "bold"),
+            bg="#f5f5f5",
+            fg="#333"
+        ).pack(pady=(10, 5))
+
+        # Main content frame
+        content_frame = tk.Frame(popup, bg="#ffffff", bd=1, relief="solid")
+        content_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+
+        
+
+        # Field labels and indices
+        fields = [
+            ("ID", 0), ("Room", 1), ("Guest Name", 2), ("Gender", 3),
+            ("Booking Cost", 4), ("Arrival", 5), ("Departure", 6),
+            ("Status", 7), ("Number of Days", 8), ("Booking Type", 9),
+            ("Phone Number", 10), ("Booking Date", 11), ("Payment Status", 12),
+            ("Identification Number", 13), ("Address", 14), ("Created By", 15),
+            ("Vehicle No", 16), ("Attachment", 17)
+        ]
+
+        # Display fields in two columns
+        for i, (label_text, index) in enumerate(fields):
+            value = booking_data[index] if index < len(booking_data) else ""
+            row = i % 9
+            col = 0 if i < 9 else 2  # Left or right column
+
+            # Field Label
+            tk.Label(
+                content_frame,
+                text=f"{label_text}:",
+                font=("Arial", 10, "bold"),
+                anchor="w",
+                bg="#ffffff"
+            ).grid(row=row, column=col, sticky="w", padx=(15, 10), pady=3)
+
+            # Field Value
+            tk.Label(
+                content_frame,
+                text=str(value),
+                font=("Arial", 10),
+                anchor="w",
+                bg="#ffffff",
+                wraplength=250,
+                justify="left"
+            ).grid(row=row, column=col + 1, sticky="w", padx=(0, 20), pady=3)
+
+        # Close button
+        close_btn = ctk.CTkButton(
+            popup, text="Close", command=popup.destroy,
+            corner_radius=15, fg_color="#cc0000", text_color="white",
+            width=100, height=35
+        )
+        close_btn.pack(pady=(5, 12))
+
+
+
     
     def fetch_booking_by_guest_name(self):
         guest_name = self.search_entry.get().strip()
@@ -1907,6 +2017,15 @@ class BookingManagement:
             
                 # Apply grid effect after inserting data
                 self.apply_grid_effect(self.search_tree)
+
+                # ✅ Show total entries and booking cost excluding cancelled/complimentary
+                total_entries = data.get("total_bookings", 0)
+                total_cost = data.get("total_booking_cost", 0.0)
+
+                self.total_entries_label.config(text=f"Total Entries: {total_entries:,}")
+                self.total_cost_label.config(text=f"Total Booking Cost: ₦{total_cost:,.2f}")
+
+                
 
     
             else:

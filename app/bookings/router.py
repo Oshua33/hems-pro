@@ -389,14 +389,14 @@ def search_guest_name(
     try:
         bookings = db.query(booking_models.Booking).filter(
             booking_models.Booking.guest_name.ilike(f"%{guest_name}%"),
-            
         ).all()
-
 
         if not bookings:
             raise HTTPException(status_code=404, detail=f"No bookings found for guest '{guest_name}'.")
 
         formatted_bookings = []
+        total_cost = 0.0
+
         for booking in bookings:
             formatted_bookings.append({
                 "id": booking.id,
@@ -408,20 +408,28 @@ def search_guest_name(
                 "number_of_days": booking.number_of_days,
                 "booking_type": booking.booking_type,
                 "phone_number": booking.phone_number,
-                "booking_date":booking.booking_date,
+                "booking_date": booking.booking_date,
                 "status": booking.status,
                 "payment_status": booking.payment_status,
                 "mode_of_identification": booking.mode_of_identification,
                 "identification_number": booking.identification_number,
                 "address": booking.address,
-                "booking_cost":booking.booking_cost,
+                "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
                 "vehicle_no": booking.vehicle_no,
-                #"attachment": booking.attachment
+                 "attachment": booking.attachment
             })
+
+            # Count only non-cancelled bookings
+            total_entries = sum(1 for booking in bookings if booking.status.lower() != "cancelled")
+
+            # Only add cost if status is not 'cancelled' or 'complimentary'
+            if booking.status.lower() not in ["cancelled", "complimentary"]:
+                total_cost += booking.booking_cost or 0.0
 
         return {
             "total_bookings": len(formatted_bookings),
+            "total_booking_cost": total_cost,
             "bookings": formatted_bookings,
         }
 
@@ -429,7 +437,7 @@ def search_guest_name(
         logger.error(f"Error searching bookings for guest '{guest_name}': {str(e)}")
         raise HTTPException(
             status_code=400,
-            detail=f" {str(e)}",
+            detail=f"{str(e)}",
         )
 
 
