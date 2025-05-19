@@ -1871,7 +1871,7 @@ class BookingManagement:
             corner_radius=20,
             command=self.view_selected_guest_booking
         )
-        view_button.pack(pady=10)
+        view_button.pack(pady=3)
 
 
 
@@ -1880,10 +1880,10 @@ class BookingManagement:
         summary_frame = tk.Frame(frame, bg="#ffffff")
         summary_frame.pack(fill=tk.X, pady=10)
 
-        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 11, "bold"), fg="blue", bg="#ffffff")
+        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="blue", bg="#ffffff")
         self.total_entries_label.pack(side=tk.LEFT, padx=10)
 
-        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 11, "bold"), fg="red", bg="#ffffff")
+        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="red", bg="#ffffff")
         self.total_cost_label.pack(side=tk.LEFT, padx=20)
 
 
@@ -2201,9 +2201,33 @@ class BookingManagement:
         x_scroll.pack(fill=tk.X)
         self.search_tree.configure(xscroll=x_scroll.set)
 
-        # Total Label (Below Table)
-        self.total_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
-        self.total_label.pack(pady=10)
+
+        # --- View Booking Button using CustomTkinter ---
+        view_button = ctk.CTkButton(
+            frame,
+            text="View Booking",
+            corner_radius=20,
+            command=self.view_selected_guest_booking
+        )
+        view_button.pack(pady=3)
+
+        
+
+# Frame to hold totals and view button
+        totals_frame = tk.Frame(frame, bg="#ffffff")
+        totals_frame.pack(pady=10, anchor="w")  # Left-align
+
+        # Total Entries Label (Blue)
+        self.total_entries_label = tk.Label(totals_frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label.pack(side="left", padx=(0, 10))
+
+        # Total Booking Cost Label (Red)
+        self.total_label = tk.Label(totals_frame, text="Total Booking Cost: 0.00", fg="red", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_label.pack(side="left", padx=(0, 10))
+
+
+
+    
 
 
 
@@ -2222,62 +2246,70 @@ class BookingManagement:
                 messagebox.showerror("Error", "Please select both start and end dates.")
                 return
 
-            # Ensure date format matches backend expectation
             formatted_start_date = start_date.strftime("%Y-%m-%d")
             formatted_end_date = end_date.strftime("%Y-%m-%d")
 
-            # Construct API URL
             api_url = f"http://127.0.0.1:8000/bookings/room/{room_number}"
             params = {"start_date": formatted_start_date, "end_date": formatted_end_date}
             headers = {"Authorization": f"Bearer {self.token}"}
 
-            # Debugging output
-            #print(f"Fetching bookings for Room: {room_number}, Start Date: {formatted_start_date}, End Date: {formatted_end_date}")
-            #print(f"API URL: {api_url}, Headers: {headers}")
-
-            # Make the request
             response = requests.get(api_url, params=params, headers=headers)
             response_data = response.json()
 
-            # Print full API response for debugging
-            #print("API Response:", response_data)
-
-            # Handle response
-
-            # Initialize total cost
-            
             total_cost = 0.0
-            
+            total_entries = 0
+
             if response.status_code == 200:
                 if "bookings" in response_data and response_data["bookings"]:
                     self.search_tree.delete(*self.search_tree.get_children())  # Clear table
 
                     for booking in response_data["bookings"]:
-                        cost = float(booking.get("booking_cost", 0))
-                        total_cost += cost  # Sum up the total booking cost
-                        self.search_tree.insert("", "end", values=(
-                            booking.get("id", ""),
-                            booking.get("room_number", ""),
-                            booking.get("guest_name", ""),
-                            booking.get("gender", ""),
-                            f"{float(booking.get('booking_cost', 0)) :,.2f}",
-                            booking.get("arrival_date", ""),
-                            booking.get("departure_date", ""),
-                            booking.get("status", ""),
-                            booking.get("number_of_days", ""),
-                            booking.get("booking_type", ""),
-                            booking.get("phone_number", ""),
-                            booking.get("booking_date", ""),
-                            booking.get("payment_status", ""),
-                            booking.get("identification_number", ""),  
-                            booking.get("address", ""),                                                   
-                            booking.get("created_by", ""),
-                            booking.get("vehicle_no", ""),
-                            booking.get("attachment", ""),
+                        status = booking.get("status", "").lower()
+                        booking_type = booking.get("booking_type", "").lower()
 
+                        # For total entries, exclude only cancelled
+                        if status != "cancelled":
+                            total_entries += 1
 
-                            
-                        ))
+                            # For total cost, exclude cancelled and complimentary
+                            if booking_type != "complimentary":
+                                try:
+                                    cost = float(booking.get("booking_cost", 0))
+                                    total_cost += cost
+                                except ValueError:
+                                    pass
+
+                            # Add only non-cancelled bookings to table
+                            self.search_tree.insert("", "end", values=(
+                                booking.get("id", ""),
+                                booking.get("room_number", ""),
+                                booking.get("guest_name", ""),
+                                booking.get("gender", ""),
+                                f"{float(booking.get('booking_cost', 0)) :,.2f}",
+                                booking.get("arrival_date", ""),
+                                booking.get("departure_date", ""),
+                                booking.get("status", ""),
+                                booking.get("number_of_days", ""),
+                                booking.get("booking_type", ""),
+                                booking.get("phone_number", ""),
+                                booking.get("booking_date", ""),
+                                booking.get("payment_status", ""),
+                                booking.get("identification_number", ""),
+                                booking.get("address", ""),
+                                booking.get("created_by", ""),
+                                booking.get("vehicle_no", ""),
+                                booking.get("attachment", ""),
+                            ))
+
+                    # Update totals with color styling
+                    self.total_entries_label.config(
+                        text=f"Total Entries: {total_entries}",
+                        fg="blue"
+                    )
+                    self.total_label.config(
+                        text=f"Total Booking Cost: {total_cost:,.2f}",
+                        fg="red"
+                    )
 
                     # Update total label dynamically
                     self.total_label.config(text=f"Total Booking Cost: {total_cost:,.2f}")

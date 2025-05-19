@@ -534,38 +534,51 @@ def list_bookings_by_room(
                 status_code=404,
                 detail=f"No bookings found for room number {room_number} within the selected date range.",
             )
+        
 
-        # Format the bookings for response
+        # Exclude 'cancelled' for total entries
+        total_entries = len([b for b in bookings if b.status.lower() != "cancelled"])
+
+        # Exclude 'cancelled' and 'complimentary' for total cost
+        total_booking_cost = sum(
+            b.booking_cost or 0
+            for b in bookings
+            if b.status.lower() not in ("cancelled", "complimentary")
+        )
+
+        # Format all bookings for display (including cancelled/complimentary)
         formatted_bookings = [
             {
-                "id": booking.id,
-                "room_number": booking.room_number,
-                "guest_name": booking.guest_name,
-                "gender": booking.gender,
-                "arrival_date": booking.arrival_date,
-                "departure_date": booking.departure_date,
-                "number_of_days": booking.number_of_days,
-                "booking_type": booking.booking_type,
-                "phone_number": booking.phone_number,
-                "booking_date": booking.booking_date,
-                "status": booking.status,
-                "payment_status": booking.payment_status,
-                "mode_of_identification": booking.mode_of_identification,
-                "identification_number": booking.identification_number,
-                "address": booking.address,
-                "booking_cost": booking.booking_cost,
-                "created_by": booking.created_by,
-                "vehicle_no": booking.vehicle_no,
-                #"attachment": booking.attachment
+                "id": b.id,
+                "room_number": b.room_number,
+                "guest_name": b.guest_name,
+                "gender": b.gender,
+                "arrival_date": b.arrival_date,
+                "departure_date": b.departure_date,
+                "number_of_days": b.number_of_days,
+                "booking_type": b.booking_type,
+                "phone_number": b.phone_number,
+                "booking_date": b.booking_date,
+                "status": b.status,
+                "payment_status": b.payment_status,
+                "mode_of_identification": b.mode_of_identification,
+                "identification_number": b.identification_number,
+                "address": b.address,
+                "booking_cost": b.booking_cost,
+                "created_by": b.created_by,
+                "vehicle_no": b.vehicle_no,
+                "attachment": b.attachment,
             }
-            for booking in bookings
+            for b in bookings
         ]
 
         return {
             "room_number": normalized_room_number,
-            "total_bookings": len(formatted_bookings),
+            "total_entries": total_entries,
+            "total_booking_cost": total_booking_cost,
             "bookings": formatted_bookings,
         }
+
 
     except Exception as e:
         logger.error(f"Error retrieving bookings for room {room_number}: {str(e)}")
