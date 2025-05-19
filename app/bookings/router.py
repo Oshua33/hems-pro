@@ -17,6 +17,7 @@ import os
 import shutil
 from fastapi import UploadFile, File, Form
 from typing import Optional, Union
+import uuid
 
 router = APIRouter()
 
@@ -617,9 +618,7 @@ def update_booking(
     try:
         today = date.today()
 
-        # Normalize attachment if it's an empty string
-        if isinstance(attachment, str) and attachment == "":
-            attachment = None
+       
 
         # Fetch the existing booking from the database
         booking = db.query(booking_models.Booking).filter(booking_models.Booking.id == booking_id).first()

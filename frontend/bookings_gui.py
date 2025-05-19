@@ -1165,8 +1165,7 @@ class BookingManagement:
                 elif label_text == "Attachment":
                     entry.configure(state="normal")
                     entry.delete(0, "end")
-                    filename = os.path.basename(value) if value else "Select file..."
-                    entry.insert(0, filename)
+                    entry.insert(0, value if value else "Select file...")  # Insert full path
                     entry.configure(text_color="black" if value else "gray")
 
                 else:
@@ -1228,11 +1227,19 @@ class BookingManagement:
             }
 
             files = None
-            if attachment_path and os.path.exists(attachment_path):
+
+            # Check if user browsed a new file
+            if os.path.isfile(attachment_path):  # New file selected via file dialog
                 file_name = os.path.basename(attachment_path)
                 files = {
                     "attachment": (file_name, open(attachment_path, "rb"), "application/octet-stream")
                 }
+            else:
+                # Use existing attachment path (assume backend handles this logic)
+                data["attachment_str"] = attachment_path  # ✅ Matches backend expectation
+
+
+
 
             response = requests.put(url, data=data, files=files, headers=headers)
 
