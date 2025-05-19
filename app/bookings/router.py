@@ -231,6 +231,7 @@ def list_bookings(
 
         # Calculate total booking cost (excluding cancelled bookings)
         total_booking_cost = sum(booking.booking_cost for booking in checked_in_bookings)
+        
 
         # Format bookings for response
         formatted_bookings = [
@@ -421,7 +422,7 @@ def search_guest_name(
             })
 
             # Count only non-cancelled bookings
-            total_entries = sum(1 for booking in bookings if booking.status.lower() != "cancelled")
+            #total_entries = sum(1 for booking in bookings if booking.status.lower() != "cancelled")
 
             # Only add cost if status is not 'cancelled' or 'complimentary'
             if booking.status.lower() not in ["cancelled", "complimentary"]:
@@ -537,7 +538,7 @@ def list_bookings_by_room(
         
 
         # Exclude 'cancelled' for total entries
-        total_entries = len([b for b in bookings if b.status.lower() != "cancelled"])
+        #total_entries = len([b for b in bookings if b.status.lower() != ""])
 
         # Exclude 'cancelled' and 'complimentary' for total cost
         total_booking_cost = sum(
@@ -574,7 +575,7 @@ def list_bookings_by_room(
 
         return {
             "room_number": normalized_room_number,
-            "total_entries": total_entries,
+            #"total_entries": total_entries,
             "total_booking_cost": total_booking_cost,
             "bookings": formatted_bookings,
         }

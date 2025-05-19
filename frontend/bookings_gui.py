@@ -987,8 +987,13 @@ class BookingManagement:
 
 
         # Label to display total booking cost
-        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="red")
         self.total_booking_cost_label.pack(pady=10)
+
+        # Total Entries Label (Blue)
+        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label.pack(side="left", padx=(0, 10))
+
 
             
         # Assuming `frame` is where your booking buttons are being placed
@@ -997,6 +1002,7 @@ class BookingManagement:
 
         view_button = ctk.CTkButton(button_frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
         view_button.pack(side="left", padx=10)
+
 
         update_button = ctk.CTkButton(button_frame, text="Update Booking", corner_radius=20, command=self.update_selected_booking)
         update_button.pack(side="left", padx=10)
@@ -1594,6 +1600,7 @@ class BookingManagement:
                 if isinstance(data, dict) and "bookings" in data:
                     bookings = data["bookings"]
                     total_booking_cost = data.get("total_booking_cost", 0)  # Get total cost from API
+                    total_entries = data.get("total_entries", len(bookings))  # Fallback in case key missing
                 else:
                     messagebox.showerror("Error", "Unexpected API response format")
                     return
@@ -1601,6 +1608,7 @@ class BookingManagement:
                 # Check if bookings list is empty
                 if not bookings:
                     self.total_booking_cost_label.config(text="Total Booking Cost: 0.00")  # Reset label
+                    self.total_entries_label.config(text="Total Entries: 0")  # Clear label too
                     messagebox.showinfo("No Results", "No bookings found for the selected filters.")
                     return
 
@@ -1638,6 +1646,10 @@ class BookingManagement:
                 self.total_booking_cost_label.config(
                     text=f"Total Booking Cost: {total_booking_cost:,.2f}"
                 )
+
+                self.total_entries_label.config(text=f"Total Entries: {len(bookings)}")
+
+            
             
             else:
                 messagebox.showerror("Error", response.json().get("detail", "Failed to retrieve bookings."))
@@ -2268,7 +2280,7 @@ class BookingManagement:
                         booking_type = booking.get("booking_type", "").lower()
 
                         # For total entries, exclude only cancelled
-                        if status != "cancelled":
+                        if status != "":
                             total_entries += 1
 
                             # For total cost, exclude cancelled and complimentary
