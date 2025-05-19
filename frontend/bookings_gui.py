@@ -1909,7 +1909,7 @@ class BookingManagement:
 
         popup = tk.Toplevel()
         popup.title("Booking Details")
-        popup.geometry("750x430")
+        popup.geometry("715x430")
         popup.configure(bg="#f5f5f5")
         popup.grab_set()
 
@@ -2279,39 +2279,38 @@ class BookingManagement:
                         status = booking.get("status", "").lower()
                         booking_type = booking.get("booking_type", "").lower()
 
-                        # For total entries, exclude only cancelled
-                        if status != "":
-                            total_entries += 1
+                        # Count all bookings regardless of status or type
+                        total_entries += 1
 
-                            # For total cost, exclude cancelled and complimentary
-                            if booking_type != "complimentary":
-                                try:
-                                    cost = float(booking.get("booking_cost", 0))
-                                    total_cost += cost
-                                except ValueError:
-                                    pass
+                        # For total cost, exclude cancelled and complimentary bookings
+                        if status != "cancelled" and booking_type != "complimentary":
+                            try:
+                                cost = float(booking.get("booking_cost", 0))
+                                total_cost += cost
+                            except ValueError:
+                                pass
 
-                            # Add only non-cancelled bookings to table
-                            self.search_tree.insert("", "end", values=(
-                                booking.get("id", ""),
-                                booking.get("room_number", ""),
-                                booking.get("guest_name", ""),
-                                booking.get("gender", ""),
-                                f"{float(booking.get('booking_cost', 0)) :,.2f}",
-                                booking.get("arrival_date", ""),
-                                booking.get("departure_date", ""),
-                                booking.get("status", ""),
-                                booking.get("number_of_days", ""),
-                                booking.get("booking_type", ""),
-                                booking.get("phone_number", ""),
-                                booking.get("booking_date", ""),
-                                booking.get("payment_status", ""),
-                                booking.get("identification_number", ""),
-                                booking.get("address", ""),
-                                booking.get("created_by", ""),
-                                booking.get("vehicle_no", ""),
-                                booking.get("attachment", ""),
-                            ))
+                        # Add all bookings to the table
+                        self.search_tree.insert("", "end", values=(
+                            booking.get("id", ""),
+                            booking.get("room_number", ""),
+                            booking.get("guest_name", ""),
+                            booking.get("gender", ""),
+                            f"{float(booking.get('booking_cost', 0)) :,.2f}",
+                            booking.get("arrival_date", ""),
+                            booking.get("departure_date", ""),
+                            booking.get("status", ""),
+                            booking.get("number_of_days", ""),
+                            booking.get("booking_type", ""),
+                            booking.get("phone_number", ""),
+                            booking.get("booking_date", ""),
+                            booking.get("payment_status", ""),
+                            booking.get("identification_number", ""),
+                            booking.get("address", ""),
+                            booking.get("created_by", ""),
+                            booking.get("vehicle_no", ""),
+                            booking.get("attachment", ""),
+                        ))
 
                     # Update totals with color styling
                     self.total_entries_label.config(
@@ -2323,11 +2322,8 @@ class BookingManagement:
                         fg="red"
                     )
 
-                    # Update total label dynamically
-                    self.total_label.config(text=f"Total Booking Cost: {total_cost:,.2f}")
                     # Apply grid effect after inserting data
                     self.apply_grid_effect(self.search_tree)
-
     
                 else:
                     messagebox.showinfo("No Results", f"No bookings found for Room {room_number} between {formatted_start_date} and {formatted_end_date}.")
