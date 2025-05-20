@@ -14,7 +14,7 @@ class UserManagement:
 
         # Create modal window
         self.user_management_window = CTkToplevel(self.parent)
-        self.user_management_window.title("User Management")
+        self.user_management_window.title("HEMS-User Management")
         self.user_management_window.geometry("700x500")
         self.user_management_window.resizable(False, False)
         self.user_management_window.configure(fg_color="#2C3E50")  # Dark background

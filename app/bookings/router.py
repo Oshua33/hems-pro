@@ -840,8 +840,8 @@ def cancel_booking(
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     """
     Cancel a booking if no non-voided payment is tied to it. If a payment exists, raise an exception.

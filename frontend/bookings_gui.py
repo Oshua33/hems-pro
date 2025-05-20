@@ -127,7 +127,7 @@ class RoundedButton(tk.Canvas):
 class BookingManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
-        self.root.title("Booking Management")
+        self.root.title("HEMS-Booking Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
         
@@ -162,17 +162,15 @@ class BookingManagement:
         y_coordinate = (screen_height // 2) - (window_height // 2)
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
-        from tkinter import filedialog
 
     
-        
         # ========== Main Layout ==========
         self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
-        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=50)
-        self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
+        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=45)
+        self.header_frame.pack(fill=tk.X, pady=(0, 5))  # More breathing room after header
         self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
 
         # Title Label (left side of header)
@@ -934,7 +932,8 @@ class BookingManagement:
         
         
         # Create a new frame for the table
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=5, pady=5)
+        #frame = tk.Frame(self.right_frame, bg="#ffffff")
         frame.pack(fill=tk.BOTH, expand=True)
 
         tk.Label(frame, text="List Bookings Report", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
@@ -958,7 +957,7 @@ class BookingManagement:
         fetch_btn.grid(row=0, column=4, padx=10, pady=5)
 # === Table Frame ===
         table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")
-        table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=1)
 
         # Create Treeview
         columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
@@ -1274,7 +1273,7 @@ class BookingManagement:
 
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("700x500+100+10")
+        view_window.geometry("700x520+100+10")
         view_window.configure(fg_color="white")
         view_window.grab_set()
 
@@ -2617,23 +2616,6 @@ class BookingManagement:
             cancel_window.grab_release()
             CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="cancel")
 
-
-
-
-
-
-
-#class UpdateBooking:
-    #def __init__(self, root, token):
-        #self.root = tk.Toplevel(root)
-        #self.root.title("Update Booking")
-        #self.root.geometry("900x600")
-        #self.token = token
-        #self.root.configure(bg="#f0f0f0")
-        
-        
-        
-   
 
 
 

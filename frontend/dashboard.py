@@ -17,7 +17,7 @@ class Dashboard:
         self.username = username
         self.token = token
 
-        self.root.title("Hotel & Event Management System")
+        self.root.title("HEMS-Hotel & Event Management System")
         try:
             self.root.state("zoomed")
         except:
@@ -65,12 +65,6 @@ class Dashboard:
         # Your dashboard UI code here
 
 
-
-
-
-
-
-
         
         self.user_role = get_user_role(self.token)
 
@@ -81,12 +75,12 @@ class Dashboard:
         
         # === SOFT SHADOW HEADER EFFECT ===
 
-# Shadow Frame (slightly offset)
-        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=64)  # Darker grey-blue
+        # Shadow Frame (slightly offset)
+        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=40)  # Darker grey-blue
         self.header_shadow.pack(fill=tk.X)
 
         # Actual Header (on top of shadow)
-        self.header = tk.Frame(self.root, bg="#2C3E50", height=60)
+        self.header = tk.Frame(self.root, bg="#2C3E50", height=46)
         self.header.place(relx=0, rely=0, relwidth=1)  # Using place() to sit above shadow
 
         # Left Title
@@ -95,7 +89,7 @@ class Dashboard:
         left_title.pack(side=tk.LEFT, padx=20, pady=10)
 
         # Center Title (HEMS)
-        center_title = tk.Label(self.header, text="🏨 HEMS", fg="gold", bg="#2C3E50",
+        center_title = tk.Label(self.header, text="🏨 H E M S", fg="gold", bg="#2C3E50",
                                 font=("Helvetica", 16, "bold"))
         center_title.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -158,8 +152,8 @@ class Dashboard:
         logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#E74C3C"))  # Back to default
 
         # MAIN CONTENT FRAME
-        self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=5, relief=tk.RIDGE)
-        self.main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=4, relief=tk.RIDGE)
+        self.main_content.pack(fill=tk.BOTH, expand=True, padx=2, pady=10)
 
         welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username), 
                                  fg="#2C3E50", bg="#ECF0F1", font=("Arial", 14, "bold"))

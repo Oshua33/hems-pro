@@ -7,7 +7,7 @@ from dashboard import Dashboard  # Import the Dashboard class
 class LoginGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Hotel Management System")
+        self.root.title("HEMS-Hotel Management System")
         self.root.geometry(f"{self.root.winfo_screenwidth()}x{self.root.winfo_screenheight()}")
         self.root.configure(bg="#2c3e50")
 

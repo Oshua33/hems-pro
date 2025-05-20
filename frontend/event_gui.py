@@ -79,7 +79,7 @@ class RoundedButton(tk.Canvas):
 class EventManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
-        self.root.title("Event Management")
+        self.root.title("HEMS-Event Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
         
@@ -106,7 +106,7 @@ class EventManagement:
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
-        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=50)
+        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=45)
         self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
         self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
 

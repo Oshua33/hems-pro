@@ -8,7 +8,7 @@ class RoomManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
         self.token = token
-        self.root.title("Room Management")
+        self.root.title("HEMS-Room Management")
 
         # Set window size and position at the center
         window_width = 780
@@ -16,7 +16,7 @@ class RoomManagement:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x_coordinate = (screen_width // 2) - (window_width // 2)
-        y_coordinate = (screen_height // 2) - (window_height // 2) - 20  # Move slightly up
+        y_coordinate = (screen_height // 2) - (window_height // 2) - 10  # Move slightly up
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
         self.user_role = get_user_role(self.token)
@@ -66,30 +66,39 @@ class RoomManagement:
 
         self.tree.pack(fill=tk.BOTH, expand=True)
 
-        # Apply alternating row colors
-        #self.tree.tag_configure("oddrow", background="#ECF0F1")  # Light gray
-        #self.tree.tag_configure("evenrow", background="white")
+       
 
-        # Button Frame
-        btn_frame = tk.Frame(self.root, bg="#f8f9fa")
-        btn_frame.pack(pady=10, padx=10)
+        # Compact Button Frame
+        btn_frame = ctk.CTkFrame(self.root, fg_color="#f8f9fa")
+        btn_frame.pack(pady=5, padx=5)
 
-        # Buttons with Icons
+        # Buttons with Icons and Compact Styling
         buttons = [
-            ("➕ Add Room", self.open_room_form),
-            ("✏️ Update Room", self.update_room),
-            ("❌ Delete Room", self.delete_room),
-            ("🟢 Available Rooms", self.list_available_rooms),
+            ("➕ Add", self.open_room_form),
+            ("✏️ Edit", self.update_room),
+            ("❌ Delete", self.delete_room),
+            ("🟢 Rooms Available", self.list_available_rooms),
             ("🔄 Refresh", self.fetch_rooms)
         ]
 
         for idx, (text, command) in enumerate(buttons):
-            btn = ttk.Button(btn_frame, text=text, command=command, width=18)
-            btn.grid(row=0, column=idx, padx=5, pady=5)
-
+            btn = ctk.CTkButton(
+                btn_frame,
+                text=text,
+                command=command,
+                width=100,               # Reduced width
+                height=25,               # Reduced height
+                corner_radius=10,
+                font=("Segoe UI", 11, "bold"),  # Slightly smaller font
+                text_color="white",
+                fg_color="#1e3d59",
+                hover_color="#2563eb"
+            )
+            btn.grid(row=0, column=idx, padx=7, pady=7)
+        
             # Disable buttons for non-admin users
-            if self.user_role != "admin" and text in ["➕ Add Room", "✏️ Update Room", "❌ Delete Room"]:
-                btn.config(state=tk.DISABLED)
+            if self.user_role != "admin" and text in ["➕ Add", "✏️ Edit", "❌ Delete"]:
+                btn.configure(state="disabled", fg_color="#adb5bd", hover_color="#adb5bd")
 
                 
 
