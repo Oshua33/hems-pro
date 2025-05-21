@@ -123,6 +123,7 @@ class RoundedButton(tk.Canvas):
 
 
 
+
 # =================== Main Booking Management ===================
 class BookingManagement:
     def __init__(self, root, token):
@@ -217,6 +218,15 @@ class BookingManagement:
         )
         self.print_button.pack(side=tk.LEFT, padx=5)
 
+        self.booking_fields = [
+        "ID", "Room Number", "Guest Name", "Gender", "Booking Cost", "Arrival Date", "Departure Date", "Status",
+        "Number of Days", "Booking Type", "Phone Number", "Booking Date", "Payment Status",
+        "Mode of Identification", "Identification Number", "Address",
+        "Vehicle No", "Attachment", "Created By"
+    ]
+
+
+
        # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -247,8 +257,8 @@ class BookingManagement:
             ("Create Booking", self.create_booking),
             ("List Booking", self.list_bookings),
             ("Sort By Status", self.list_bookings_by_status),
-            ("Sort Guest Name", self.search_booking),
-            ("Sort by ID", self.search_booking_by_id),
+            ("Sort Guest Name", self.search_booking_by_guest_name),
+            #("Sort by ID", self.search_booking_by_id),
             ("Sort By Room", self.search_booking_by_room),
             #("Update Booking", self.update_booking),
             ("Guest Checkout", self.guest_checkout),
@@ -1273,7 +1283,7 @@ class BookingManagement:
 
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("700x520+100+10")
+        view_window.geometry("700x500+100+10")
         view_window.configure(fg_color="white")
         view_window.grab_set()
 
@@ -1360,7 +1370,7 @@ class BookingManagement:
                 attachment_preview.image = ctk_image  # prevent GC
                 attachment_preview.place(x=580, y=20)
             except Exception as e:
-                print(f"Image preview failed: {e}")
+                print("")
 
         # --- Buttons ---
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
@@ -1374,8 +1384,8 @@ class BookingManagement:
             text_color="white",
             corner_radius=20,
             font=("Arial", 12, "bold"),
-            width=150,
-            height=32
+            width=125,
+            height=25
         )
         pdf_button.grid(row=0, column=0, padx=5)
 
@@ -1387,8 +1397,8 @@ class BookingManagement:
             text_color="white",
             corner_radius=20,
             font=("Arial", 12, "bold"),
-            width=150,
-            height=32
+            width=125,
+            height=25
         )
         guest_form_btn.grid(row=0, column=1, padx=5)
 
@@ -1401,8 +1411,8 @@ class BookingManagement:
                 text_color="white",
                 corner_radius=20,
                 font=("Arial", 12, "bold"),
-                width=130,
-                height=32
+                width=125,
+                height=25
             )
             open_attachment_btn.grid(row=0, column=2, padx=5)
 
@@ -1455,7 +1465,26 @@ class BookingManagement:
         ]))
 
         elements.append(table)
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 10))
+
+
+
+        # Rules and directives section
+        rules_text = """
+        <b>RULES AND DIRECTIVES</b><br/>
+        X No smoking of any kind or intake of hard drugs in the room or toilet. Fine is N200,000.<br/>
+        X Guests are not allowed to bring in food and drinks from outside into the hotel premises.<br/>
+        X Smoking of cigarette is only allowed by the Pool Bar area.<br/>
+        X All guests are to drop their keycards whenever they are leaving the hotel premises.<br/>
+        X Misplacement of room keycard attracts a fine of N5,000 for immediate replacement.<br/>
+        X Destroying or staining towels, bedsheets, rugs, and especially wallpaper in the room or any area in the hotel will attract immediate replacement.<br/><br/>
+        <b>NOTE:</b> Guests that go contrary to the above stated rules and directives will be evicted without refund.
+        """
+
+        rules_paragraph = Paragraph(rules_text, styles['Normal'])
+        elements.append(rules_paragraph)
+        elements.append(Spacer(1, 25))
+
 
         # Add signature lines
         signature_table = Table([
@@ -1722,8 +1751,9 @@ class BookingManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by")
 
 
         # ✅ Prevent recreation of table on every call
@@ -1806,11 +1836,12 @@ class BookingManagement:
                                 booking.get("phone_number", ""),
                                 booking.get("booking_date", ""),
                                 booking.get("payment_status", ""), 
+                                booking.get("mode_of_identification", ""),
                                 booking.get("identification_number", ""),  
                                 booking.get("address", ""),                               
-                                booking.get("created_by", ""),
                                 booking.get("vehicle_no", ""),
                                 booking.get("attachment", ""),
+                                booking.get("created_by", ""),
 
                             ), tags=(tag,))
 
@@ -1841,7 +1872,7 @@ class BookingManagement:
 
             
     #Search Booking by Guest Name
-    def search_booking(self):
+    def search_booking_by_guest_name(self):
         self.clear_right_frame()
         
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
@@ -1864,8 +1895,9 @@ class BookingManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
         
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
@@ -1913,77 +1945,144 @@ class BookingManagement:
 
         booking_data = self.search_tree.item(selected_item)["values"]
 
-        popup = tk.Toplevel()
-        popup.title("Booking Details")
-        popup.geometry("715x430")
-        popup.configure(bg="#f5f5f5")
-        popup.grab_set()
-
-        # Center the popup
-        popup.update_idletasks()
-        x = (popup.winfo_screenwidth() // 2) - (700 // 2)
-        y = (popup.winfo_screenheight() // 2) - (500 // 2)
-        popup.geometry(f"+{x}+{y}")
-
-        # Title
-        tk.Label(
-            popup,
-            text="Booking Details",
-            font=("Arial", 14, "bold"),
-            bg="#f5f5f5",
-            fg="#333"
-        ).pack(pady=(10, 5))
-
-        # Main content frame
-        content_frame = tk.Frame(popup, bg="#ffffff", bd=1, relief="solid")
-        content_frame.pack(padx=20, pady=10, fill="both", expand=True)
-
-
-        
-
-        # Field labels and indices
-        fields = [
-            ("ID", 0), ("Room", 1), ("Guest Name", 2), ("Gender", 3),
-            ("Booking Cost", 4), ("Arrival", 5), ("Departure", 6),
-            ("Status", 7), ("Number of Days", 8), ("Booking Type", 9),
-            ("Phone Number", 10), ("Booking Date", 11), ("Payment Status", 12),
-            ("Identification Number", 13), ("Address", 14), ("Created By", 15),
-            ("Vehicle No", 16), ("Attachment", 17)
+        field_names = [
+            "ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Number of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification Number",
+            "Address", "Vehicle No", "Attachment", "Created By"
         ]
 
-        # Display fields in two columns
-        for i, (label_text, index) in enumerate(fields):
-            value = booking_data[index] if index < len(booking_data) else ""
-            row = i % 9
-            col = 0 if i < 9 else 2  # Left or right column
+        popup = ctk.CTkToplevel(self.root)
+        popup.title("Guest Booking Details")
+        popup.geometry("700x500+100+20")
+        popup.configure(fg_color="white")
+        popup.grab_set()
 
-            # Field Label
-            tk.Label(
+        hotel_label = ctk.CTkLabel(
+            popup, text=HOTEL_NAME, font=("Arial", 17, "bold"), text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(10, 0))
+
+        title_label = ctk.CTkLabel(
+            popup,
+            text="Guest Booking Details",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(5, 10))
+
+        content_frame = ctk.CTkFrame(
+            popup,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 10))
+
+        content_frame.grid_columnconfigure(0, weight=0)
+        content_frame.grid_columnconfigure(1, weight=0)
+        content_frame.grid_columnconfigure(2, weight=0)
+        content_frame.grid_columnconfigure(3, weight=0)
+
+        rows = []
+        attachment_url = None
+
+        for idx, (field, value) in enumerate(zip(field_names, booking_data)):
+            col = 0 if idx < 10 else 2
+            row = idx % 10
+
+            label_field = ctk.CTkLabel(
                 content_frame,
-                text=f"{label_text}:",
-                font=("Arial", 10, "bold"),
-                anchor="w",
-                bg="#ffffff"
-            ).grid(row=row, column=col, sticky="w", padx=(15, 10), pady=3)
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
+                text_color="#2c3e50",
+                anchor="w"
+            )
+            label_field.grid(row=row, column=col, sticky="w", padx=(20, 15), pady=3)
 
-            # Field Value
-            tk.Label(
+            label_value = ctk.CTkLabel(
                 content_frame,
                 text=str(value),
-                font=("Arial", 10),
+                font=("Arial", 12),
+                text_color="#34495e",
                 anchor="w",
-                bg="#ffffff",
-                wraplength=250,
-                justify="left"
-            ).grid(row=row, column=col + 1, sticky="w", padx=(0, 20), pady=3)
+                wraplength=240
+            )
+            label_value.grid(row=row, column=col + 1, sticky="w", padx=(0, 25), pady=3)
 
-        # Close button
-        close_btn = ctk.CTkButton(
-            popup, text="Close", command=popup.destroy,
-            corner_radius=15, fg_color="#cc0000", text_color="white",
-            width=100, height=35
+            rows.append((field, value))
+
+            if field.lower() == "attachment" and value:
+                attachment_url = value
+
+        # --- Optional: Display Attachment as Image Preview (top-right corner) ---
+        if attachment_url:
+            try:
+                filename = os.path.basename(attachment_url)
+                url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+                response = requests.get(url)
+
+                img = Image.open(BytesIO(response.content))
+                img = img.convert("RGBA")
+                ctk_image = CTkImage(light_image=img, size=(120, 120))
+
+                attachment_preview = ctk.CTkLabel(
+                    master=popup,
+                    image=ctk_image,
+                    text="",
+                    width=120,
+                    height=120
+                )
+                attachment_preview.image = ctk_image
+                attachment_preview.place(x=600, y=20)
+            except Exception as e:
+                print("")
+
+        # --- Action Buttons ---
+        button_frame = ctk.CTkFrame(popup, fg_color="white")
+        button_frame.pack(pady=(10, 15))
+
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print Details",
+            command=lambda: self.export_booking_to_pdf(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
         )
-        close_btn.pack(pady=(5, 12))
+        pdf_button.grid(row=0, column=0, padx=5)
+
+        guest_form_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Guest Form",
+            command=lambda: self.export_guest_form(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        guest_form_btn.grid(row=0, column=1, padx=5)
+
+        close_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Close",
+            command=popup.destroy,
+            fg_color="#cc0000",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        close_btn.grid(row=0, column=2, padx=5)
+
+
 
 
 
@@ -2023,11 +2122,12 @@ class BookingManagement:
                         booking.get("phone_number", ""),
                         booking.get("booking_date", ""),
                         booking.get("payment_status", ""),
+                        booking.get("mode_of_identification", ""),
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                               
-                        booking.get("created_by", ""),
                         booking.get("vehicle_no", ""),
                         booking.get("attachment", ""),
+                        booking.get("created_by", ""),
 
 
                        
@@ -2052,106 +2152,6 @@ class BookingManagement:
             messagebox.showerror("Error", f"Request failed: {e}")
 
     
-    def search_booking_by_id(self):
-        self.clear_right_frame()
-        
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        tk.Label(frame, text="Search Booking by ID", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
-        
-        search_frame = tk.Frame(frame, bg="#ffffff")
-        search_frame.pack(pady=5)
-        
-        tk.Label(search_frame, text="Booking ID:", font=("Arial", 11), bg="#ffffff").grid(row=0, column=0, padx=5, pady=5)
-        self.booking_id_entry = tk.Entry(search_frame, font=("Arial", 11))
-        self.booking_id_entry.grid(row=0, column=1, padx=5, pady=5)
-        
-        search_btn = ttk.Button(
-            search_frame, text="Search", command=self.fetch_booking_by_id
-        )
-        search_btn.grid(row=0, column=2, padx=10, pady=5)
-        
-        table_frame = tk.Frame(frame, bg="#ffffff")
-        table_frame.pack(fill=tk.BOTH, expand=True)
-        
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
-
-        if hasattr(self, "tree"):
-            self.tree.destroy()
-        
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=70, anchor="center")
-        
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscroll=y_scroll.set)
-        
-        x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.tree.xview)
-        x_scroll.pack(fill=tk.X)
-        self.tree.configure(xscroll=x_scroll.set)
-
-    def fetch_booking_by_id(self):
-        booking_id = self.booking_id_entry.get().strip()
-    
-        if not booking_id.isdigit():  # Ensure input is numeric
-            messagebox.showerror("Error", "Please enter a valid numeric booking ID.")
-            return
-        
-        try:
-    
-            #booking_id = int(booking_id)  # Convert to integer
-
-            
-            api_url = f"http://127.0.0.1:8000/bookings/{booking_id}"
-            headers = {"Authorization": f"Bearer {self.token}"}
-        
-        
-            response = requests.get(api_url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                booking = data.get("booking", {})
-                
-                # Ensure the booking details exist
-                if booking:
-                    self.tree.delete(*self.tree.get_children())
-                    self.tree.insert("", "end", values=(
-                        booking.get("id", ""),
-                        booking.get("room_number", ""),
-                        booking.get("guest_name", ""),
-                        booking.get("gender", ""),
-                        f"{float(booking.get('booking_cost', 0)) :,.2f}",  # Format booking_cost
-                        booking.get("arrival_date", ""),
-                        booking.get("departure_date", ""),
-                        booking.get("status", ""),
-                        booking.get("number_of_days", ""),
-                        booking.get("booking_type", ""),
-                        booking.get("phone_number", ""),
-                        booking.get("booking_date", ""),
-                        booking.get("payment_status", ""),
-                        booking.get("identification_number", ""),  
-                        booking.get("address", ""),                                                   
-                        booking.get("created_by", ""),
-                        booking.get("vehicle_no", ""),
-                        booking.get("attachment", ""),
-
-                    ))
-
-                 # Apply grid effect after inserting data
-                    self.apply_grid_effect(self.tree)
-
-   
-                else:
-                    messagebox.showinfo("No Results", "No booking found with the provided ID.")
-            else:
-                messagebox.showerror("Error", response.json().get("detail", "No booking found."))
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Error", f"Request failed: {e}")
      
     def search_booking_by_room(self):
         self.clear_right_frame()
@@ -2198,8 +2198,10 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         # Define table columns
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days",
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Number of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification Number",
+            "Address", "Vehicle No", "Attachment", "Created By")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -2311,11 +2313,12 @@ class BookingManagement:
                             booking.get("phone_number", ""),
                             booking.get("booking_date", ""),
                             booking.get("payment_status", ""),
+                            booking.get("mode_of_identification", ""),
                             booking.get("identification_number", ""),
                             booking.get("address", ""),
-                            booking.get("created_by", ""),
                             booking.get("vehicle_no", ""),
                             booking.get("attachment", ""),
+                            booking.get("created_by", ""),
                         ))
 
                     # Update totals with color styling
