@@ -925,21 +925,20 @@ class PaymentManagement:
                         payment.get("payment_id", ""),
                         payment.get("guest_name", ""),
                         payment.get("room_number", ""),
-                        f"{booking_cost:,.2f}",  # Display booking cost
-                        f"{amount_paid:,.2f}",
-                        f"{discount:,.2f}",
-                        f"{booking_cost - (amount_paid + discount):,.2f}",  # Correct Amount Due
+                        f"{booking_cost:,.2f}",                  # Booking cost
+                        f"{amount_paid:,.2f}",                   # Amount paid
+                        f"{discount:,.2f}",                      # Discount given
+                        f"{payment.get('balance_due', 0):,.2f}", # ✅ Fixed: Use correct key
                         payment.get("payment_method", ""),
                         payment.get("payment_date", ""),
                         payment.get("status", ""),
-                        
                         payment.get("booking_id", ""),
                         payment.get("created_by", "N/A"),
                         payment.get("void_date", ""),
                     ))
 
                 # Apply the effect to the correct treeview (payment_tree)
-                    self.apply_grid_effect(self.tree)
+                self.apply_grid_effect(self.tree)
                     
                 # Update breakdown labels
                 self.total_cash_label.config(text=f"Total Cash: {total_cash:,.2f}")
@@ -1161,14 +1160,14 @@ class PaymentManagement:
 
         columns = (
             "Booking ID", "Guest Name", "Room Number", "Room Price", "Number of Days",
-            "Total Amount", "Total Paid", "Amount Due", "Booking Date", "Last Payment Date"
+            "Total Amount", "Total Paid","Discount Allowed", "Amount Due", "Booking Date", "Last Payment Date"
         )
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=100, anchor="center")
+            self.tree.column(col, width=90, anchor="center")
 
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -1231,6 +1230,7 @@ class PaymentManagement:
                         debtor.get("number_of_days", ""),
                         f"{float(debtor.get('total_due', 0)) :,.2f}",
                         f"{float(debtor.get('total_paid', 0)) :,.2f}",
+                        f"{float(debtor.get('discount_allowed', 0)) :,.2f}",
                         f"{float(debtor.get('amount_due', 0)) :,.2f}",
                         debtor.get("booking_date", ""),
                         debtor.get("last_payment_date", ""),

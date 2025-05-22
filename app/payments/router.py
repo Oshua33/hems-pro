@@ -499,7 +499,7 @@ def get_debtor_list(
             if not room:
                 continue
 
-            # Calculate total amount due based on number_of_days and room price
+            # Calculate total amount due
             total_due = booking.number_of_days * room.amount
 
             # Query all payments for this booking, ignoring voided payments
@@ -508,22 +508,20 @@ def get_debtor_list(
                 payment_models.Payment.status != "voided"
             ).all()
 
-            # Calculate the total amount paid for this booking
-            total_paid = sum(
-                payment.amount_paid + (payment.discount_allowed or 0)
-                for payment in all_payments
-            )
+            # Calculate total paid and discount
+            total_paid = sum(payment.amount_paid for payment in all_payments)
+            total_discount = sum(payment.discount_allowed or 0 for payment in all_payments)
 
-            # Get the most recent payment date (if available) and convert to Lagos timezone
+            # Get last payment date if exists
             last_payment_date = (
                 make_timezone_aware(max(payment.payment_date for payment in all_payments))
                 if all_payments else None
             )
 
-            # Calculate the balance due
-            balance_due = total_due - total_paid
+            # Calculate balance due
+            balance_due = total_due - (total_paid + total_discount)
 
-            # Only include bookings where balance_due > 0
+            # Include only if balance_due > 0
             if balance_due > 0:
                 debtor_list.append({
                     "guest_name": booking.guest_name,
@@ -533,9 +531,10 @@ def get_debtor_list(
                     "number_of_days": booking.number_of_days,
                     "total_due": total_due,
                     "total_paid": total_paid,
+                    "discount_allowed": total_discount,
                     "amount_due": balance_due,
-                    "booking_date": make_timezone_aware(booking.booking_date),  # Convert booking_date to Lagos timezone
-                    "last_payment_date": last_payment_date,  # Include last payment date for sorting
+                    "booking_date": make_timezone_aware(booking.booking_date),
+                    "last_payment_date": last_payment_date,
                 })
                 total_debt_amount += balance_due
 
@@ -558,11 +557,9 @@ def get_debtor_list(
                 payment_models.Payment.status != "voided"
             ).all()
 
-            total_paid = sum(
-                payment.amount_paid + (payment.discount_allowed or 0)
-                for payment in all_payments
-            )
-            total_database_debt += max(total_due - total_paid, 0)
+            total_paid = sum(payment.amount_paid for payment in all_payments)
+            total_discount = sum(payment.discount_allowed or 0 for payment in all_payments)
+            total_database_debt += max(total_due - (total_paid + total_discount), 0)
 
         # Raise an exception if no debtors are found
         if not debtor_list:

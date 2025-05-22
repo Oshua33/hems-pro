@@ -22,7 +22,7 @@ class LoginGUI:
         
         self.create_login_ui()
 
-
+    
     
 
     def create_login_ui(self):
