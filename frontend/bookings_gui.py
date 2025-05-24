@@ -55,6 +55,12 @@ from reportlab.lib.utils import ImageReader
 import webbrowser
 import os
 
+import openpyxl
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from openpyxl.utils import get_column_letter
+from tkinter import messagebox
+from datetime import datetime
+
 
 
 
@@ -427,16 +433,11 @@ class BookingManagement:
             self.bookings_data = []
             messagebox.showerror("Error", f"API Error: {str(e)}")
 
-
+    
 
     def export_report(self):
         """Export current booking view to Excel with styled formatting, summary, and timestamped filename."""
-        import os
-        import openpyxl
-        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-        from openpyxl.utils import get_column_letter
-        from tkinter import messagebox
-        from datetime import datetime
+       
 
         try:
             if self.current_view == "bookings":
@@ -472,8 +473,17 @@ class BookingManagement:
                 return
 
             # Create 'Report' folder if not exists
-            report_dir = os.path.join(os.getcwd(), "Reports")
+            if getattr(sys, 'frozen', False):
+                script_dir = os.path.dirname(sys.executable)
+            else:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+
+            project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
+            report_dir = os.path.join(project_root, "Reports")
             os.makedirs(report_dir, exist_ok=True)
+
+    
+
 
             # Add timestamp to filename
             timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -542,10 +552,12 @@ class BookingManagement:
             # Save file
             wb.save(file_path)
 
+            messagebox.showinfo("Export Success", f"Report exported successfully to:\n{file_path}")
+            
             # Open the file immediately
             os.startfile(file_path)
 
-            messagebox.showinfo("Export Success", f"Report exported successfully to:\n{file_path}")
+            
 
         except Exception as e:
             import traceback

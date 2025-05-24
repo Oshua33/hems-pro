@@ -9,6 +9,7 @@ from tkinter import ttk, Tk
 import tkinter as tk
 import customtkinter as ctk
 import os
+import sys
 import pandas as pd
 from CTkMessagebox import CTkMessagebox
 
@@ -372,7 +373,14 @@ class PaymentManagement:
         # Timestamped filename
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         file_name = f"{file_name_base}_{timestamp}.xlsx"
-        reports_folder = os.path.join(os.getcwd(), "Reports")
+
+        if getattr(sys, 'frozen', False):
+            script_dir = os.path.dirname(sys.executable)
+        else:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
+        reports_folder = os.path.join(project_root, "Reports")
+
         os.makedirs(reports_folder, exist_ok=True)
         file_path = os.path.join(reports_folder, file_name)
 
@@ -455,6 +463,8 @@ class PaymentManagement:
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+
+            
 
             # Open file immediately
             os.startfile(file_path)
