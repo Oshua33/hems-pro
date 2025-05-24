@@ -343,27 +343,38 @@ class PaymentManagement:
             messagebox.showwarning("Warning", "No view selected for export.")
             return
 
+        # Extract columns and rows
         columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
         rows = [
             [self.tree.item(item)["values"][i] for i in range(len(columns))]
             for item in self.tree.get_children()
         ]
-
         df = pd.DataFrame(rows, columns=columns)
 
+        # Determine file name base and title
         file_name_map = {
-            "payments": ("payments_report.xlsx", "Hotel Payment Report"),
-            "debtors": ("debtors_report.xlsx", "Hotel Debtor Report"),
-            "daily_payments": ("daily_payments_report.xlsx", "Hotel Daily Payment Report")
+            "payments": "payments_report",
+            "debtors": "debtors_report",
+            "daily_payments": "daily_payments_report"
+        }
+        title_map = {
+            "payments": "Hotel Payment Report",
+            "debtors": "Hotel Debtor Report",
+            "daily_payments": "Hotel Daily Payment Report"
         }
 
-        mapped = file_name_map.get(self.current_view)
-        if not mapped:
+        file_name_base = file_name_map.get(self.current_view)
+        report_title = title_map.get(self.current_view)
+        if not file_name_base or not report_title:
             messagebox.showerror("Error", "Unknown view selected.")
             return
 
-        file_name, report_title = mapped
-        file_path = os.path.join(os.path.expanduser("~"), "Downloads", file_name)
+        # Timestamped filename
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        file_name = f"{file_name_base}_{timestamp}.xlsx"
+        reports_folder = os.path.join(os.getcwd(), "Reports")
+        os.makedirs(reports_folder, exist_ok=True)
+        file_path = os.path.join(reports_folder, file_name)
 
         try:
             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
@@ -372,13 +383,13 @@ class PaymentManagement:
 
                 workbook = writer.book
                 worksheet = writer.sheets[sheet_name]
+
+                # Layout
                 worksheet.set_landscape()
+                worksheet.center_horizontally()
+                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)
 
-                worksheet.center_horizontally()  # Center content horizontally on the page
-                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)  # Adjust margins in inches
-
-
-                # === Styles ===
+                # Formats
                 title_format = workbook.add_format({
                     'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
                 })
@@ -389,48 +400,41 @@ class PaymentManagement:
                 })
                 cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
 
-                # === Merge Title ===
+                # Title and timestamp
                 worksheet.merge_range('A1:E1', report_title, title_format)
                 worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
 
-                
-                # Header styling
+                # Headers
                 for col_num, col_name in enumerate(columns):
                     worksheet.write(5, col_num, col_name, header_format)
 
-                # Data cell styling
-                for row_num in range(len(rows)):
-                    for col_num in range(len(columns)):
-                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
+                # Data
+                for row_num, row in enumerate(rows):
+                    for col_num, value in enumerate(row):
+                        worksheet.write(row_num + 6, col_num, value, cell_format)
 
                 # Auto-fit columns
                 for i, col in enumerate(columns):
-                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
-                    worksheet.set_column(i, i, col_width + 2)
+                    max_length = max(len(str(col)), max((len(str(row[i])) for row in rows if row[i] is not None), default=0))
+                    worksheet.set_column(i, i, max_length + 2)
 
-                # === Summary Section ===
+                # Summary
                 start_row = len(df) + 8
                 col_span = len(columns)
                 end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'
-                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
-
-                worksheet.merge_range(summary_range, "Summary", header_format)
+                worksheet.merge_range(f"A{start_row+1}:{end_col_letter}{start_row+1}", "Summary", header_format)
 
                 def extract_amount(label_widget):
-                    if label_widget is None:
+                    if not label_widget:
                         return "N/A"
-                    text = label_widget.cget("text")
-                    parts = text.split(":", 1)
-                    if len(parts) > 1:
-                        try:
-                            amount = float(parts[1].strip().replace(",", ""))
-                            return "{:,.0f}".format(amount)
-                        except ValueError:
-                            return "N/A"
-                    return "N/A"
+                    try:
+                        parts = label_widget.cget("text").split(":")
+                        return "{:,.0f}".format(float(parts[1].strip().replace(",", "")))
+                    except:
+                        return "N/A"
 
-                def write_summary_row(row_offset, label_text, label_widget):
-                    worksheet.write(start_row + row_offset, 0, label_text, header_format)
+                def write_summary_row(row_offset, label, label_widget):
+                    worksheet.write(start_row + row_offset, 0, label, header_format)
                     worksheet.write(start_row + row_offset, 1, extract_amount(label_widget), cell_format)
 
                 if self.current_view == "payments":
@@ -451,6 +455,9 @@ class PaymentManagement:
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+
+            # Open file immediately
+            os.startfile(file_path)
 
         except PermissionError:
             messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
@@ -1282,7 +1289,7 @@ class PaymentManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("Payment ID", "Guest Name", "Room Number", "Amount Paid", "Discount Allowed", "Balance Due",
-                "Payment Method", "Payment Date", "Status", "Booking ID")
+                "Payment Method", "Payment Date", "Status", "Booking ID", "Created By")
 
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -1357,6 +1364,7 @@ class PaymentManagement:
                         payment.get("payment_date", ""),
                         payment.get("status", ""),
                         payment.get("booking_id", ""),
+                        payment.get("created_by", ""),
                     ))
 
                 self.apply_grid_effect(self.tree)

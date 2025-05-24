@@ -12,6 +12,8 @@ from CTkMessagebox import CTkMessagebox
 #from customtkinter import CTkMessagebox
 from customtkinter import CTkImage
 
+from openpyxl.utils import get_column_letter
+
 
 from tkinter import Tk, Button, messagebox
 from utils import export_to_excel, print_excel
@@ -25,7 +27,7 @@ from reportlab.pdfgen import canvas
 import tempfile
 import os
 import platform
-
+import openpyxl
 from PIL import Image, ImageTk
 import io
 import requests
@@ -75,6 +77,9 @@ class RoundedButton(tk.Canvas):
         self.text = text
         self.border_color = border_color
         self.border_width = border_width
+
+        self.current_view = "bookings"
+
         
         # Adjusted button size
         self.width = 120  # Smaller width
@@ -425,99 +430,131 @@ class BookingManagement:
 
 
     def export_report(self):
-        """Export the visible bookings and the total booking cost to Excel."""
-        if not hasattr(self, "tree") or not self.tree.get_children():
-            messagebox.showwarning("Warning", "No data available to export.")
-            return
-
-        
-        columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
-        rows = [
-            [self.tree.item(item)["values"][i] for i in range(len(columns))]
-            for item in self.tree.get_children()
-        ]
-        df = pd.DataFrame(rows, columns=columns)
-
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(download_dir, "bookings_report.xlsx")
-        report_title = "Hotel Booking Report"
+        """Export current booking view to Excel with styled formatting, summary, and timestamped filename."""
+        import os
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+        from openpyxl.utils import get_column_letter
+        from tkinter import messagebox
+        from datetime import datetime
 
         try:
-            with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-                sheet_name = "Bookings"
-                df.to_excel(writer, sheet_name=sheet_name, startrow=5, index=False)
+            if self.current_view == "bookings":
+                tree = self.tree
+                base_filename = "Booking_Report"
+                total_cost_text = self.total_booking_cost_label.cget("text")
+                total_entries_text = self.total_entries_label.cget("text")
 
-                workbook = writer.book
-                worksheet = writer.sheets[sheet_name]
-                worksheet.set_landscape()
+            elif self.current_view == "guest_search":
+                if not hasattr(self, 'search_tree') or not self.search_tree.get_children():
+                    messagebox.showerror("Export Error", "No guest search results to export.")
+                    return
+                tree = self.search_tree
+                base_filename = "Guest_Search_Report"
+                total_cost_text = self.total_cost_label.cget("text") if hasattr(self, 'total_cost_label') else "Total Cost: N/A"
+                total_entries_text = self.total_entries_label.cget("text") if hasattr(self, 'total_entries_label') else "Total Entries: N/A"
 
-                worksheet.center_horizontally()  # Center content horizontally on the page
-                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)  # Adjust margins in inches
-            
+            elif self.current_view == "room_search":
+                if not hasattr(self, 'search_tree') or not self.search_tree.get_children():
+                    messagebox.showerror("Export Error", "No room search results to export.")
+                    return
+                tree = self.search_tree
+                base_filename = "Room_Search_Report"
+                total_cost_text = self.total_label.cget("text") if hasattr(self, 'total_label') else "Total: N/A"
+                total_entries_text = self.total_entries_label.cget("text") if hasattr(self, 'total_entries_label') else "Total Entries: N/A"
 
-                # === Styles ===
-                title_format = workbook.add_format({
-                    'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
-                })
-                timestamp_format = workbook.add_format({'italic': True, 'font_size': 10})
-                header_format = workbook.add_format({
-                    'bold': True, 'bg_color': '#DDEBF7', 'border': 1,
-                    'align': 'center', 'valign': 'vcenter'
-                })
-                cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
+            else:
+                messagebox.showerror("Export Error", f"No active exportable view found for: {self.current_view}")
+                return
 
-                # === Merge Title ===
-                worksheet.merge_range('A1:E1', report_title, title_format)
-                worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
+            if not tree or not tree["columns"]:
+                messagebox.showerror("Export Error", "No data available for export.")
+                return
 
+            # Create 'Report' folder if not exists
+            report_dir = os.path.join(os.getcwd(), "Reports")
+            os.makedirs(report_dir, exist_ok=True)
 
-                
-                # Header styling
-                for col_num, col_name in enumerate(columns):
-                    worksheet.write(5, col_num, col_name, header_format)
+            # Add timestamp to filename
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+            filename = f"{base_filename}_{timestamp}.xlsx"
+            file_path = os.path.join(report_dir, filename)
 
-                # Data cell styling
-                for row_num in range(len(rows)):
-                    for col_num in range(len(columns)):
-                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Reports"
 
-                # Auto-fit columns
-                for i, col in enumerate(columns):
-                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
-                    worksheet.set_column(i, i, col_width + 2)
+            columns = [tree.heading(col)["text"] for col in tree["columns"]]
 
-                # === Summary Section ===
-                start_row = len(df) + 8
-                col_span = len(columns)
-                end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'
-                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
-                worksheet.merge_range(summary_range, "Summary", header_format)
+            # Title
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(columns))
+            title_cell = ws.cell(row=1, column=1)
+            title_cell.value = "Hotel Booking Report"
+            title_cell.font = Font(size=14, bold=True)
+            title_cell.alignment = Alignment(horizontal="left", vertical="center")
 
-                # Total Booking Cost from label
-                label_text = self.total_booking_cost_label.cget("text")
-                if ":" in label_text:
-                    try:
-                        total_cost = float(label_text.split(":")[1].strip().replace(",", ""))
-                        formatted_cost = "{:,.0f}".format(total_cost)
-                    except ValueError:
-                        formatted_cost = "N/A"
-                else:
-                    formatted_cost = "N/A"
+            # Header row
+            ws.append(columns)
+            for cell in ws[2]:
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.fill = PatternFill("solid", fgColor="D9E1F2")
+                cell.border = Border(
+                    left=Side(style="thin"), right=Side(style="thin"),
+                    top=Side(style="thin"), bottom=Side(style="thin")
+                )
 
-                worksheet.write(start_row + 2, 0, "Booking Cost", header_format)
-                worksheet.write(start_row + 2, 1, formatted_cost, cell_format)
+            # Data rows
+            for row_id in tree.get_children():
+                values = tree.item(row_id)["values"]
+                ws.append(values)
+                row_idx = ws.max_row
+                for col_idx, value in enumerate(values, 1):
+                    cell = ws.cell(row=row_idx, column=col_idx)
+                    cell.alignment = Alignment(horizontal="left")
+                    cell.border = Border(
+                        left=Side(style="thin"), right=Side(style="thin"),
+                        top=Side(style="thin"), bottom=Side(style="thin")
+                    )
 
-                # === Optional: Add other summary rows based on custom logic ===
-                # For example, you can add more detailed breakdowns or additional metrics here
+            # Auto-fit columns
+            for col_idx, column in enumerate(columns, 1):
+                max_len = len(str(column))
+                for row_id in tree.get_children():
+                    cell_val = str(tree.item(row_id)["values"][col_idx - 1])
+                    if len(cell_val) > max_len:
+                        max_len = len(cell_val)
+                col_letter = get_column_letter(col_idx)
+                ws.column_dimensions[col_letter].width = max_len + 2
 
-            self.last_exported_file = file_path
-            messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
+            # Summary section
+            summary_start_row = ws.max_row + 2
+            summary_font = Font(bold=True, size=12)
 
-        except PermissionError:
-            messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
+            total_cost_cell = ws.cell(row=summary_start_row, column=1)
+            total_cost_cell.value = total_cost_text
+            total_cost_cell.font = summary_font
+
+            total_entries_cell = ws.cell(row=summary_start_row + 1, column=1)
+            total_entries_cell.value = total_entries_text
+            total_entries_cell.font = summary_font
+
+            # Save file
+            wb.save(file_path)
+
+            # Open the file immediately
+            os.startfile(file_path)
+
+            messagebox.showinfo("Export Success", f"Report exported successfully to:\n{file_path}")
+
         except Exception as e:
-            messagebox.showerror("Error", f"Error exporting to Excel: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Export Error", f"Failed to export report:\n{str(e)}")
 
+
+
+    
 
     def print_report(self):
         """Print the exported Excel report"""
@@ -938,6 +975,7 @@ class BookingManagement:
 
 
     def list_bookings(self):
+        self.current_view = "bookings"
         self.clear_right_frame()
         
         
@@ -970,7 +1008,7 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True, pady=1)
 
         # Create Treeview
-        columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
+        columns = ("ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
                 "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Mode of Identification", "Identification No", 
                 "Address", "Vehicle No", "Attachment", "Created_by")
 
@@ -1667,7 +1705,6 @@ class BookingManagement:
                         booking.get("mode_of_identification", ""), 
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                 
-                        
                         booking.get("vehicle_no", ""),
                         booking.get("attachment", ""),
                         booking.get("created_by", ""),
@@ -1873,6 +1910,8 @@ class BookingManagement:
             
     #Search Booking by Guest Name
     def search_booking_by_guest_name(self):
+        self.current_view = "guest_search"
+
         self.clear_right_frame()
         
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
@@ -2154,6 +2193,8 @@ class BookingManagement:
     
      
     def search_booking_by_room(self):
+        self.current_view = "room_search"
+
         self.clear_right_frame()
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
@@ -2333,6 +2374,8 @@ class BookingManagement:
 
                     # Apply grid effect after inserting data
                     self.apply_grid_effect(self.search_tree)
+
+                    
     
                 else:
                     messagebox.showinfo("No Results", f"No bookings found for Room {room_number} between {formatted_start_date} and {formatted_end_date}.")

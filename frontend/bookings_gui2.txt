@@ -25,10 +25,11 @@ from reportlab.pdfgen import canvas
 import tempfile
 import os
 import platform
-
+import openpyxl
 from PIL import Image, ImageTk
 import io
 import requests
+
 
 
 from reportlab.lib import colors
@@ -74,6 +75,9 @@ class RoundedButton(tk.Canvas):
         self.text = text
         self.border_color = border_color
         self.border_width = border_width
+
+        self.current_view = "bookings"
+
         
         # Adjusted button size
         self.width = 120  # Smaller width
@@ -122,11 +126,12 @@ class RoundedButton(tk.Canvas):
 
 
 
+
 # =================== Main Booking Management ===================
 class BookingManagement:
     def __init__(self, root, token):
         self.root = tk.Toplevel(root)
-        self.root.title("Booking Management")
+        self.root.title("HEMS-Booking Management")
         self.root.state("zoomed")
         self.root.configure(bg="#f0f0f0")
         
@@ -161,17 +166,15 @@ class BookingManagement:
         y_coordinate = (screen_height // 2) - (window_height // 2)
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
-        from tkinter import filedialog
 
     
-        
         # ========== Main Layout ==========
         self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
-        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=50)
-        self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
+        self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=45)
+        self.header_frame.pack(fill=tk.X, pady=(0, 5))  # More breathing room after header
         self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
 
         # Title Label (left side of header)
@@ -218,6 +221,15 @@ class BookingManagement:
         )
         self.print_button.pack(side=tk.LEFT, padx=5)
 
+        self.booking_fields = [
+        "ID", "Room Number", "Guest Name", "Gender", "Booking Cost", "Arrival Date", "Departure Date", "Status",
+        "Number of Days", "Booking Type", "Phone Number", "Booking Date", "Payment Status",
+        "Mode of Identification", "Identification Number", "Address",
+        "Vehicle No", "Attachment", "Created By"
+    ]
+
+
+
        # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -248,8 +260,8 @@ class BookingManagement:
             ("Create Booking", self.create_booking),
             ("List Booking", self.list_bookings),
             ("Sort By Status", self.list_bookings_by_status),
-            ("Sort Guest Name", self.search_booking),
-            ("Sort by ID", self.search_booking_by_id),
+            ("Sort Guest Name", self.search_booking_by_guest_name),
+            #("Sort by ID", self.search_booking_by_id),
             ("Sort By Room", self.search_booking_by_room),
             #("Update Booking", self.update_booking),
             ("Guest Checkout", self.guest_checkout),
@@ -416,98 +428,68 @@ class BookingManagement:
 
 
     def export_report(self):
-        """Export the visible bookings and the total booking cost to Excel."""
-        if not hasattr(self, "tree") or not self.tree.get_children():
-            messagebox.showwarning("Warning", "No data available to export.")
+        # Determine which tree has data
+        if self.tree.get_children():
+            tree = self.tree
+            filename_prefix = "Bookings_Report"
+            total_entries_label = getattr(self, "total_entries_label", None)
+            total_cost_label = getattr(self, "total_booking_cost_label", None)
+        elif self.search_tree.get_children():
+            tree = self.search_tree
+            # We can check some hint from context or fallback to a generic name
+            # If you want, add a state variable for more accurate naming
+            filename_prefix = "Search_Bookings_Report"
+            total_entries_label = getattr(self, "total_entries_label", None)
+            total_cost_label = getattr(self, "total_cost_label", None)
+        else:
+            messagebox.showinfo("Export", "No data to export.")
             return
 
-        
-        columns = [self.tree.heading(col)["text"] for col in self.tree["columns"]]
-        rows = [
-            [self.tree.item(item)["values"][i] for i in range(len(columns))]
-            for item in self.tree.get_children()
-        ]
-        df = pd.DataFrame(rows, columns=columns)
+        data = tree.get_children()
+        if not data:
+            messagebox.showinfo("Export", "No data to export.")
+            return
 
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_path = os.path.join(download_dir, "bookings_report.xlsx")
-        report_title = "Hotel Booking Report"
+        # Ask for file save location
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel Files", "*.xlsx")],
+            initialfile=f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        )
+        if not file_path:
+            return
 
         try:
-            with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-                sheet_name = "Bookings"
-                df.to_excel(writer, sheet_name=sheet_name, startrow=5, index=False)
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "Bookings Report"
 
-                workbook = writer.book
-                worksheet = writer.sheets[sheet_name]
-                worksheet.set_landscape()
+            # Write column headers
+            headers = tree["columns"]
+            sheet.append(headers)
 
-                worksheet.center_horizontally()  # Center content horizontally on the page
-                worksheet.set_margins(left=0.2, right=0.2, top=0.5, bottom=0.5)  # Adjust margins in inches
-            
+            # Write booking rows
+            for item in data:
+                row = tree.item(item)["values"]
+                sheet.append(row)
 
-                # === Styles ===
-                title_format = workbook.add_format({
-                    'bold': True, 'align': 'center', 'valign': 'vcenter', 'font_size': 16
-                })
-                timestamp_format = workbook.add_format({'italic': True, 'font_size': 10})
-                header_format = workbook.add_format({
-                    'bold': True, 'bg_color': '#DDEBF7', 'border': 1,
-                    'align': 'center', 'valign': 'vcenter'
-                })
-                cell_format = workbook.add_format({'border': 1, 'valign': 'top'})
+            # Optionally write totals if labels exist and have text
+            try:
+                if total_cost_label and total_entries_label:
+                    total_cost = total_cost_label.cget("text")
+                    total_entries = total_entries_label.cget("text")
 
-                # === Merge Title ===
-                worksheet.merge_range('A1:E1', report_title, title_format)
-                worksheet.write('A3', f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_format)
+                    sheet.append([])
+                    sheet.append(["", "", "", "", total_cost])
+                    sheet.append(["", "", "", "", total_entries])
+            except Exception:
+                pass  # Skip if any issue
 
+            workbook.save(file_path)
+            messagebox.showinfo("Export Success", f"Report exported successfully to:\n{file_path}")
 
-                
-                # Header styling
-                for col_num, col_name in enumerate(columns):
-                    worksheet.write(5, col_num, col_name, header_format)
-
-                # Data cell styling
-                for row_num in range(len(rows)):
-                    for col_num in range(len(columns)):
-                        worksheet.write(row_num + 6, col_num, rows[row_num][col_num], cell_format)
-
-                # Auto-fit columns
-                for i, col in enumerate(columns):
-                    col_width = max(len(str(col)), max(len(str(row[i])) for row in rows if row[i] is not None))
-                    worksheet.set_column(i, i, col_width + 2)
-
-                # === Summary Section ===
-                start_row = len(df) + 8
-                col_span = len(columns)
-                end_col_letter = chr(64 + col_span) if col_span <= 26 else 'Z'
-                summary_range = f"A{start_row+1}:{end_col_letter}{start_row+1}"
-                worksheet.merge_range(summary_range, "Summary", header_format)
-
-                # Total Booking Cost from label
-                label_text = self.total_booking_cost_label.cget("text")
-                if ":" in label_text:
-                    try:
-                        total_cost = float(label_text.split(":")[1].strip().replace(",", ""))
-                        formatted_cost = "{:,.0f}".format(total_cost)
-                    except ValueError:
-                        formatted_cost = "N/A"
-                else:
-                    formatted_cost = "N/A"
-
-                worksheet.write(start_row + 2, 0, "Booking Cost", header_format)
-                worksheet.write(start_row + 2, 1, formatted_cost, cell_format)
-
-                # === Optional: Add other summary rows based on custom logic ===
-                # For example, you can add more detailed breakdowns or additional metrics here
-
-            self.last_exported_file = file_path
-            messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
-
-        except PermissionError:
-            messagebox.showerror("Error", "Permission denied! Close the file if it's open and try again.")
         except Exception as e:
-            messagebox.showerror("Error", f"Error exporting to Excel: {e}")
+            messagebox.showerror("Export Error", f"Failed to export report: {e}")
 
 
     def print_report(self):
@@ -565,7 +547,7 @@ class BookingManagement:
         # Create a new pop-up window
         create_window = ctk.CTkToplevel(self.root)
         create_window.title(title_text)
-        create_window.geometry("750x400")
+        create_window.geometry("790x400")
         create_window.resizable(False, False)
         create_window.configure(fg_color="#f5f5f5")
 
@@ -574,7 +556,7 @@ class BookingManagement:
         screen_height = create_window.winfo_screenheight()
         x_coordinate = (screen_width - 650) // 2
         y_coordinate = (screen_height - 400) // 2
-        create_window.geometry(f"750x400+{x_coordinate}+{y_coordinate}")
+        create_window.geometry(f"790x400+{x_coordinate}+{y_coordinate}")
 
         # Make the window modal
         create_window.transient(self.root)
@@ -616,17 +598,17 @@ class BookingManagement:
         # Field-specific widths
         field_widths = {
             "Room Number": 50,
-            "Guest Name": 150,
+            "Guest Name": 170,
             "Identification Number": 150,
             "Mode of Identification": 130,
             "Gender": 100,
-            "Address": 170,
+            "Address": 200,
             "Phone Number": 120,
             "Booking Type": 120,
             "Arrival Date": 10,
             "Departure Date": 10,
             "Vehicle No": 120,
-            "Attachment": 150
+            "Attachment": 200
         }
 
         # Form creation loop
@@ -674,15 +656,48 @@ class BookingManagement:
         attachment_entry.bind("<1>", browse_file)
 
         # Submit Button
-        submit_btn = ctk.CTkButton(frame, text="Submit Booking", command=lambda: self.submit_booking(create_window), font=("Arial", 14, "bold"),
-                                fg_color="#3498db", hover_color="#2980b9", text_color="white", corner_radius=10, width=450, height=40)
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
+        submit_btn = ctk.CTkButton(
+            frame, text="Submit Booking", 
+            command=lambda: self.submit_booking(create_window), 
+            font=("Arial", 14, "bold"),
+            fg_color="#3498db", hover_color="#2980b9", 
+            text_color="white", corner_radius=10, 
+            width=200, height=40
+        )
+        submit_btn.grid(row=7, column=0, columnspan=5, pady=25, sticky="n")
 
         # Search button for guest name
         guest_name_entry = self.entries["Guest Name"]
-        search_btn = ctk.CTkButton(frame, text="Search", command=lambda: self.search_guest(guest_name_entry.get()), font=("Arial", 10), fg_color="gray", text_color="white", width=80, height=28)
-        search_btn.grid(row=0, column=4, padx=(0, 10), pady=5, sticky="w")
 
+        # Set placeholder text and color for Guest Name
+        guest_name_entry.insert(0, "Guest name")
+        guest_name_entry.configure(text_color="gray")
+
+        # Define focus-in and focus-out behaviors
+        def clear_placeholder(event):
+            if guest_name_entry.get() == "Guest name":
+                guest_name_entry.delete(0, "end")
+                guest_name_entry.configure(text_color="black")
+
+        def add_placeholder(event):
+            if guest_name_entry.get() == "":
+                guest_name_entry.insert(0, "Guest name")
+                guest_name_entry.configure(text_color="gray")
+
+        guest_name_entry.bind("<FocusIn>", clear_placeholder)
+        guest_name_entry.bind("<FocusOut>", add_placeholder)
+
+        search_btn = ctk.CTkButton(
+        frame,
+        text="🔍Search",
+        command=lambda: self.search_guest(guest_name_entry.get()),
+        font=("Arial", 12),
+        fg_color="gray",
+        text_color="white",
+        width=90,
+        height=28
+    )
+        search_btn.grid(row=0, column=4, padx=(5, 0), pady=5, sticky="w")
 
        
 
@@ -690,6 +705,7 @@ class BookingManagement:
 
 
     import tkinter.simpledialog as simpledialog
+
 
     def search_guest(self, guest_name):
         if not hasattr(self, "entries"):
@@ -705,10 +721,9 @@ class BookingManagement:
             messagebox.showwarning("Authentication Error", "Please log in first.")
             return
 
-        # Cycle through previous results if same name searched again
-        if hasattr(self, "last_guest_name") and self.last_guest_name == guest_name and hasattr(self, "guest_search_results"):
-            self.guest_search_index = (self.guest_search_index + 1) % len(self.guest_search_results)
-        else:
+        is_new_search = not hasattr(self, "last_guest_name") or self.last_guest_name != guest_name
+
+        if is_new_search:
             try:
                 headers = {"Authorization": f"Bearer {token}"}
                 response = requests.get(
@@ -722,19 +737,28 @@ class BookingManagement:
                 self.last_guest_name = guest_name
 
                 if not self.guest_search_results:
-                    messagebox.showinfo("Not Found", "Guest not found.")
+                    messagebox.showinfo("Not Found", "Guest Name not found.")
                     return
+
+                # Close existing popup if it exists
+                if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+                    self.search_popup.destroy()
+
+                if len(self.guest_search_results) > 1:
+                    self.show_guest_search_popup()
 
             except requests.HTTPError as e:
                 if e.response.status_code == 404:
-                    messagebox.showinfo("Not Found", "Guest not found.")
+                    messagebox.showinfo("Not Found", "Guest Name not found.")
                 else:
                     messagebox.showerror("Error", f"Failed to fetch guest info: {str(e)}")
                 return
+        else:
+            self.guest_search_index = (self.guest_search_index + 1) % len(self.guest_search_results)
 
         selected_guest = self.guest_search_results[self.guest_search_index]
 
-        # ✅ Fill form with selected guest's data
+        # ✅ Fill form
         self.entries["Gender"].set(selected_guest.get("gender", ""))
         self.entries["Mode of Identification"].set(selected_guest.get("mode_of_identification", ""))
         self.entries["Identification Number"].delete(0, "end")
@@ -746,23 +770,45 @@ class BookingManagement:
         self.entries["Vehicle No"].delete(0, "end")
         self.entries["Vehicle No"].insert(0, selected_guest.get("vehicle_no", ""))
 
-        # ✅ Show attachment (just text, not as an image)
         attachment_url = selected_guest.get("attachment", "")
         self.entries["Attachment"].delete(0, "end")
         self.entries["Attachment"].insert(0, attachment_url)
 
         self.current_attachment = attachment_url
 
-        if len(self.guest_search_results) > 1:
-            messagebox.showinfo(
-                "Multiple Matches",
-                f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
+        # ✅ Update popup count (if open)
+        if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+            self.search_popup_label.config(
+                text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
             )
 
+    def show_guest_search_popup(self):
+        if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+            # If popup already exists, just update the label text
+            self.search_popup_label.config(
+                text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}"
+            )
+            return
 
-    
+        self.search_popup = tk.Toplevel(self.root)
+        self.search_popup.title("Search Info")
 
-    
+        # Set small fixed size and top-left position (e.g., x=10, y=10)
+        self.search_popup.geometry("200x60+160+150")
+        self.search_popup.resizable(False, False)
+        self.search_popup.attributes('-topmost', True)
+
+        self.search_popup_label = tk.Label(
+            self.search_popup,
+            text=f"Showing result {self.guest_search_index + 1} of {len(self.guest_search_results)}",
+            font=("Arial", 9),
+            padx=5, pady=5
+        )
+        self.search_popup_label.pack()
+
+    # Optional: Auto-close after a few seconds
+    # self.search_popup.after(5000, self.search_popup.destroy)
+
 
     def submit_booking(self, create_window, booking_data=None):
         try:
@@ -774,11 +820,9 @@ class BookingManagement:
             )
             headers = {"Authorization": f"Bearer {self.token}"}
 
-            # If no new attachment is selected, use the existing one
-            attachment_path = getattr(self, 'attachment_full_path', None)
-            attachment_value = self.entries["Attachment"].get() or None
-            if not attachment_path and not attachment_value:
-                attachment_value = self.current_attachment  # Use the previously fetched attachment URL
+            # Fetch values
+            attachment_text = self.entries["Attachment"].get().strip()
+            attachment_path = getattr(self, "attachment_full_path", None)
 
             data = {
                 "room_number": self.entries["Room Number"].get(),
@@ -792,48 +836,68 @@ class BookingManagement:
                 "booking_type": self.entries["Booking Type"].get(),
                 "phone_number": self.entries["Phone Number"].get(),
                 "vehicle_no": self.entries["Vehicle No"].get() or None,
-                "attachment": attachment_value,
             }
 
+            # Validate required fields
             required_fields = ["room_number", "guest_name", "gender", "mode_of_identification",
                             "address", "arrival_date", "departure_date", "booking_type", "phone_number"]
-
             missing = [k for k in required_fields if not data.get(k)]
             if missing:
                 messagebox.showerror("Missing Fields", f"The following fields are required:\n{', '.join(missing)}")
                 return
 
-            # Handle attachment if it exists
+            # --- Attachment Logic ---
             files = {}
             file_obj = None
 
             if attachment_path and os.path.isfile(attachment_path):
+                # ✅ Upload file
                 try:
                     file_obj = open(attachment_path, "rb")
-                    files["attachment"] = (
+                    files["attachment_file"] = (
                         os.path.basename(attachment_path),
                         file_obj,
                         "application/octet-stream"
                     )
+                    # No need to set attachment_str if uploading file
                 except Exception as e:
                     messagebox.showerror("File Error", f"Attachment file error: {str(e)}")
                     return
+            elif attachment_text:
+                # ✅ Send as string path (from fetched data or user input)
+                data["attachment_str"] = attachment_text
             else:
-                # If no attachment is provided, send an empty file value (or None)
-                files["attachment"] = ("", "", "application/octet-stream")
+                # ✅ Send None explicitly (user cleared it)
+                data["attachment_str"] = None
 
+            # Make request
             try:
                 if is_update:
-                    response = requests.put(url, data=data, files=files, headers=headers)
+                    response = requests.put(url, data=data, files=files if files else None, headers=headers)
                 else:
-                    response = requests.post(url, data=data, files=files, headers=headers)
+                    response = requests.post(url, data=data, files=files if files else None, headers=headers)
             finally:
                 if file_obj:
                     file_obj.close()
 
+            # Response Handling
             if response.status_code == 200:
                 messagebox.showinfo("Success", f"Booking {'updated' if is_update else 'created'} successfully.")
+                
+
+                # ✅ Clear any cached file path after successful booking
+                self.attachment_full_path = None
+
+                # ✅ Also clear the Attachment entry if needed
+                self.entries["Attachment"].delete(0, "end")
                 create_window.destroy()
+
+                # Close guest search popup if it's open
+                if hasattr(self, "search_popup") and self.search_popup.winfo_exists():
+                    self.search_popup.destroy()
+
+            
+
             else:
                 messagebox.showerror("Error", f"Failed to {'update' if is_update else 'create'} booking:\n{response.text}")
 
@@ -845,12 +909,14 @@ class BookingManagement:
 
 
 
+
     def list_bookings(self):
         self.clear_right_frame()
         
         
         # Create a new frame for the table
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=5, pady=5)
+        #frame = tk.Frame(self.right_frame, bg="#ffffff")
         frame.pack(fill=tk.BOTH, expand=True)
 
         tk.Label(frame, text="List Bookings Report", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
@@ -874,7 +940,7 @@ class BookingManagement:
         fetch_btn.grid(row=0, column=4, padx=10, pady=5)
 # === Table Frame ===
         table_frame = tk.Frame(frame, bg="#ffffff", bd=1, relief="solid")
-        table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=1)
 
         # Create Treeview
         columns = ("Booking ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Days", 
@@ -889,7 +955,7 @@ class BookingManagement:
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col, anchor="center")
-            self.tree.column(col, width=80, anchor="center")  # Widened slightly for readability
+            self.tree.column(col, width=70, anchor="center")  # Widened slightly for readability
 
         # Add scrollbars INSIDE same frame
         y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
@@ -903,8 +969,13 @@ class BookingManagement:
 
 
         # Label to display total booking cost
-        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="red")
         self.total_booking_cost_label.pack(pady=10)
+
+        # Total Entries Label (Blue)
+        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label.pack(side="left", padx=(0, 10))
+
 
             
         # Assuming `frame` is where your booking buttons are being placed
@@ -913,6 +984,7 @@ class BookingManagement:
 
         view_button = ctk.CTkButton(button_frame, text="View Booking", corner_radius=20, command=self.view_selected_booking)
         view_button.pack(side="left", padx=10)
+
 
         update_button = ctk.CTkButton(button_frame, text="Update Booking", corner_radius=20, command=self.update_selected_booking)
         update_button.pack(side="left", padx=10)
@@ -960,13 +1032,14 @@ class BookingManagement:
         window = ctk.CTkToplevel(self.root)
         window.title("Update Booking")
         window.geometry("750x450+150+30")
-        window.configure(fg_color="#1e1e1e")
+        window.configure(fg_color="#e0e0e0")  # Light-medium gray background
         window.resizable(False, False)
 
-        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#f1f1f1")
+        title = ctk.CTkLabel(window, text="Update Booking", font=("Segoe UI", 18, "bold"), text_color="#1e1e1e")
+
         title.pack(pady=(10, 5))
 
-        form_frame = ctk.CTkFrame(window, fg_color="#2c2c2c", corner_radius=15)
+        form_frame = ctk.CTkFrame(window, fg_color="#f5f5f5", corner_radius=15)
         form_frame.pack(fill="both", expand=True, padx=20, pady=15)
 
         for i in range(4):
@@ -984,30 +1057,43 @@ class BookingManagement:
             col = 0
             for label_text, field_type in [(label1, field1), (label2, field2) if label2 else (None, None)]:
                 if label_text:
-                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#dddddd")
+                    label = ctk.CTkLabel(form_frame, text=label_text, font=("Segoe UI", 11, "bold"), text_color="#333333")
+
                     label.grid(row=row, column=col, sticky="w", padx=10, pady=6)
 
                     width = 180
                     if field_type == ctk.CTkComboBox:
                         entry = ctk.CTkComboBox(
-                            form_frame,
-                            values=combo_box_values.get(label_text, []),
-                            state="readonly",
-                            font=("Segoe UI", 11),
-                            width=width,
-                            dropdown_fg_color="#3a3a3a",
-                            dropdown_text_color="#f1f1f1"
-                        )
+                        form_frame,
+                        values=combo_box_values.get(label_text, []),
+                        state="readonly",
+                        font=("Segoe UI", 11),
+                        width=width,
+                        fg_color="#f8f8f8",
+                        text_color="#222222",
+                        dropdown_fg_color="#f0f0f0",
+                        dropdown_text_color="#222222"
+                    )
+
+
                     elif field_type == DateEntry:
                         entry = DateEntry(
-                            form_frame,
-                            font=("Segoe UI", 10),
-                            background='darkblue',
-                            foreground='white',
-                            borderwidth=2
-                        )
+                        form_frame,
+                        font=("Segoe UI", 10),
+                        background='white',
+                        foreground='black',
+                        borderwidth=2
+                    )
+
                     else:
-                        entry = field_type(form_frame, font=("Segoe UI", 11), width=width)
+                        entry = field_type(
+                        form_frame,
+                        font=("Segoe UI", 13),
+                        width=width,
+                        fg_color="#f8f8f8",  # Entry background
+                        text_color="#222222"  # Entry text
+                    )
+
                         if label_text == "Attachment":
                             entry.insert(0, "Select file...")
                             entry.configure(text_color="black")
@@ -1030,18 +1116,18 @@ class BookingManagement:
 
         # Submit button
         submit_button = ctk.CTkButton(
-            form_frame,
-            text="Update",
-            width=140,
-            height=36,
-            corner_radius=10,
-            font=("Segoe UI", 12, "bold"),
-            text_color="white",
-            fg_color="#3b82f6",
-            hover_color="#2563eb",
-            command=lambda: self.save_updated_booking(window)
+        form_frame,
+        text="Update",
+        width=140,
+        height=36,
+        corner_radius=10,
+        font=("Segoe UI", 12, "bold"),
+        text_color="white",
+        fg_color="#2563eb",  # Slightly lighter blue
+        hover_color="#1d4ed8",
+        command=lambda: self.save_updated_booking(window)
+    )
 
-        )
         submit_button.grid(row=7, column=0, columnspan=4, pady=20, sticky="n")
 
         # Populate fields from booking_data
@@ -1061,8 +1147,7 @@ class BookingManagement:
                 elif label_text == "Attachment":
                     entry.configure(state="normal")
                     entry.delete(0, "end")
-                    filename = os.path.basename(value) if value else "Select file..."
-                    entry.insert(0, filename)
+                    entry.insert(0, value if value else "Select file...")  # Insert full path
                     entry.configure(text_color="black" if value else "gray")
 
                 else:
@@ -1124,11 +1209,19 @@ class BookingManagement:
             }
 
             files = None
-            if attachment_path and os.path.exists(attachment_path):
+
+            # Check if user browsed a new file
+            if os.path.isfile(attachment_path):  # New file selected via file dialog
                 file_name = os.path.basename(attachment_path)
                 files = {
                     "attachment": (file_name, open(attachment_path, "rb"), "application/octet-stream")
                 }
+            else:
+                # Use existing attachment path (assume backend handles this logic)
+                data["attachment_str"] = attachment_path  # ✅ Matches backend expectation
+
+
+
 
             response = requests.put(url, data=data, files=files, headers=headers)
 
@@ -1148,12 +1241,6 @@ class BookingManagement:
     
 
     def view_selected_booking(self):
-        import os
-        import webbrowser
-        from PIL import Image, ImageTk
-        import requests
-        from io import BytesIO
-
         selected_item = self.tree.focus()
         if not selected_item:
             messagebox.showwarning("No selection", "Please select a booking to view.")
@@ -1169,8 +1256,9 @@ class BookingManagement:
 
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
-        view_window.geometry("560x720+100+10")
+        view_window.geometry("700x500+100+10")
         view_window.configure(fg_color="white")
+        view_window.grab_set()
 
         hotel_label = ctk.CTkLabel(
             view_window,
@@ -1178,7 +1266,7 @@ class BookingManagement:
             font=("Arial", 17, "bold"),
             text_color="#0f2e4d"
         )
-        hotel_label.pack(pady=(5, 0))
+        hotel_label.pack(pady=(10, 0))
 
         title_label = ctk.CTkLabel(
             view_window,
@@ -1186,7 +1274,7 @@ class BookingManagement:
             font=("Arial", 15, "bold"),
             text_color="#1e3d59"
         )
-        title_label.pack(pady=(5, 2))
+        title_label.pack(pady=(5, 10))
 
         content_frame = ctk.CTkFrame(
             view_window,
@@ -1195,32 +1283,40 @@ class BookingManagement:
             border_width=1,
             corner_radius=12
         )
-        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 0))
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 10))
+
+        content_frame.grid_columnconfigure(0, weight=0)
+        content_frame.grid_columnconfigure(1, weight=0)
+        content_frame.grid_columnconfigure(2, weight=0)
+        content_frame.grid_columnconfigure(3, weight=0)
+
 
         rows = []
         attachment_url = None
-        for field, value in zip(field_names, booking_data):
-            row = ctk.CTkFrame(content_frame, fg_color="white")
-            row.pack(fill="x", padx=5, pady=1)
+
+        for idx, (field, value) in enumerate(zip(field_names, booking_data)):
+            col = 0 if idx < 10 else 2
+            row = idx % 10
 
             label_field = ctk.CTkLabel(
-                row,
+                content_frame,
                 text=f"{field}:",
                 font=("Arial", 12, "bold"),
                 text_color="#2c3e50",
-                width=150,
                 anchor="w"
             )
+            label_field.grid(row=row, column=col, sticky="w", padx=(20, 15), pady=3)
+
             label_value = ctk.CTkLabel(
-                row,
+                content_frame,
                 text=str(value),
                 font=("Arial", 12),
                 text_color="#34495e",
                 anchor="w",
-                wraplength=320
+                wraplength=240
             )
-            label_field.pack(side="left")
-            label_value.pack(side="left", fill="x", expand=True)
+            label_value.grid(row=row, column=col + 1, sticky="w", padx=(0, 25), pady=3)
+
             rows.append((field, value))
 
             if field.lower() == "attachment" and value:
@@ -1234,7 +1330,7 @@ class BookingManagement:
                 response = requests.get(url)
 
                 img = Image.open(BytesIO(response.content))
-                img = img.convert("RGBA")  # Ensure compatibility
+                img = img.convert("RGBA")
                 ctk_image = CTkImage(light_image=img, size=(120, 120))
 
                 attachment_preview = ctk.CTkLabel(
@@ -1244,22 +1340,15 @@ class BookingManagement:
                     width=120,
                     height=120
                 )
-                attachment_preview= ctk_image  # Prevent garbage collection
-                attachment_preview.place(x=420, y=20)
+                attachment_preview.image = ctk_image  # prevent GC
+                attachment_preview.place(x=580, y=20)
             except Exception as e:
-                print(f"Image preview failed: {e}")
+                print("")
 
-            except Exception as e:
-                print(f"Image preview failed: {e}")
-
-            except Exception as e:
-                print(f"Image preview failed: {e}")
-
-                # --- Buttons ---
+        # --- Buttons ---
         button_frame = ctk.CTkFrame(view_window, fg_color="white")
         button_frame.pack(pady=(10, 15))
 
-        # Print Details Button
         pdf_button = ctk.CTkButton(
             master=button_frame,
             text="Print Details",
@@ -1268,12 +1357,11 @@ class BookingManagement:
             text_color="white",
             corner_radius=20,
             font=("Arial", 12, "bold"),
-            width=150,
-            height=32
+            width=125,
+            height=25
         )
         pdf_button.grid(row=0, column=0, padx=5)
 
-        # Guest Form Button
         guest_form_btn = ctk.CTkButton(
             master=button_frame,
             text="Guest Form",
@@ -1282,12 +1370,11 @@ class BookingManagement:
             text_color="white",
             corner_radius=20,
             font=("Arial", 12, "bold"),
-            width=150,
-            height=32
+            width=125,
+            height=25
         )
         guest_form_btn.grid(row=0, column=1, padx=5)
 
-        # Open Attachment Button (smaller width)
         if attachment_url:
             open_attachment_btn = ctk.CTkButton(
                 master=button_frame,
@@ -1297,10 +1384,12 @@ class BookingManagement:
                 text_color="white",
                 corner_radius=20,
                 font=("Arial", 12, "bold"),
-                width=130,
-                height=32
+                width=125,
+                height=25
             )
             open_attachment_btn.grid(row=0, column=2, padx=5)
+
+
 
 
     def export_guest_form(self, data):
@@ -1349,7 +1438,26 @@ class BookingManagement:
         ]))
 
         elements.append(table)
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 10))
+
+
+
+        # Rules and directives section
+        rules_text = """
+        <b>RULES AND DIRECTIVES</b><br/>
+        X No smoking of any kind or intake of hard drugs in the room or toilet. Fine is N200,000.<br/>
+        X Guests are not allowed to bring in food and drinks from outside into the hotel premises.<br/>
+        X Smoking of cigarette is only allowed by the Pool Bar area.<br/>
+        X All guests are to drop their keycards whenever they are leaving the hotel premises.<br/>
+        X Misplacement of room keycard attracts a fine of N5,000 for immediate replacement.<br/>
+        X Destroying or staining towels, bedsheets, rugs, and especially wallpaper in the room or any area in the hotel will attract immediate replacement.<br/><br/>
+        <b>NOTE:</b> Guests that go contrary to the above stated rules and directives will be evicted without refund.
+        """
+
+        rules_paragraph = Paragraph(rules_text, styles['Normal'])
+        elements.append(rules_paragraph)
+        elements.append(Spacer(1, 25))
+
 
         # Add signature lines
         signature_table = Table([
@@ -1419,7 +1527,7 @@ class BookingManagement:
             elif field.lower() == "attachment":
                 if isinstance(value, str):
                     # 🔁 Convert public URL path to local path if necessary
-                    if value.startswith("/files/attachments/"):
+                    if value.startswith("/uploads/attachments/"):
                         local_path = os.path.join("uploads", "attachments", os.path.basename(value))
                     else:
                         local_path = value
@@ -1458,7 +1566,7 @@ class BookingManagement:
         if attachment_data:
             try:
                 image_stream = BytesIO(attachment_data)
-                img = Image(image_stream, width=200, height=200)  # ✅ Corrected line
+                img = Image(image_stream, width=300, height=250)  # ✅ Corrected line
                 elements.append(Spacer(1, 12))
                 elements.append(Paragraph("Attachment Photo:", styles['Heading2']))
                 elements.append(img)
@@ -1500,6 +1608,7 @@ class BookingManagement:
                 if isinstance(data, dict) and "bookings" in data:
                     bookings = data["bookings"]
                     total_booking_cost = data.get("total_booking_cost", 0)  # Get total cost from API
+                    total_entries = data.get("total_entries", len(bookings))  # Fallback in case key missing
                 else:
                     messagebox.showerror("Error", "Unexpected API response format")
                     return
@@ -1507,6 +1616,7 @@ class BookingManagement:
                 # Check if bookings list is empty
                 if not bookings:
                     self.total_booking_cost_label.config(text="Total Booking Cost: 0.00")  # Reset label
+                    self.total_entries_label.config(text="Total Entries: 0")  # Clear label too
                     messagebox.showinfo("No Results", "No bookings found for the selected filters.")
                     return
 
@@ -1530,7 +1640,6 @@ class BookingManagement:
                         booking.get("mode_of_identification", ""), 
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                 
-                        
                         booking.get("vehicle_no", ""),
                         booking.get("attachment", ""),
                         booking.get("created_by", ""),
@@ -1544,6 +1653,10 @@ class BookingManagement:
                 self.total_booking_cost_label.config(
                     text=f"Total Booking Cost: {total_booking_cost:,.2f}"
                 )
+
+                self.total_entries_label.config(text=f"Total Entries: {len(bookings)}")
+
+            
             
             else:
                 messagebox.showerror("Error", response.json().get("detail", "Failed to retrieve bookings."))
@@ -1610,8 +1723,9 @@ class BookingManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by")
 
 
         # ✅ Prevent recreation of table on every call
@@ -1694,11 +1808,12 @@ class BookingManagement:
                                 booking.get("phone_number", ""),
                                 booking.get("booking_date", ""),
                                 booking.get("payment_status", ""), 
+                                booking.get("mode_of_identification", ""),
                                 booking.get("identification_number", ""),  
                                 booking.get("address", ""),                               
-                                booking.get("created_by", ""),
                                 booking.get("vehicle_no", ""),
                                 booking.get("attachment", ""),
+                                booking.get("created_by", ""),
 
                             ), tags=(tag,))
 
@@ -1725,9 +1840,13 @@ class BookingManagement:
         except requests.exceptions.RequestException as e:
             messagebox.showerror("Error", f"Request failed: {e}")
 
+
+
             
-    
-    def search_booking(self):
+    #Search Booking by Guest Name
+    def search_booking_by_guest_name(self):
+        self.last_search_type = "guest"
+
         self.clear_right_frame()
         
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
@@ -1750,8 +1869,9 @@ class BookingManagement:
         table_frame = tk.Frame(frame, bg="#ffffff")
         table_frame.pack(fill=tk.BOTH, expand=True)
         
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room No", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "No of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification No", "Address", "Vehicle No", "Attachment", "Created by")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         for col in columns:
@@ -1767,6 +1887,179 @@ class BookingManagement:
         x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.search_tree.xview)
         x_scroll.pack(fill=tk.X)
         self.search_tree.configure(xscroll=x_scroll.set)
+
+      # --- View Booking Button using CustomTkinter ---
+        view_button = ctk.CTkButton(
+            frame,
+            text="View Booking",
+            corner_radius=20,
+            command=self.view_selected_guest_booking
+        )
+        view_button.pack(pady=3)
+
+
+
+
+        # Create a horizontal frame for the summary labels
+        summary_frame = tk.Frame(frame, bg="#ffffff")
+        summary_frame.pack(fill=tk.X, pady=10)
+
+        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="blue", bg="#ffffff")
+        self.total_entries_label.pack(side=tk.LEFT, padx=10)
+
+        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="red", bg="#ffffff")
+        self.total_cost_label.pack(side=tk.LEFT, padx=20)
+
+
+    def view_selected_guest_booking(self):
+        selected_item = self.search_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No Selection", "Please select a booking to view.")
+            return
+
+        booking_data = self.search_tree.item(selected_item)["values"]
+
+        field_names = [
+            "ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Number of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification Number",
+            "Address", "Vehicle No", "Attachment", "Created By"
+        ]
+
+        popup = ctk.CTkToplevel(self.root)
+        popup.title("Guest Booking Details")
+        popup.geometry("700x500+100+20")
+        popup.configure(fg_color="white")
+        popup.grab_set()
+
+        hotel_label = ctk.CTkLabel(
+            popup, text=HOTEL_NAME, font=("Arial", 17, "bold"), text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(10, 0))
+
+        title_label = ctk.CTkLabel(
+            popup,
+            text="Guest Booking Details",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(5, 10))
+
+        content_frame = ctk.CTkFrame(
+            popup,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 10))
+
+        content_frame.grid_columnconfigure(0, weight=0)
+        content_frame.grid_columnconfigure(1, weight=0)
+        content_frame.grid_columnconfigure(2, weight=0)
+        content_frame.grid_columnconfigure(3, weight=0)
+
+        rows = []
+        attachment_url = None
+
+        for idx, (field, value) in enumerate(zip(field_names, booking_data)):
+            col = 0 if idx < 10 else 2
+            row = idx % 10
+
+            label_field = ctk.CTkLabel(
+                content_frame,
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
+                text_color="#2c3e50",
+                anchor="w"
+            )
+            label_field.grid(row=row, column=col, sticky="w", padx=(20, 15), pady=3)
+
+            label_value = ctk.CTkLabel(
+                content_frame,
+                text=str(value),
+                font=("Arial", 12),
+                text_color="#34495e",
+                anchor="w",
+                wraplength=240
+            )
+            label_value.grid(row=row, column=col + 1, sticky="w", padx=(0, 25), pady=3)
+
+            rows.append((field, value))
+
+            if field.lower() == "attachment" and value:
+                attachment_url = value
+
+        # --- Optional: Display Attachment as Image Preview (top-right corner) ---
+        if attachment_url:
+            try:
+                filename = os.path.basename(attachment_url)
+                url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+                response = requests.get(url)
+
+                img = Image.open(BytesIO(response.content))
+                img = img.convert("RGBA")
+                ctk_image = CTkImage(light_image=img, size=(120, 120))
+
+                attachment_preview = ctk.CTkLabel(
+                    master=popup,
+                    image=ctk_image,
+                    text="",
+                    width=120,
+                    height=120
+                )
+                attachment_preview.image = ctk_image
+                attachment_preview.place(x=600, y=20)
+            except Exception as e:
+                print("")
+
+        # --- Action Buttons ---
+        button_frame = ctk.CTkFrame(popup, fg_color="white")
+        button_frame.pack(pady=(10, 15))
+
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print Details",
+            command=lambda: self.export_booking_to_pdf(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        pdf_button.grid(row=0, column=0, padx=5)
+
+        guest_form_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Guest Form",
+            command=lambda: self.export_guest_form(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        guest_form_btn.grid(row=0, column=1, padx=5)
+
+        close_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Close",
+            command=popup.destroy,
+            fg_color="#cc0000",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        close_btn.grid(row=0, column=2, padx=5)
+
+
+
+
+
     
     def fetch_booking_by_guest_name(self):
         guest_name = self.search_entry.get().strip()
@@ -1803,11 +2096,12 @@ class BookingManagement:
                         booking.get("phone_number", ""),
                         booking.get("booking_date", ""),
                         booking.get("payment_status", ""),
+                        booking.get("mode_of_identification", ""),
                         booking.get("identification_number", ""),  
                         booking.get("address", ""),                               
-                        booking.get("created_by", ""),
                         booking.get("vehicle_no", ""),
                         booking.get("attachment", ""),
+                        booking.get("created_by", ""),
 
 
                        
@@ -1816,6 +2110,15 @@ class BookingManagement:
                 # Apply grid effect after inserting data
                 self.apply_grid_effect(self.search_tree)
 
+                # ✅ Show total entries and booking cost excluding cancelled/complimentary
+                total_entries = data.get("total_bookings", 0)
+                total_cost = data.get("total_booking_cost", 0.0)
+
+                self.total_entries_label.config(text=f"Total Entries: {total_entries:,}")
+                self.total_cost_label.config(text=f"Total Booking Cost: ₦{total_cost:,.2f}")
+
+                
+
     
             else:
                 messagebox.showinfo("No result", response.json().get("detail", "No bookings found."))
@@ -1823,108 +2126,10 @@ class BookingManagement:
             messagebox.showerror("Error", f"Request failed: {e}")
 
     
-    def search_booking_by_id(self):
-        self.clear_right_frame()
-        
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        tk.Label(frame, text="Search Booking by ID", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
-        
-        search_frame = tk.Frame(frame, bg="#ffffff")
-        search_frame.pack(pady=5)
-        
-        tk.Label(search_frame, text="Booking ID:", font=("Arial", 11), bg="#ffffff").grid(row=0, column=0, padx=5, pady=5)
-        self.booking_id_entry = tk.Entry(search_frame, font=("Arial", 11))
-        self.booking_id_entry.grid(row=0, column=1, padx=5, pady=5)
-        
-        search_btn = ttk.Button(
-            search_frame, text="Search", command=self.fetch_booking_by_id
-        )
-        search_btn.grid(row=0, column=2, padx=10, pady=5)
-        
-        table_frame = tk.Frame(frame, bg="#ffffff")
-        table_frame.pack(fill=tk.BOTH, expand=True)
-        
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days", 
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address","Created_by", "Vehicle No", "Attachment")
-
-        if hasattr(self, "tree"):
-            self.tree.destroy()
-        
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=70, anchor="center")
-        
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.configure(yscroll=y_scroll.set)
-        
-        x_scroll = ttk.Scrollbar(frame, orient="horizontal", command=self.tree.xview)
-        x_scroll.pack(fill=tk.X)
-        self.tree.configure(xscroll=x_scroll.set)
-
-    def fetch_booking_by_id(self):
-        booking_id = self.booking_id_entry.get().strip()
-    
-        if not booking_id.isdigit():  # Ensure input is numeric
-            messagebox.showerror("Error", "Please enter a valid numeric booking ID.")
-            return
-        
-        try:
-    
-            #booking_id = int(booking_id)  # Convert to integer
-
-            
-            api_url = f"http://127.0.0.1:8000/bookings/{booking_id}"
-            headers = {"Authorization": f"Bearer {self.token}"}
-        
-        
-            response = requests.get(api_url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                booking = data.get("booking", {})
-                
-                # Ensure the booking details exist
-                if booking:
-                    self.tree.delete(*self.tree.get_children())
-                    self.tree.insert("", "end", values=(
-                        booking.get("id", ""),
-                        booking.get("room_number", ""),
-                        booking.get("guest_name", ""),
-                        booking.get("gender", ""),
-                        f"{float(booking.get('booking_cost', 0)) :,.2f}",  # Format booking_cost
-                        booking.get("arrival_date", ""),
-                        booking.get("departure_date", ""),
-                        booking.get("status", ""),
-                        booking.get("number_of_days", ""),
-                        booking.get("booking_type", ""),
-                        booking.get("phone_number", ""),
-                        booking.get("booking_date", ""),
-                        booking.get("payment_status", ""),
-                        booking.get("identification_number", ""),  
-                        booking.get("address", ""),                                                   
-                        booking.get("created_by", ""),
-                        booking.get("vehicle_no", ""),
-                        booking.get("attachment", ""),
-
-                    ))
-
-                 # Apply grid effect after inserting data
-                    self.apply_grid_effect(self.tree)
-
-   
-                else:
-                    messagebox.showinfo("No Results", "No booking found with the provided ID.")
-            else:
-                messagebox.showerror("Error", response.json().get("detail", "No booking found."))
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Error", f"Request failed: {e}")
      
     def search_booking_by_room(self):
+        self.last_search_type = "room"
+
         self.clear_right_frame()
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
@@ -1969,8 +2174,10 @@ class BookingManagement:
         table_frame.pack(fill=tk.BOTH, expand=True)
 
         # Define table columns
-        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival", "Departure", "Status", "Number of Days",
-                "Booking Type", "Phone Number", "Booking Date", "Payment Status", "Identification Number", "Address", "Created_by", "Vehicle No", "Attachment")
+        columns = ("ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Number of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification Number",
+            "Address", "Vehicle No", "Attachment", "Created By")
 
         self.search_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
@@ -1990,9 +2197,33 @@ class BookingManagement:
         x_scroll.pack(fill=tk.X)
         self.search_tree.configure(xscroll=x_scroll.set)
 
-        # Total Label (Below Table)
-        self.total_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
-        self.total_label.pack(pady=10)
+
+        # --- View Booking Button using CustomTkinter ---
+        view_button = ctk.CTkButton(
+            frame,
+            text="View Booking",
+            corner_radius=20,
+            command=self.view_selected_guest_booking
+        )
+        view_button.pack(pady=3)
+
+        
+
+# Frame to hold totals and view button
+        totals_frame = tk.Frame(frame, bg="#ffffff")
+        totals_frame.pack(pady=10, anchor="w")  # Left-align
+
+        # Total Entries Label (Blue)
+        self.total_entries_label = tk.Label(totals_frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label.pack(side="left", padx=(0, 10))
+
+        # Total Booking Cost Label (Red)
+        self.total_label = tk.Label(totals_frame, text="Total Booking Cost: 0.00", fg="red", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_label.pack(side="left", padx=(0, 10))
+
+
+
+    
 
 
 
@@ -2011,39 +2242,39 @@ class BookingManagement:
                 messagebox.showerror("Error", "Please select both start and end dates.")
                 return
 
-            # Ensure date format matches backend expectation
             formatted_start_date = start_date.strftime("%Y-%m-%d")
             formatted_end_date = end_date.strftime("%Y-%m-%d")
 
-            # Construct API URL
             api_url = f"http://127.0.0.1:8000/bookings/room/{room_number}"
             params = {"start_date": formatted_start_date, "end_date": formatted_end_date}
             headers = {"Authorization": f"Bearer {self.token}"}
 
-            # Debugging output
-            #print(f"Fetching bookings for Room: {room_number}, Start Date: {formatted_start_date}, End Date: {formatted_end_date}")
-            #print(f"API URL: {api_url}, Headers: {headers}")
-
-            # Make the request
             response = requests.get(api_url, params=params, headers=headers)
             response_data = response.json()
 
-            # Print full API response for debugging
-            #print("API Response:", response_data)
-
-            # Handle response
-
-            # Initialize total cost
-            
             total_cost = 0.0
-            
+            total_entries = 0
+
             if response.status_code == 200:
                 if "bookings" in response_data and response_data["bookings"]:
                     self.search_tree.delete(*self.search_tree.get_children())  # Clear table
 
                     for booking in response_data["bookings"]:
-                        cost = float(booking.get("booking_cost", 0))
-                        total_cost += cost  # Sum up the total booking cost
+                        status = booking.get("status", "").lower()
+                        booking_type = booking.get("booking_type", "").lower()
+
+                        # Count all bookings regardless of status or type
+                        total_entries += 1
+
+                        # For total cost, exclude cancelled and complimentary bookings
+                        if status != "cancelled" and booking_type != "complimentary":
+                            try:
+                                cost = float(booking.get("booking_cost", 0))
+                                total_cost += cost
+                            except ValueError:
+                                pass
+
+                        # Add all bookings to the table
                         self.search_tree.insert("", "end", values=(
                             booking.get("id", ""),
                             booking.get("room_number", ""),
@@ -2058,21 +2289,28 @@ class BookingManagement:
                             booking.get("phone_number", ""),
                             booking.get("booking_date", ""),
                             booking.get("payment_status", ""),
-                            booking.get("identification_number", ""),  
-                            booking.get("address", ""),                                                   
-                            booking.get("created_by", ""),
+                            booking.get("mode_of_identification", ""),
+                            booking.get("identification_number", ""),
+                            booking.get("address", ""),
                             booking.get("vehicle_no", ""),
                             booking.get("attachment", ""),
-
-
-                            
+                            booking.get("created_by", ""),
                         ))
 
-                    # Update total label dynamically
-                    self.total_label.config(text=f"Total Booking Cost: {total_cost:,.2f}")
+                    # Update totals with color styling
+                    self.total_entries_label.config(
+                        text=f"Total Entries: {total_entries}",
+                        fg="blue"
+                    )
+                    self.total_label.config(
+                        text=f"Total Booking Cost: {total_cost:,.2f}",
+                        fg="red"
+                    )
+
                     # Apply grid effect after inserting data
                     self.apply_grid_effect(self.search_tree)
 
+                    
     
                 else:
                     messagebox.showinfo("No Results", f"No bookings found for Room {room_number} between {formatted_start_date} and {formatted_end_date}.")
@@ -2095,210 +2333,6 @@ class BookingManagement:
 
     
 
-
-
-    """
-    def update_booking(self):
-        Opens a pop-up window for updating an existing booking with CustomTkinter.
-        self.clear_right_frame()
-
-        update_window = ctk.CTkToplevel(self.root)
-        update_window.title("Update Booking")
-        update_window.geometry("670x400")
-        update_window.resizable(False, False)
-        update_window.configure(fg_color="#f5f5f5")
-
-        # Center the window on the screen
-        screen_width = update_window.winfo_screenwidth()
-        screen_height = update_window.winfo_screenheight()
-        x_coordinate = (screen_width - 670) // 2
-        y_coordinate = (screen_height - 450) // 2
-        update_window.geometry(f"670x450+{x_coordinate}+{y_coordinate}")
-
-        update_window.transient(self.root)
-        update_window.grab_set()
-
-        header_frame = ctk.CTkFrame(update_window, fg_color="#2c3e50", height=50, corner_radius=8)
-        header_frame.pack(fill="x", padx=10, pady=10)
-        header_label = ctk.CTkLabel(header_frame, text="Update Booking", font=("Arial", 16, "bold"), text_color="white")
-        header_label.pack(pady=10)
-        
-        frame = ctk.CTkFrame(update_window, fg_color="white", corner_radius=10)
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        combo_box_values = {
-            "Gender": ["Male", "Female"],
-            "Booking Type": ["checked-in", "reservation", "complimentary"],
-            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
-        }
-
-        self.entries = {}
-
-        form_data = [
-            ("Booking ID", ctk.CTkEntry, 0, 0, 2),  # Booking ID takes full row (colspan=2)
-            ("Room Number", ctk.CTkEntry, 1, 0),
-            ("Guest Name", ctk.CTkEntry, 1, 2),
-            ("Identification Number", ctk.CTkEntry, 2, 0),
-            ("Mode of Identification", ctk.CTkComboBox, 2, 2),
-            ("Gender", ctk.CTkComboBox, 3, 0),
-            ("Address", ctk.CTkEntry, 3, 2),
-            ("Phone Number", ctk.CTkEntry, 4, 0),
-            ("Booking Type", ctk.CTkComboBox, 4, 2),
-            ("Arrival Date", DateEntry, 5, 0),
-            ("Departure Date", DateEntry, 5, 2),
-            ("Vehicle No", ctk.CTkEntry, 6, 0),
-            ("Attachment", ctk.CTkEntry, 6, 2),
-        ]
-
-        field_widths = {
-            "Booking ID": 100,
-            "Room Number": 50,
-            "Guest Name": 150,
-            "Identification Number": 150,
-            "Mode of Identification": 130,
-            "Gender": 100,
-            "Address": 170,
-            "Phone Number": 120,
-            "Booking Type": 120,
-            "Arrival Date": 10,
-            "Departure Date": 10,
-            "Vehicle No": 120,
-            "Attachment": 150
-        }
-
-        for item in form_data:
-            label_text, field_type, row, col = item[:4]
-            colspan = item[4] if len(item) == 5 else 1
-
-            label = ctk.CTkLabel(frame, text=label_text, font=("Helvetica", 12, "bold"), text_color="#2c3e50")
-            label.grid(row=row, column=col, sticky="w", pady=5, padx=10)
-
-            width = field_widths.get(label_text, 20)
-
-            if field_type == ctk.CTkComboBox:
-                entry = ctk.CTkComboBox(frame, values=combo_box_values.get(label_text, []), state="readonly",
-                                        font=("Helvetica", 12), width=width)
-            elif field_type == DateEntry:
-                entry = DateEntry(frame, font=("Helvetica", 12), background='darkblue',
-                                foreground='white', borderwidth=2)
-            else:
-                entry = field_type(frame, font=("Helvetica", 12), width=width)
-                if label_text == "Attachment":
-                    entry.insert(0, "Select file...")
-                    entry.configure(text_color="gray")
-                if label_text == "Booking ID":
-                    entry.configure(state="normal")  # Enable it so it's visible and editable if needed
-
-            entry.grid(row=row, column=col + 1, columnspan=colspan, pady=5, padx=10, sticky="w")
-            self.entries[label_text] = entry
-
-        self.update_window = update_window
-
-        # File Picker (same as Create Booking)
-        def browse_file(event=None):
-            file_path = filedialog.askopenfilename()
-            if file_path:
-                self.attachment_full_path = file_path
-                attachment_entry.configure(state="normal")
-                attachment_entry.delete(0, "end")
-                attachment_entry.insert(0, os.path.basename(file_path))
-                attachment_entry.configure(state="readonly")
-
-        attachment_entry = self.entries["Attachment"]
-        attachment_entry.bind("<1>", browse_file)
-
-        # Submit Button (styled to match Create Booking)
-        submit_btn = ctk.CTkButton(
-            frame,
-            text="Submit Update",
-            command=lambda: self.submit_update_booking(update_window),
-            font=("Arial", 14, "bold"),
-            fg_color="#3498db",
-            hover_color="#2980b9",
-            text_color="white",
-            corner_radius=10,
-            width=450,
-            height=40
-        )
-
-        # Place Submit button at next row after form fields
-        submit_btn.grid(row=7, column=0, columnspan=4, pady=25, padx=30, sticky="ew")
-
-
-
-    
-
-    def submit_update_booking(self, update_window):
-        Collects form data and sends a multipart/form-data request to update a booking.
-        try:
-            # Basic data collection
-            data = {
-                "booking_id": self.entries["Booking ID"].get(),
-                "room_number": self.entries["Room Number"].get(),
-                "guest_name": self.entries["Guest Name"].get(),
-                "gender": self.entries["Gender"].get(),
-                "mode_of_identification": self.entries["Mode of Identification"].get(),
-                "identification_number": self.entries["Identification Number"].get(),
-                "address": self.entries["Address"].get(),
-                "phone_number": self.entries["Phone Number"].get(),
-                "arrival_date": self.entries["Arrival Date"].get_date().strftime("%Y-%m-%d"),
-                "departure_date": self.entries["Departure Date"].get_date().strftime("%Y-%m-%d"),
-                "booking_type": self.entries["Booking Type"].get(),
-                "vehicle_no": self.entries["Vehicle No"].get() or "",
-            }
-
-            # Validate required fields (excluding optional vehicle_no)
-            required = [k for k in data if k != "vehicle_no"]
-            if not all(data[k] for k in required):
-                update_window.grab_release()
-                CTkMessagebox(title="Error", message="Please fill in all required fields", icon="cancel", option_1="OK")
-                return
-
-            # Handle file attachment
-            attachment_path = getattr(self, 'attachment_full_path', None)
-            files = {}
-            file_obj = None
-
-            if attachment_path and os.path.isfile(attachment_path):
-                try:
-                    file_obj = open(attachment_path, "rb")
-                    files["attachment"] = (
-                        os.path.basename(attachment_path),
-                        file_obj,
-                        "application/octet-stream"
-                    )
-                except Exception as e:
-                    update_window.grab_release()
-                    CTkMessagebox(title="File Error", message=f"Attachment error: {str(e)}", icon="cancel", option_1="OK")
-                    return
-            else:
-                files["attachment"] = ("", "", "application/octet-stream")
-
-            # Send request
-            url = f"http://127.0.0.1:8000/bookings/update/?booking_id={data['booking_id']}"
-            headers = {"Authorization": f"Bearer {self.token}"}
-
-            try:
-                response = requests.put(url, data=data, files=files, headers=headers)
-
-            finally:
-                if file_obj:
-                    file_obj.close()
-
-            # Handle response
-            if response.status_code == 200:
-                update_window.grab_release()
-                msgbox = CTkMessagebox(title="Success", message="Booking updated successfully!", icon="check", option_1="OK")
-                if msgbox.get() == "OK":
-                    update_window.destroy()
-            else:
-                update_window.grab_release()
-                CTkMessagebox(title="Error", message=response.json().get("detail", "Update failed."), icon="warning", option_1="OK")
-
-        except Exception as e:
-            update_window.grab_release()
-            CTkMessagebox(title="Error", message=f"Unexpected error: {str(e)}", icon="cancel", option_1="OK")
-"""
 
     
 #from CTkMessagebox import CTkMessagebox
@@ -2541,17 +2575,19 @@ class BookingManagement:
                 canceled_booking = response.json().get("canceled_booking", {})
 
                 # Success message
-                CTkMessagebox(
+                msgbox = CTkMessagebox(
                     title="Success",
                     message=f"Booking {canceled_booking.get('id', booking_id)} canceled successfully!\n"
                             f"Room Status: {canceled_booking.get('room_status', 'N/A')}\n"
                             f"Booking Status: {canceled_booking.get('status', 'N/A')}\n"
                             f"Reason: {canceled_booking.get('cancellation_reason', 'None')}",
                     icon="check",
+                    option_1="OK",
                 )
+                # Wait for user to press OK before closing the window
+                if msgbox.get() == "OK":
+                    cancel_window.destroy()
 
-                # Close window after a short delay
-                cancel_window.after(500, cancel_window.destroy)
 
             else:
                 cancel_window.grab_release()  # Release before showing message
@@ -2561,23 +2597,6 @@ class BookingManagement:
             cancel_window.grab_release()
             CTkMessagebox(title="Error", message=f"Request failed: {e}", icon="cancel")
 
-
-
-
-
-
-
-#class UpdateBooking:
-    #def __init__(self, root, token):
-        #self.root = tk.Toplevel(root)
-        #self.root.title("Update Booking")
-        #self.root.geometry("900x600")
-        #self.token = token
-        #self.root.configure(bg="#f0f0f0")
-        
-        
-        
-   
 
 
 
