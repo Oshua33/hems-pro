@@ -356,12 +356,14 @@ class PaymentManagement:
         file_name_map = {
             "payments": "payments_report",
             "debtors": "debtors_report",
-            "daily_payments": "daily_payments_report"
+            "daily_payments": "daily_payments_report",
+            "status": "payments_status"
         }
         title_map = {
             "payments": "Hotel Payment Report",
             "debtors": "Hotel Debtor Report",
-            "daily_payments": "Hotel Daily Payment Report"
+            "daily_payments": "Hotel Daily Payment Report",
+            "status": "Search Payments Status"
         }
 
         file_name_base = file_name_map.get(self.current_view)
@@ -460,6 +462,12 @@ class PaymentManagement:
                     write_summary_row(3, "POS Card", getattr(self, "pos_card_label", None))
                     write_summary_row(4, "Bank Transfer", getattr(self, "bank_transfer_label", None))
                     write_summary_row(5, "Total Amount", getattr(self, "total_label", None))
+
+                elif self.current_view == "status":
+                    
+                    write_summary_row(5, "Total Amount", getattr(self, "total_payment_label", None))    
+
+
 
             self.last_exported_file = file_path
             messagebox.showinfo("Success", f"Report exported successfully!\nSaved at: {file_path}")
@@ -978,6 +986,7 @@ class PaymentManagement:
 
     def list_payments_by_status(self):
         """Displays the List Payments by Status UI."""
+        self.current_view = "status"
         self.clear_right_frame()
 
         frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)

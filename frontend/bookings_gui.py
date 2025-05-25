@@ -437,42 +437,50 @@ class BookingManagement:
 
     def export_report(self):
         """Export current booking view to Excel with styled formatting, summary, and timestamped filename."""
-       
-
         try:
-            if self.current_view == "bookings":
-                tree = self.tree
-                base_filename = "Booking_Report"
-                total_cost_text = self.total_booking_cost_label.cget("text")
-                total_entries_text = self.total_entries_label.cget("text")
+            view_config = {
+                "bookings": {
+                    "tree": getattr(self, "tree", None),
+                    "base_filename": "Booking_Report",
+                    "total_cost": getattr(self, "total_booking_cost_label", None),
+                    "total_entries": getattr(self, "total_entries_label", None)
+                },
+                "guest_search": {
+                    "tree": getattr(self, "search_tree", None),
+                    "base_filename": "Guest_Search_Report",
+                    "total_cost": getattr(self, "total_cost_label", None),
+                    "total_entries": getattr(self, "total_entries_label", None)
+                },
+                "room_search": {
+                    "tree": getattr(self, "search_tree", None),
+                    "base_filename": "Room_Search_Report",
+                    "total_cost": getattr(self, "total_label", None),
+                    "total_entries": getattr(self, "total_entries_label", None)
+                },
+                "status_search": {
+                "tree": self.tree,
+                "base_filename": "Guest_Status_Search_Report",
+                "total_cost": self.total_cost_label,
+                "total_entries": self.total_entries_label  # optional: set this somewhere if needed
+            }
 
-            elif self.current_view == "guest_search":
-                if not hasattr(self, 'search_tree') or not self.search_tree.get_children():
-                    messagebox.showerror("Export Error", "No guest search results to export.")
-                    return
-                tree = self.search_tree
-                base_filename = "Guest_Search_Report"
-                total_cost_text = self.total_cost_label.cget("text") if hasattr(self, 'total_cost_label') else "Total Cost: N/A"
-                total_entries_text = self.total_entries_label.cget("text") if hasattr(self, 'total_entries_label') else "Total Entries: N/A"
+            }
 
-            elif self.current_view == "room_search":
-                if not hasattr(self, 'search_tree') or not self.search_tree.get_children():
-                    messagebox.showerror("Export Error", "No room search results to export.")
-                    return
-                tree = self.search_tree
-                base_filename = "Room_Search_Report"
-                total_cost_text = self.total_label.cget("text") if hasattr(self, 'total_label') else "Total: N/A"
-                total_entries_text = self.total_entries_label.cget("text") if hasattr(self, 'total_entries_label') else "Total Entries: N/A"
-
-            else:
-                messagebox.showerror("Export Error", f"No active exportable view found for: {self.current_view}")
+            config = view_config.get(self.current_view)
+            if not config:
+                messagebox.showerror("Export Error", f"No exportable view found for: {self.current_view}")
                 return
 
-            if not tree or not tree["columns"]:
-                messagebox.showerror("Export Error", "No data available for export.")
+            tree = config["tree"]
+            if not tree or not tree.get_children():
+                messagebox.showerror("Export Error", "No data available to export.")
                 return
 
-            # Create 'Report' folder if not exists
+            base_filename = config["base_filename"]
+            total_cost_text = config["total_cost"].cget("text") if config["total_cost"] else "Total Cost: N/A"
+            total_entries_text = config["total_entries"].cget("text") if config["total_entries"] else "Total Entries: N/A"
+
+            # Determine save path
             if getattr(sys, 'frozen', False):
                 script_dir = os.path.dirname(sys.executable)
             else:
@@ -482,14 +490,12 @@ class BookingManagement:
             report_dir = os.path.join(project_root, "Reports")
             os.makedirs(report_dir, exist_ok=True)
 
-    
-
-
-            # Add timestamp to filename
+            # Generate filename
             timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
             filename = f"{base_filename}_{timestamp}.xlsx"
             file_path = os.path.join(report_dir, filename)
 
+            # Create Excel workbook
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = "Reports"
@@ -503,7 +509,7 @@ class BookingManagement:
             title_cell.font = Font(size=14, bold=True)
             title_cell.alignment = Alignment(horizontal="left", vertical="center")
 
-            # Header row
+            # Header
             ws.append(columns)
             for cell in ws[2]:
                 cell.font = Font(bold=True)
@@ -514,7 +520,7 @@ class BookingManagement:
                     top=Side(style="thin"), bottom=Side(style="thin")
                 )
 
-            # Data rows
+            # Data
             for row_id in tree.get_children():
                 values = tree.item(row_id)["values"]
                 ws.append(values)
@@ -527,7 +533,7 @@ class BookingManagement:
                         top=Side(style="thin"), bottom=Side(style="thin")
                     )
 
-            # Auto-fit columns
+            # Autofit
             for col_idx, column in enumerate(columns, 1):
                 max_len = len(str(column))
                 for row_id in tree.get_children():
@@ -537,7 +543,7 @@ class BookingManagement:
                 col_letter = get_column_letter(col_idx)
                 ws.column_dimensions[col_letter].width = max_len + 2
 
-            # Summary section
+            # Summary
             summary_start_row = ws.max_row + 2
             summary_font = Font(bold=True, size=12)
 
@@ -549,15 +555,10 @@ class BookingManagement:
             total_entries_cell.value = total_entries_text
             total_entries_cell.font = summary_font
 
-            # Save file
+            # Save and open
             wb.save(file_path)
-
             messagebox.showinfo("Export Success", f"Report exported successfully to:\n{file_path}")
-            
-            # Open the file immediately
             os.startfile(file_path)
-
-            
 
         except Exception as e:
             import traceback
@@ -1752,6 +1753,8 @@ class BookingManagement:
     
     def list_bookings_by_status(self):
         """Displays the List Bookings by Status UI."""
+        self.current_view = "status_search"
+        
         self.clear_right_frame()  # Ensure old UI elements are removed
 
         # Create a new frame for the table with scrollable functionality
@@ -1830,6 +1833,10 @@ class BookingManagement:
         self.total_cost_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_cost_label.pack(pady=10)  # Placed at the bottom
 
+        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="green")
+        self.total_entries_label.pack()
+
+
 
     def fetch_bookings_by_status(self):
         """Fetch bookings based on status and date filters."""
@@ -1901,6 +1908,10 @@ class BookingManagement:
                         self.tree.tag_configure("cancelled", foreground="red")
                         self.tree.tag_configure("normal", foreground="black")
                         self.total_cost_label.config(text=f"Total Booking Cost: {total_cost:,.2f}")
+                        self.total_entries_label.config(text=f"Total Entries: {len(bookings)}")
+
+
+                        
                     else:
                         self.tree.delete(*self.tree.get_children())
                         self.total_cost_label.config(text="Total Booking Cost: ₦0.00")
