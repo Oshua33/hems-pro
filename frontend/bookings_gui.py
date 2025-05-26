@@ -458,11 +458,12 @@ class BookingManagement:
                     "total_entries": getattr(self, "total_entries_label", None)
                 },
                 "status_search": {
-                "tree": self.tree,
+                "tree": getattr(self, "tree", None),
                 "base_filename": "Guest_Status_Search_Report",
-                "total_cost": self.total_cost_label,
-                "total_entries": self.total_entries_label  # optional: set this somewhere if needed
+                "total_cost": getattr(self, "total_cost_label", None),  # safer access
+                "total_entries": getattr(self, "total_entries_label", None)
             }
+
 
             }
 
