@@ -1519,7 +1519,16 @@ class BookingManagement:
         elements.append(table)
         elements.append(Spacer(1, 10))
 
+        # Legal preamble before rules and directives
+        preamble_text = """
+        <b>Guest Acknowledgement and Agreement</b><br/><br/>
+        I, _____________________________________, hereby acknowledge that I have carefully read, understood, and agreed to abide by the rules and directives outlined below. 
+        I understand that failure to comply with any of the stated rules may result in penalties, fines, or eviction from the hotel premises without refund. 
+        I accept full responsibility for any violations and understand that I will be held liable as specified herein.<br/><br/>
+        """
 
+        preamble_paragraph = Paragraph(preamble_text, styles['Normal'])
+        elements.append(preamble_paragraph)
 
         # Rules and directives section
         rules_text = """
@@ -1536,7 +1545,6 @@ class BookingManagement:
         rules_paragraph = Paragraph(rules_text, styles['Normal'])
         elements.append(rules_paragraph)
         elements.append(Spacer(1, 25))
-
 
         # Add signature lines
         signature_table = Table([
