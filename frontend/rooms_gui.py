@@ -3,6 +3,7 @@ import customtkinter as ctk
 from tkinter import ttk, messagebox
 from utils import api_request, get_user_role
 import re
+from datetime import datetime
 
 class RoomManagement:
     def __init__(self, root, token):
@@ -75,8 +76,9 @@ class RoomManagement:
         # Buttons with Icons and Compact Styling
         buttons = [
             ("➕ Add", self.open_room_form),
-            ("✏️ Edit", self.update_room),
+            ("✏️ Update", self.update_room),
             ("❌ Delete", self.delete_room),
+            ("🧾 View Faults", self.view_faults),
             ("🟢 Rooms Available", self.list_available_rooms),
             ("🔄 Refresh", self.fetch_rooms)
         ]
@@ -97,7 +99,7 @@ class RoomManagement:
             btn.grid(row=0, column=idx, padx=7, pady=7)
         
             # Disable buttons for non-admin users
-            if self.user_role != "admin" and text in ["➕ Add", "✏️ Edit", "❌ Delete"]:
+            if self.user_role != "admin" and text in ["➕ Add",  "❌ Delete"]:
                 btn.configure(state="disabled", fg_color="#adb5bd", hover_color="#adb5bd")
 
                 
@@ -162,30 +164,30 @@ class RoomManagement:
             self.tree.insert("", tk.END, values=(room_number, room_type, amount, current_status, booking_type))
             
             self.apply_grid_effect()  
+
+
+
             
     def list_available_rooms(self):
-        """Fetch and display available rooms in a non-blocking dark-themed CustomTkinter window."""
         response = api_request("/rooms/available", "GET", token=self.token)
 
         if not response or "available_rooms" not in response:
             messagebox.showerror("Error", "Unable to retrieve available rooms. Please try again.")
             return
-        
-        
 
         available_rooms = response["available_rooms"]
         available_rooms.sort(key=self.natural_sort_key)
-        total_available = len(available_rooms)
 
-        # Create popup window that doesn't close the dashboard
+        # Only count rooms that are NOT under maintenance
+        total_available = sum(1 for room in available_rooms if room.get("status") != "maintenance")
+
         available_window = ctk.CTkToplevel(self.root)
         available_window.title("Available Rooms")
         available_window.geometry("600x460")
         available_window.resizable(False, False)
-        available_window.transient(self.root)   # Keep on top of dashboard
-        available_window.grab_set()             # Optional: to focus this window
+        available_window.transient(self.root)
+        available_window.grab_set()
 
-        # Header
         header_frame = ctk.CTkFrame(available_window, fg_color="#1e1e1e", corner_radius=10)
         header_frame.pack(fill="x", padx=15, pady=(15, 5))
 
@@ -196,39 +198,49 @@ class RoomManagement:
             text_color="white"
         ).pack(pady=10)
 
-        # Content Frame
         content_frame = ctk.CTkFrame(available_window, fg_color="#2a2a2a", corner_radius=10)
         content_frame.pack(fill="both", expand=True, padx=15, pady=(5, 10))
 
-        # Style Treeview
         style = ttk.Style()
         style.theme_use("default")
+
         style.configure("Treeview",
                         background="#2a2a2a",
                         foreground="white",
-                        rowheight=28,
                         fieldbackground="#2a2a2a",
+                        rowheight=28,
                         font=("Segoe UI", 11))
+
         style.configure("Treeview.Heading",
                         background="#3a3a3a",
                         foreground="white",
                         font=("Segoe UI", 11, "bold"))
-        style.map("Treeview", background=[("selected", "#007acc")])
 
-        # Treeview widget
-        columns = ("Room Number", "Room Type", "Amount")
-        tree = ttk.Treeview(content_frame, columns=columns, show="headings")
+        tree = ttk.Treeview(content_frame, columns=("Room Number", "Room Type", "Amount"), show="headings")
 
-        for col in columns:
+        for col in ("Room Number", "Room Type", "Amount"):
             tree.heading(col, text=col, anchor="center")
             tree.column(col, anchor="center", width=180)
 
         for room in available_rooms:
-            tree.insert("", tk.END, values=(room["room_number"], room["room_type"], room["amount"]))
+            status = room.get("status")
+
+            if status == "maintenance":
+                # Surround each field with warning symbol
+                symbol = "⚠️"
+                room_number = f"{symbol} {room['room_number']} {symbol}"
+                room_type = f"{symbol} {room['room_type']} {symbol}"
+                amount = f"{symbol} {room['amount']} {symbol}"
+
+            else:
+                room_number = room['room_number']
+                room_type = room['room_type']
+                amount = room['amount']
+
+            tree.insert("", tk.END, values=(room_number, room_type, amount))
 
         tree.pack(padx=10, pady=10, fill="both", expand=True)
 
-        # Close Button
         ctk.CTkButton(
             available_window,
             text="Close",
@@ -241,7 +253,10 @@ class RoomManagement:
             corner_radius=8
         ).pack(pady=(0, 15))
 
-        self.apply_grid_effect(self.tree)
+        self.apply_grid_effect(tree)
+
+
+
 
     
     def open_room_form(self):
@@ -290,11 +305,10 @@ class RoomManagement:
 
         # Status Dropdown
         tk.Label(container, text="Status:", bg="#f8f9fa").pack(anchor="w")
-        status_options = ["available"]
+        status_options = ["available", "maintenance"]
         status_entry = ttk.Combobox(container, values=status_options, state="readonly", width=27)
         status_entry.pack(pady=3)
         status_entry.current(0)
-
 
         # Submit Function
         def submit():
@@ -325,6 +339,96 @@ class RoomManagement:
                                 font=("Arial", 10, "bold"), padx=10, pady=3, relief="raised", bd=2)
         submit_button.pack(pady=10)
 
+
+
+    def view_faults(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a room to view faults")
+            return
+
+        room_number = self.tree.item(selected[0], "values")[0]
+        response = api_request(f"/rooms/{room_number}/faults", "GET", token=self.token)
+
+        if response is None:
+            messagebox.showerror("Error", f"Failed to fetch faults. Response is None")
+            return
+
+        if not isinstance(response, list):
+            messagebox.showerror("Error", f"Unexpected response type: {type(response)} - {response}")
+            return
+
+        fault_window = tk.Toplevel(self.root)
+        fault_window.title(f"Faults for Room {room_number}")
+        fault_window.geometry("450x550")
+        fault_window.configure(bg="#f8f9fa")
+
+        tk.Label(fault_window, text=f"Faults - Room {room_number}",
+                font=("Arial", 14, "bold"), bg="#2C3E50", fg="white", pady=10).pack(fill=tk.X)
+
+        frame = tk.Frame(fault_window, bg="#f8f9fa", padx=10, pady=10)
+        frame.pack(fill="both", expand=True)
+
+        fault_vars = {}  # {fault_id: BooleanVar}
+
+        if not response:
+            tk.Label(frame, text="No faults found.", bg="#f8f9fa", font=("Arial", 12)).pack()
+        else:
+            for fault in response:
+                fault_id = fault.get("id")
+                desc = fault.get("description", "")
+                resolved = fault.get("resolved", False)
+                created_at = fault.get("created_at", None)
+                resolved_at = fault.get("resolved_at", None)
+
+                # Format timestamps nicely
+                def format_date(dt_str):
+                    if not dt_str:
+                        return "-"
+                    try:
+                        dt_obj = datetime.fromisoformat(dt_str)
+                        return dt_obj.strftime("%Y-%m-%d %H:%M")
+                    except Exception:
+                        return dt_str
+
+                created_at_fmt = format_date(created_at)
+                resolved_at_fmt = format_date(resolved_at)
+
+                var = tk.BooleanVar(value=resolved)
+                fault_vars[fault_id] = var
+
+                fault_frame = tk.Frame(frame, bg="#f8f9fa")
+                fault_frame.pack(fill="x", pady=2, anchor="w")
+
+                cb = tk.Checkbutton(fault_frame, text=desc, variable=var, bg="#f8f9fa", anchor="w",
+                                    font=("Arial", 11))
+                cb.pack(side="left", anchor="w")
+
+                # Show timestamps as labels to the right of checkbox
+                ts_label = tk.Label(fault_frame, text=f"Created: {created_at_fmt} | Resolved: {resolved_at_fmt}",
+                                    bg="#f8f9fa", font=("Arial", 9), fg="gray")
+                ts_label.pack(side="left", padx=10)
+
+        def save_fault_updates():
+            updates = []
+            for fid, var in fault_vars.items():
+                updates.append({"id": fid, "resolved": var.get()})
+
+            save_response = api_request("/rooms/faults/update", method="PUT", data=updates, token=self.token)
+
+            if save_response is not None:
+                messagebox.showinfo("Success", "Fault statuses updated successfully.")
+                fault_window.destroy()
+            else:
+                messagebox.showerror("Error", "Failed to update faults.")
+
+        if fault_vars:
+            tk.Button(fault_window, text="Save", command=save_fault_updates, bg="#007bff", fg="white",
+                    font=("Arial", 12), pady=5).pack(pady=10)
+
+
+
+
         
     def update_room(self):
         """Update selected room details."""
@@ -333,61 +437,42 @@ class RoomManagement:
             messagebox.showwarning("Warning", "Please select a room to update")
             return
 
-        # Get selected room details
         values = self.tree.item(selected[0], "values")
+        room_number = values[0]
 
-        room_number = values[0]  # Ensure this value is correct
-
-        # Fetch the full room details from API
         response = api_request(f"/rooms/{room_number}", "GET", token=self.token)
-
-        # Ensure the response contains valid data
         if not response or not isinstance(response, dict) or "room_number" not in response:
             messagebox.showerror("Error", f"Failed to fetch room details. Response: {response}")
             return
 
-        room_data = response  # Assign the response directly if valid
-
-        # Prevent updates if the room is checked-in
+        room_data = response
         if room_data["status"] == "checked-in":
             messagebox.showwarning("Warning", "Room cannot be updated as it is currently checked-in")
             return
 
-        # Create update window
         update_window = tk.Toplevel(self.root)
         update_window.title("Update Room")
-        update_window.geometry("350x320")
+        update_window.geometry("400x500")
         update_window.resizable(False, False)
 
         # Center the window
-        update_window.update_idletasks()  # Ensure correct size calculation
+        update_window.update_idletasks()
         screen_width = update_window.winfo_screenwidth()
         screen_height = update_window.winfo_screenheight()
-        window_width = 350
-        window_height = 320
+        x = (screen_width - 400) // 2
+        y = (screen_height - 500) // 2
+        update_window.geometry(f"400x500+{x}+{y}")
 
-        x_position = (screen_width - window_width) // 2
-        y_position = (screen_height - window_height) // 2
-
-        update_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-
-        # Border Frame
         container = tk.Frame(update_window, bg="#f8f9fa", padx=15, pady=15, relief="groove", bd=3)
         container.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Title Label
-        title_label = tk.Label(container, text="Update Room Details", font=("Arial", 12, "bold"), bg="#f8f9fa")
-        title_label.pack(pady=5)
+        tk.Label(container, text="Update Room Details", font=("Arial", 12, "bold"), bg="#f8f9fa").pack(pady=5)
 
-        # Room Number (Ensure case is maintained)
-        # Room Number Entry (Ensure case is preserved)
+        # Room Number
         tk.Label(container, text="Room Number:", bg="#f8f9fa").pack(anchor="w")
         room_number_entry = tk.Entry(container, width=30)
-
-        # Ensure it is inserted correctly without modification
-        room_number_entry.insert(0, room_data["room_number"])  
+        room_number_entry.insert(0, room_data["room_number"])
         room_number_entry.pack(pady=3)
-
 
         # Room Type
         tk.Label(container, text="Room Type:", bg="#f8f9fa").pack(anchor="w")
@@ -401,43 +486,103 @@ class RoomManagement:
         amount_entry.insert(0, str(room_data["amount"]))
         amount_entry.pack(pady=3)
 
-        # Status Dropdown
+        # Status
         tk.Label(container, text="Select New Status:", bg="#f8f9fa").pack(anchor="w")
-        status_options = ["available"]
+        status_options = ["available", "maintenance"]
         status_entry = ttk.Combobox(container, values=status_options, state="readonly", width=27)
         status_entry.pack(pady=3)
-        status_entry.set(room_data["status"])  # Set current status as default
+        status_entry.set(room_data["status"])
 
-        # Submit Function
+        # Maintenance Frame (Initially hidden)
+        maintenance_frame = tk.Frame(container, bg="#f8f9fa")
+        maintenance_check_vars = []
+        maintenance_faults = []
+
+        def load_fault_items():
+            maintenance_check_vars.clear()
+            for widget in maintenance_frame.winfo_children():
+                widget.destroy()
+
+            tk.Label(maintenance_frame, text="Fault Items:", bg="#f8f9fa", font=("Arial", 10, "bold")).pack(anchor="w", pady=(10, 2))
+
+            fault_items = room_data.get("faults", [])
+            for fault in fault_items:
+                var = tk.BooleanVar(value=fault.get("done", False))
+                cb = tk.Checkbutton(maintenance_frame, text=fault["description"], variable=var, bg="#f8f9fa")
+                cb.pack(anchor="w")
+                maintenance_check_vars.append((fault, var))
+
+            # Add new fault item
+            tk.Label(maintenance_frame, text="Add New Fault:", bg="#f8f9fa").pack(anchor="w", pady=(10, 0))
+            new_fault_entry = tk.Entry(maintenance_frame, width=30)
+            new_fault_entry.pack(pady=3)
+
+            def add_fault_item():
+                desc = new_fault_entry.get().strip()
+                if desc:
+                    maintenance_check_vars.append(({"description": desc, "done": False}, tk.BooleanVar(value=False)))
+                    cb = tk.Checkbutton(maintenance_frame, text=desc, variable=maintenance_check_vars[-1][1], bg="#f8f9fa")
+                    cb.pack(anchor="w")
+                    new_fault_entry.delete(0, tk.END)
+
+            tk.Button(maintenance_frame, text="Add Fault", command=add_fault_item).pack(pady=5)
+
+        def toggle_maintenance_section(event):
+            if status_entry.get() == "maintenance":
+                load_fault_items()
+                maintenance_frame.pack(fill="x", pady=5)
+            else:
+                maintenance_frame.pack_forget()
+
+        status_entry.bind("<<ComboboxSelected>>", toggle_maintenance_section)
+        if room_data["status"] == "maintenance":
+            load_fault_items()
+            maintenance_frame.pack(fill="x", pady=5)
+
         def submit_update():
-            """Submit updated room data to API."""
             new_room_number = room_number_entry.get()
             new_room_type = room_type_entry.get()
             new_amount = amount_entry.get()
             new_status = status_entry.get()
 
-            # Validate input
             if not new_room_number or not new_room_type or not new_amount:
                 messagebox.showwarning("Warning", "All fields must be filled")
                 return
 
-            # Convert amount to float
             try:
                 new_amount = float(new_amount)
             except ValueError:
                 messagebox.showwarning("Warning", "Amount must be a number")
                 return
 
-            # Prepare update payload
             data = {
-                "room_number": str(new_room_number),  # Maintain original case
+                "room_number": str(new_room_number),
                 "room_type": new_room_type,
                 "amount": new_amount,
-                "status": new_status
+                "status": new_status,
+                "faults": []  # Add this line
             }
 
 
-            # Send update request
+            if new_status == "maintenance":
+                faults = []
+                room_number = room_number_entry.get().strip()
+
+                for fault_dict, done_var in maintenance_check_vars:
+                    description = fault_dict.get("description", "").strip()
+                    if description:
+                        faults.append({
+                            "description": description,
+                            "done": done_var.get(),
+                            "room_number": room_number
+                        })
+
+                data["faults"] = faults
+
+
+
+                data["faults"] = faults
+
             response = api_request(f"/rooms/{room_number}", "PUT", data, self.token)
             if response:
                 messagebox.showinfo("Success", "Room updated successfully")
@@ -446,10 +591,8 @@ class RoomManagement:
             else:
                 messagebox.showerror("Error", "Failed to update room")
 
-        # Submit Button with Style
-        submit_button = tk.Button(container, text="Update", command=submit_update, bg="#28A745", fg="white",
-                                font=("Arial", 10, "bold"), padx=10, pady=3, relief="raised", bd=2)
-        submit_button.pack(pady=10)
+        tk.Button(container, text="Update", command=submit_update, bg="#28A745", fg="white",
+                font=("Arial", 10, "bold"), padx=10, pady=3, relief="raised", bd=2).pack(pady=10)
 
 
 

@@ -49,6 +49,16 @@ def create_booking(
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    
+    room = db.query(room_models.Room).filter(room_models.Room.room_number == room_number).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    if room.status == "maintenance":
+        raise HTTPException(status_code=400, detail="Room is under maintenance.")
+
+
+
     attachment_path = None
 
     # ✅ Handle new file upload

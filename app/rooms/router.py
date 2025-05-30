@@ -7,6 +7,18 @@ from sqlalchemy import and_, or_, not_
 from app.rooms import schemas as room_schemas, models as room_models, crud
 from app.bookings import models as booking_models  # Adjust path if needed
 from app.users import schemas
+from sqlalchemy import func
+from datetime import datetime
+
+
+from typing import List
+
+
+from app.rooms.models import RoomFault  # Not app.models.room
+from app.rooms.schemas import RoomFaultOut  # Not app.schemas.room
+from app.rooms.schemas import FaultUpdate
+
+
 from datetime import date
 from loguru import logger
 import os
@@ -94,34 +106,26 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 def list_available_rooms(db: Session = Depends(get_db)):
     today = date.today()
 
-    # Query to get all rooms, no matter their availability status
-    available_rooms_query = db.query(room_models.Room)
-
-    # Exclude rooms with bookings that overlap with today
-    available_rooms_query = available_rooms_query.filter(
+    # Step 1: Get rooms not currently booked
+    available_rooms_query = db.query(room_models.Room).filter(
         not_(
             room_models.Room.room_number.in_(
                 db.query(booking_models.Booking.room_number)
                 .filter(
-                    booking_models.Booking.status.notin_(["checked-out", "cancelled"]),  # Exclude irrelevant bookings
-                    # Check for overlapping bookings with today
+                    booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
                     and_(
-                        booking_models.Booking.arrival_date <= today,  # Booking starts before or on today
-                        booking_models.Booking.departure_date >= today,  # Booking ends after or on today
+                        booking_models.Booking.arrival_date <= today,
+                        booking_models.Booking.departure_date >= today,
                     )
                 )
             )
         )
     )
 
-    # Fetch available rooms
-    available_rooms = available_rooms_query.all()
-
-    # Total rooms in the database
+    all_available_rooms = available_rooms_query.all()
     total_rooms = db.query(room_models.Room).count()
 
-    # If no rooms are available, return a fully booked message
-    if not available_rooms:
+    if not all_available_rooms:
         return {
             "message": "We are fully booked! No rooms are available for today.",
             "total_rooms": total_rooms,
@@ -129,24 +133,51 @@ def list_available_rooms(db: Session = Depends(get_db)):
             "available_rooms": [],
         }
 
-    # Serialize the available rooms for the response
-    serialized_rooms = [
-        {
+    # Step 2: Prepare data for frontend
+    serialized_rooms = []
+    available_count = 0  # Exclude maintenance from this count
+
+    for room in all_available_rooms:
+        serialized_rooms.append({
             "room_number": room.room_number,
             "room_type": room.room_type,
             "amount": room.amount,
-        }
-        for room in available_rooms
-    ]
+            "status": room.status
+        })
+
+        if room.status != "maintenance":
+            available_count += 1
 
     return {
         "message": "Available rooms fetched successfully.",
         "total_rooms": total_rooms,
-        "total_available_rooms": len(serialized_rooms),
-        "available_rooms": serialized_rooms,
+        "total_available_rooms": available_count,  # Maintenance excluded here
+        "available_rooms": serialized_rooms,       # But included in the list
     }
 
 
+@router.put("/faults/update")
+
+#@router.put("/rooms/faults/update")
+def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
+    print("Received data:", faults)  # Or use logging
+    for fault in faults:
+        db_fault = db.query(RoomFault).filter(RoomFault.id == fault.id).first()
+        if db_fault:
+            if db_fault.resolved != fault.resolved:
+                db_fault.resolved = fault.resolved
+                if fault.resolved:
+                    db_fault.resolved_at = datetime.utcnow()
+                else:
+                    db_fault.resolved_at = None
+    db.commit()
+    return {"message": "Faults updated successfully"}
+
+
+@router.get("/{room_number}/faults", response_model=List[RoomFaultOut])
+def get_room_faults(room_number: str, db: Session = Depends(get_db)):
+    faults = db.query(RoomFault).filter(func.lower(RoomFault.room_number) == room_number.lower()).all()
+    return faults  # Always return a list, even if empty
 
 
 @router.put("/{room_number}")
@@ -159,31 +190,25 @@ def update_room(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    # Normalize the room_number input to lowercase
     room_number = room_number.lower()
-
-    # Fetch the room by the normalized room_number
     room = db.query(room_models.Room).filter(func.lower(room_models.Room.room_number) == room_number).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    # Prevent updates if the room is checked-in
     if room.status == "checked-in":
         raise HTTPException(
             status_code=400,
             detail="Room cannot be updated as it is currently checked-in"
         )
 
-    # If a new room_number is provided, check for conflicts
     if room_update.room_number and room_update.room_number.lower() != room.room_number.lower():
         existing_room = db.query(room_models.Room).filter(
             func.lower(room_models.Room.room_number) == room_update.room_number.lower()
         ).first()
         if existing_room:
             raise HTTPException(status_code=400, detail="Room with this number already exists")
-        room.room_number = room_update.room_number.lower()  # Update the room number to lowercase
+        room.room_number = room_update.room_number.lower()
 
-    # Update other fields only if provided
     if room_update.room_type:
         room.room_type = room_update.room_type
 
@@ -191,15 +216,56 @@ def update_room(
         room.amount = room_update.amount
 
     if room_update.status:
-        if room_update.status not in ["available", "checked-in", "reserved"]:
+        if room_update.status not in ["available", "maintenance"]:
             raise HTTPException(status_code=400, detail="Invalid status value")
         room.status = room_update.status
 
-    # Commit the changes to the database
+    # ✅ Update faults if provided
+    # ✅ Update faults if provided
+    if room_update.faults is not None:
+        for fault_data in room_update.faults:
+            if fault_data.id is not None:
+                # Update existing fault
+                existing_fault = db.query(room_models.RoomFault).filter(
+                    room_models.RoomFault.id == fault_data.id,
+                    room_models.RoomFault.room_number == room.room_number
+                ).first()
+                if existing_fault:
+                    existing_fault.resolved = fault_data.resolved
+                    existing_fault.description = fault_data.description
+            else:
+                # Always allow new fault entry, even with same description
+                new_fault = room_models.RoomFault(
+                    room_number=room.room_number,
+                    description=fault_data.description,
+                    resolved=fault_data.resolved if fault_data.resolved is not None else False
+                )
+                db.add(new_fault)
+
     db.commit()
     db.refresh(room)
 
-    return {"message": "Room updated successfully", "room": room}
+    return {
+        "message": "Room updated successfully",
+        "room": {
+            "room_number": room.room_number,
+            "room_type": room.room_type,
+            "amount": room.amount,
+            "status": room.status,
+            "faults": [
+                {
+                    "id": fault.id,
+                    "description": fault.description,
+                    "resolved": fault.resolved,
+                    "room_number": room.room_number
+                }
+                for fault in room.faults
+            ]
+        }
+    }
+
+
+
 
 @router.get("/{room_number}")
 def get_room(room_number: str, db: Session = Depends(get_db)):

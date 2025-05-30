@@ -62,13 +62,16 @@ def get_user_role(token):
 
 import requests
 
-def api_request(endpoint, method="GET", data=None, token=None):
-    url = f"http://127.0.0.1:8000{endpoint}"  # Ensure this is the correct API base URL
+import requests
+import logging
+
+def api_request(endpoint, method="GET", data=None, token=None, params=None):
+    url = f"http://127.0.0.1:8000{endpoint}"
     headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     try:
         if method == "GET":
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, params=params)
         elif method == "POST":
             response = requests.post(url, json=data, headers=headers)
         elif method == "PUT":
@@ -76,16 +79,25 @@ def api_request(endpoint, method="GET", data=None, token=None):
         elif method == "DELETE":
             response = requests.delete(url, headers=headers)
         else:
+            logging.error(f"Unsupported method: {method}")
             return None
 
-        if response.status_code == 200:
-            return response.json()  # Ensure correct JSON handling
+        if response.status_code in [200, 201]:
+            return response.json()
+        elif response.status_code == 204:
+            return {"detail": "No content"}
         else:
-            print(f"Error: {response.status_code}, Response: {response.text}")  # Print error details
+            try:
+                error_data = response.json()
+                logging.warning(f"Error: {response.status_code}, Response: {error_data}")
+            except ValueError:
+                logging.warning(f"Error: {response.status_code}, Response: {response.text}")
             return None
+
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
+        logging.error(f"Request error: {e}")
         return None
+
 
 import requests
 
