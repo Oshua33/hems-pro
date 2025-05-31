@@ -350,81 +350,138 @@ class RoomManagement:
         room_number = self.tree.item(selected[0], "values")[0]
         response = api_request(f"/rooms/{room_number}/faults", "GET", token=self.token)
 
-        if response is None:
-            messagebox.showerror("Error", f"Failed to fetch faults. Response is None")
+        if response is None or not isinstance(response, list):
+            messagebox.showerror("Error", "Failed to fetch faults or unexpected response format.")
             return
 
-        if not isinstance(response, list):
-            messagebox.showerror("Error", f"Unexpected response type: {type(response)} - {response}")
-            return
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            try:
+                # Try full datetime first
+                return datetime.fromisoformat(date_str)
+            except ValueError:
+                try:
+                    # If only date, parse date only and set time to None (or keep as date only)
+                    return datetime.strptime(date_str, "%Y-%m-%d")
+                except Exception:
+                    return None
+
+        # Sort faults: unresolved first by created_at descending, then resolved by resolved_at descending
+        response.sort(key=lambda x: (
+            x.get("resolved", False),
+            # For unresolved, sort by created_at descending (-timestamp)
+            -parse_date(x["created_at"]).timestamp() if not x.get("resolved", False) and parse_date(x["created_at"]) else float('inf'),
+            # For resolved, sort by resolved_at ascending (older resolved at bottom)
+            parse_date(x["resolved_at"]).timestamp() if x.get("resolved", False) and parse_date(x["resolved_at"]) else float('inf')
+        ))
 
         fault_window = tk.Toplevel(self.root)
         fault_window.title(f"Faults for Room {room_number}")
-        fault_window.geometry("450x550")
-        fault_window.configure(bg="#f8f9fa")
+        fault_window.geometry("800x550")
+        fault_window.configure(bg="#e0e0e0")  # Slight gray background
 
-        tk.Label(fault_window, text=f"Faults - Room {room_number}",
-                font=("Arial", 14, "bold"), bg="#2C3E50", fg="white", pady=10).pack(fill=tk.X)
+        tk.Label(
+            fault_window, text=f"Faults - Room {room_number}",
+            font=("Arial", 14, "bold"), bg="#2C3E50", fg="white", pady=10
+        ).pack(fill=tk.X)
 
-        frame = tk.Frame(fault_window, bg="#f8f9fa", padx=10, pady=10)
-        frame.pack(fill="both", expand=True)
+        tree_frame = tk.Frame(fault_window, bg="#e0e0e0")
+        tree_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
-        fault_vars = {}  # {fault_id: BooleanVar}
+        columns = ("id", "description", "resolved", "created_at", "resolved_at")
+        headings = {
+            "id": "ID",
+            "description": "Description",
+            "resolved": "Resolved",
+            "created_at": "Created Date",
+            "resolved_at": "Resolved Date"
+        }
 
-        if not response:
-            tk.Label(frame, text="No faults found.", bg="#f8f9fa", font=("Arial", 12)).pack()
-        else:
-            for fault in response:
-                fault_id = fault.get("id")
-                desc = fault.get("description", "")
-                resolved = fault.get("resolved", False)
-                created_at = fault.get("created_at", None)
-                resolved_at = fault.get("resolved_at", None)
+        tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
+        for col in columns:
+            tree.heading(col, text=headings[col])
+            tree.column(col, anchor="center")
 
-                # Format timestamps nicely
-                def format_date(dt_str):
-                    if not dt_str:
-                        return "-"
-                    try:
-                        dt_obj = datetime.fromisoformat(dt_str)
-                        return dt_obj.strftime("%Y-%m-%d %H:%M")
-                    except Exception:
-                        return dt_str
+        tree.column("id", width=50)
+        tree.column("description", width=250)
+        tree.column("resolved", width=100)
+        tree.column("created_at", width=150)
+        tree.column("resolved_at", width=150)
 
-                created_at_fmt = format_date(created_at)
-                resolved_at_fmt = format_date(resolved_at)
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background="#d0d0d0")
+        style.configure("Treeview", font=("Arial", 12), rowheight=30, background="#f4f4f4", fieldbackground="#f4f4f4")
+        style.map("Treeview", background=[("selected", "#3399ff")])
 
-                var = tk.BooleanVar(value=resolved)
-                fault_vars[fault_id] = var
+        tree.tag_configure("unresolved", font=("Arial", 12, "bold"))
+        tree.tag_configure("resolved", font=("Arial", 12), foreground="gray")
 
-                fault_frame = tk.Frame(frame, bg="#f8f9fa")
-                fault_frame.pack(fill="x", pady=2, anchor="w")
+        tree.pack(fill="both", expand=True)
 
-                cb = tk.Checkbutton(fault_frame, text=desc, variable=var, bg="#f8f9fa", anchor="w",
-                                    font=("Arial", 11))
-                cb.pack(side="left", anchor="w")
+        for fault in response:
+            fault_id = fault.get("id")
+            desc = fault.get("description", "")
+            resolved = fault.get("resolved", False)
+            created_at_dt = parse_date(fault.get("created_at"))
+            resolved_at_dt = parse_date(fault.get("resolved_at"))
 
-                # Show timestamps as labels to the right of checkbox
-                ts_label = tk.Label(fault_frame, text=f"Created: {created_at_fmt} | Resolved: {resolved_at_fmt}",
-                                    bg="#f8f9fa", font=("Arial", 9), fg="gray")
-                ts_label.pack(side="left", padx=10)
+            resolved_display = "Done✅" if resolved else "Pending"
+            created_str = created_at_dt.strftime("%Y-%m-%d %H:%M") if created_at_dt else "-"
+            resolved_str = resolved_at_dt.strftime("%Y-%m-%d %H:%M") if resolved_at_dt else "-"
 
-        def save_fault_updates():
-            updates = []
-            for fid, var in fault_vars.items():
-                updates.append({"id": fid, "resolved": var.get()})
+            tag = "resolved" if resolved else "unresolved"
 
-            save_response = api_request("/rooms/faults/update", method="PUT", data=updates, token=self.token)
+            tree.insert(
+                "", "end",
+                values=(fault_id, desc, resolved_display, created_str, resolved_str),
+                tags=(tag,)
+            )
 
-            if save_response is not None:
-                messagebox.showinfo("Success", "Fault statuses updated successfully.")
-                fault_window.destroy()
+        def resolve_selected():
+            selected_item = tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Warning", "Please select a fault to resolve")
+                return
+
+            item = tree.item(selected_item[0])
+            fault_id = item["values"][0]
+            current_status = item["values"][2]
+
+            if current_status == "Done✅":
+                messagebox.showinfo("Info", "This fault is already resolved.")
+                return
+
+            update_data = [{"id": fault_id, "resolved": True}]
+            save_response = api_request("/rooms/faults/update", method="PUT", data=update_data, token=self.token)
+
+            if save_response:
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+                tree.set(selected_item[0], column="resolved", value="Done✅")
+                tree.set(selected_item[0], column="resolved_at", value=now_str)
+                tree.item(selected_item[0], tags=("resolved",))
             else:
-                messagebox.showerror("Error", "Failed to update faults.")
+                messagebox.showerror("Error", "Failed to update fault status.")
 
-        if fault_vars:
-            tk.Button(fault_window, text="Save", command=save_fault_updates, bg="#007bff", fg="white",
-                    font=("Arial", 12), pady=5).pack(pady=10)
+        btn_frame = ctk.CTkFrame(fault_window, fg_color="#e0e0e0")  # Use CTkFrame for styling consistency
+        btn_frame.pack(pady=10)
+
+        resolve_button = ctk.CTkButton(
+            btn_frame, text="Resolve Selected", command=resolve_selected,
+            fg_color="#28a745", hover_color="#218838", text_color="white",
+            font=("Arial", 12), corner_radius=8, width=150, height=40
+        )
+        resolve_button.pack(side="left", padx=10)
+
+        close_button = ctk.CTkButton(
+            btn_frame, text="Close", command=fault_window.destroy,
+            fg_color="#8B0000", hover_color="#A52A2A", text_color="white",
+            font=("Arial", 12), corner_radius=8, width=100, height=40
+        )
+        close_button.pack(side="left", padx=10)
+
+
 
 
 

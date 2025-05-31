@@ -22,9 +22,19 @@ from app.rooms.schemas import FaultUpdate
 from datetime import date
 from loguru import logger
 import os
+
+
+import pytz
+from sqlalchemy.sql import func
+
+
+
+
 router = APIRouter()
 
-
+def get_local_time():
+    lagos_tz = pytz.timezone("Africa/Lagos")
+    return datetime.now(lagos_tz)
 
 # Set up logging
 logger.add("app.log", rotation="500 MB", level="DEBUG")
@@ -157,17 +167,15 @@ def list_available_rooms(db: Session = Depends(get_db)):
 
 
 @router.put("/faults/update")
-
-#@router.put("/rooms/faults/update")
 def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
-    print("Received data:", faults)  # Or use logging
+    print("Received data:", faults)
     for fault in faults:
         db_fault = db.query(RoomFault).filter(RoomFault.id == fault.id).first()
         if db_fault:
             if db_fault.resolved != fault.resolved:
                 db_fault.resolved = fault.resolved
                 if fault.resolved:
-                    db_fault.resolved_at = datetime.utcnow()
+                    db_fault.resolved_at = get_local_time()
                 else:
                     db_fault.resolved_at = None
     db.commit()
@@ -177,7 +185,17 @@ def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
 @router.get("/{room_number}/faults", response_model=List[RoomFaultOut])
 def get_room_faults(room_number: str, db: Session = Depends(get_db)):
     faults = db.query(RoomFault).filter(func.lower(RoomFault.room_number) == room_number.lower()).all()
-    return faults  # Always return a list, even if empty
+    return [
+        {
+            "id": f.id,
+            "room_number": f.room_number,
+            "description": f.description,
+            "resolved": f.resolved,
+            "created_at": f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None,
+            "resolved_at": f.resolved_at.strftime('%Y-%m-%d %H:%M') if f.resolved_at else None
+        }
+        for f in faults
+    ]
 
 
 @router.put("/{room_number}")
@@ -263,6 +281,7 @@ def update_room(
             ]
         }
     }
+
 
 
 

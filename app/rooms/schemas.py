@@ -56,11 +56,14 @@ class RoomFaultOut(BaseModel):
     room_number: str
     description: str
     resolved: bool
-    created_at: date
-    resolved_at: Optional[date] = None
+    created_at: datetime  # include time and timezone
+    resolved_at: Optional[datetime] = None  # changed here
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.strftime('%Y-%m-%d %H:%M') if v else None
+        }
 
 
 
