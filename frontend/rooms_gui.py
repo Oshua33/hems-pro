@@ -28,15 +28,27 @@ class RoomManagement:
     def apply_grid_effect(self, tree=None):
         if tree is None:
             tree = self.tree  # Default to main tree if none is provided
-        
-        for i, item in enumerate(tree.get_children()):
-            if i % 2 == 0:
-                tree.item(item, tags=("evenrow",))
-            else:
-                tree.item(item, tags=("oddrow",))
 
+        for i, item in enumerate(tree.get_children()):
+            # Get existing tags as a list
+            existing_tags = list(tree.item(item, "tags"))
+            
+            # Remove any old 'evenrow' or 'oddrow' tags first (optional cleanup)
+            existing_tags = [tag for tag in existing_tags if tag not in ("evenrow", "oddrow")]
+
+            # Append the new tag
+            if i % 2 == 0:
+                existing_tags.append("evenrow")
+            else:
+                existing_tags.append("oddrow")
+
+            # Set the updated tags back on the item
+            tree.item(item, tags=existing_tags)
+
+        # Configure tag styles for background colors only
         tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
         tree.tag_configure("oddrow", background="white")
+
 
         # Style Configuration
         style = ttk.Style()
@@ -436,6 +448,57 @@ class RoomManagement:
                 tags=(tag,)
             )
 
+            # Apply grid effect first (assumed to be your row-style helper)
+            self.apply_grid_effect(tree)
+
+            # Reapply specific tag styles after apply_grid_effect, in case they were overridden
+            tree.tag_configure("unresolved", font=("Arial", 12, "bold"))
+            tree.tag_configure("resolved", font=("Arial", 12), foreground="gray")
+
+
+
+        def unresolve_selected():
+            selected_item = tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Warning", "Please select a fault to unresolve")
+                return
+
+            item = tree.item(selected_item[0])
+            fault_id = item["values"][0]
+            current_status = item["values"][2]
+
+            if current_status != "Done✅":
+                messagebox.showinfo("Info", "This fault is already unresolved.")
+                return
+
+            update_data = [{"id": fault_id, "resolved": False}]
+            save_response = api_request("/rooms/faults/update", method="PUT", data=update_data, token=self.token)
+
+            if save_response:
+                tree.set(selected_item[0], column="resolved", value="Pending")
+                tree.set(selected_item[0], column="resolved_at", value="-")
+                tree.item(selected_item[0], tags=("unresolved",))
+
+                # If room was marked 'available' when all faults resolved, you might want to update room status accordingly
+                # For example, set status to 'maintenance' or another appropriate status if there's at least one unresolved fault
+                any_unresolved = any(tree.set(child, "resolved") == "Pending" for child in tree.get_children())
+                if any_unresolved:
+                    status_update = api_request(
+                        f"/rooms/{room_number}/status",
+                        method="PUT",
+                        data={"status": "maintenance"},  # or your appropiate status for faults present
+                        token=self.token
+                    )
+                    if status_update:
+                        messagebox.showinfo("Room Updated", f"Room {room_number} set to 'maintenance' due to unresolved faults.")
+                    else:
+                        messagebox.showerror("Error", "Failed to update room status.")
+
+            else:
+                messagebox.showerror("Error", "Failed to update fault status.")
+
+
+
         def resolve_selected():
             selected_item = tree.selection()
             if not selected_item:
@@ -476,21 +539,37 @@ class RoomManagement:
             else:
                 messagebox.showerror("Error", "Failed to update fault status.")
 
-        # Button frame
+
+
+        # Example: assume self.user_role stores current user's role
+        is_admin = getattr(self, "user_role", "").lower() == "admin"
+
         btn_frame = ctk.CTkFrame(fault_window, fg_color="#e0e0e0")
         btn_frame.pack(pady=10)
+
+        button_width = 120
+        button_height = 35
+        button_font = ("Arial", 12)
 
         resolve_button = ctk.CTkButton(
             btn_frame, text="Resolve Selected", command=resolve_selected,
             fg_color="#28a745", hover_color="#218838", text_color="white",
-            font=("Arial", 12), corner_radius=8, width=150, height=40
+            font=button_font, corner_radius=8, width=button_width, height=button_height
         )
         resolve_button.pack(side="left", padx=10)
+
+        if is_admin:
+            unresolve_button = ctk.CTkButton(
+                btn_frame, text="Unresolve Selected", command=unresolve_selected,
+                fg_color="#dc3545", hover_color="#c82333", text_color="white",
+                font=button_font, corner_radius=8, width=button_width, height=button_height
+            )
+            unresolve_button.pack(side="left", padx=10)
 
         close_button = ctk.CTkButton(
             btn_frame, text="Close", command=fault_window.destroy,
             fg_color="#8B0000", hover_color="#A52A2A", text_color="white",
-            font=("Arial", 12), corner_radius=8, width=100, height=40
+            font=button_font, corner_radius=8, width=button_width, height=button_height
         )
         close_button.pack(side="left", padx=10)
 
