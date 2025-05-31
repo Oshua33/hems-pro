@@ -169,6 +169,9 @@ def list_available_rooms(db: Session = Depends(get_db)):
 @router.put("/faults/update")
 def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
     print("Received data:", faults)
+
+    updated_room_numbers = set()
+
     for fault in faults:
         db_fault = db.query(RoomFault).filter(RoomFault.id == fault.id).first()
         if db_fault:
@@ -178,8 +181,24 @@ def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
                     db_fault.resolved_at = get_local_time()
                 else:
                     db_fault.resolved_at = None
+                updated_room_numbers.add(db_fault.room_number)
+
+    # ✅ Check each affected room — if all faults are resolved, set status to "available"
+    for room_number in updated_room_numbers:
+        unresolved = db.query(RoomFault).filter(
+            RoomFault.room_number == room_number,
+            RoomFault.resolved == False
+        ).first()
+
+        if not unresolved:
+            room = db.query(room_models.Room).filter(room_models.Room.room_number == room_number).first()
+            if room and room.status == "maintenance":
+                room.status = "available"
+
     db.commit()
+
     return {"message": "Faults updated successfully"}
+
 
 
 @router.get("/{room_number}/faults", response_model=List[RoomFaultOut])
@@ -259,6 +278,16 @@ def update_room(
                     resolved=fault_data.resolved if fault_data.resolved is not None else False
                 )
                 db.add(new_fault)
+
+        # ✅ Automatically set room status to "available" if all faults are resolved
+    unresolved_faults = db.query(room_models.RoomFault).filter(
+        room_models.RoomFault.room_number == room.room_number,
+        room_models.RoomFault.resolved == False
+    ).all()
+
+    if not unresolved_faults and room.status == "maintenance":
+        room.status = "available"
+        
 
     db.commit()
     db.refresh(room)

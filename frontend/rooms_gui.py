@@ -596,7 +596,8 @@ class RoomManagement:
             load_fault_items()
             maintenance_frame.pack(fill="x", pady=5)
 
-        def submit_update():
+        def submit_update(original_room_number=room_number):
+
             new_room_number = room_number_entry.get()
             new_room_type = room_type_entry.get()
             new_amount = amount_entry.get()
@@ -640,7 +641,8 @@ class RoomManagement:
 
                 data["faults"] = faults
 
-            response = api_request(f"/rooms/{room_number}", "PUT", data, self.token)
+            response = api_request(f"/rooms/{original_room_number}", "PUT", data, self.token)
+
             if response:
                 messagebox.showinfo("Success", "Room updated successfully")
                 update_window.destroy()
