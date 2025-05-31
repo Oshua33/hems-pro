@@ -15,7 +15,7 @@ from typing import List
 
 
 from app.rooms.models import RoomFault  # Not app.models.room
-from app.rooms.schemas import RoomFaultOut  # Not app.schemas.room
+from app.rooms.schemas import RoomFaultOut , RoomStatusUpdate # Not app.schemas.room
 from app.rooms.schemas import FaultUpdate
 
 
@@ -169,6 +169,9 @@ def list_available_rooms(db: Session = Depends(get_db)):
 @router.put("/faults/update")
 def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
     print("Received data:", faults)
+
+    affected_rooms = set()
+
     for fault in faults:
         db_fault = db.query(RoomFault).filter(RoomFault.id == fault.id).first()
         if db_fault:
@@ -178,7 +181,26 @@ def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
                     db_fault.resolved_at = get_local_time()
                 else:
                     db_fault.resolved_at = None
+            affected_rooms.add(db_fault.room_number)
+
     db.commit()
+
+    # ✅ Re-check all faults for affected rooms
+    for room_number in affected_rooms:
+        unresolved = db.query(RoomFault).filter(
+            RoomFault.room_number == room_number,
+            RoomFault.resolved == False
+        ).first()
+
+        room = db.query(room_models.Room).filter(
+            room_models.Room.room_number == room_number
+        ).first()
+
+        if room:
+            if not unresolved and room.status == "maintenance":
+                room.status = "available"
+    db.commit()
+
     return {"message": "Faults updated successfully"}
 
 
@@ -196,6 +218,29 @@ def get_room_faults(room_number: str, db: Session = Depends(get_db)):
         }
         for f in faults
     ]
+
+
+
+
+#@router.put("/rooms/{room_number}/status")
+@router.put("/{room_number}/status")
+def update_room_status(
+    room_number: str,
+    status_update: RoomStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    room = db.query(room_models.Room).filter(
+        func.lower(room_models.Room.room_number) == room_number.strip().lower()
+    ).first()
+    
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    room.status = status_update.status
+    db.commit()
+    return {"message": f"Room {room_number} status updated to {status_update.status}"}
+
 
 
 @router.put("/{room_number}")
@@ -238,12 +283,10 @@ def update_room(
             raise HTTPException(status_code=400, detail="Invalid status value")
         room.status = room_update.status
 
-    # ✅ Update faults if provided
-    # ✅ Update faults if provided
+    # ✅ Process faults
     if room_update.faults is not None:
         for fault_data in room_update.faults:
             if fault_data.id is not None:
-                # Update existing fault
                 existing_fault = db.query(room_models.RoomFault).filter(
                     room_models.RoomFault.id == fault_data.id,
                     room_models.RoomFault.room_number == room.room_number
@@ -252,13 +295,23 @@ def update_room(
                     existing_fault.resolved = fault_data.resolved
                     existing_fault.description = fault_data.description
             else:
-                # Always allow new fault entry, even with same description
                 new_fault = room_models.RoomFault(
                     room_number=room.room_number,
                     description=fault_data.description,
                     resolved=fault_data.resolved if fault_data.resolved is not None else False
                 )
                 db.add(new_fault)
+
+    db.commit()
+
+    # ✅ Re-check all faults after commit
+    unresolved_faults = db.query(room_models.RoomFault).filter(
+        room_models.RoomFault.room_number == room.room_number,
+        room_models.RoomFault.resolved == False
+    ).all()
+
+    if not unresolved_faults:
+        room.status = "available"
 
     db.commit()
     db.refresh(room)

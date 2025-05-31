@@ -71,3 +71,7 @@ class FaultUpdate(BaseModel):
     id: int
     resolved: bool
 
+
+class RoomStatusUpdate(BaseModel):
+    status: str
+

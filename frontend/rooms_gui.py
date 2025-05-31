@@ -358,49 +358,43 @@ class RoomManagement:
             if not date_str:
                 return None
             try:
-                # Try full datetime first
                 return datetime.fromisoformat(date_str)
             except ValueError:
                 try:
-                    # If only date, parse date only and set time to None (or keep as date only)
                     return datetime.strptime(date_str, "%Y-%m-%d")
                 except Exception:
                     return None
 
-        # Sort faults: unresolved first by created_at descending, then resolved by resolved_at descending
+        # Sort faults: unresolved first by created_at desc, then resolved by resolved_at asc
         response.sort(key=lambda x: (
             x.get("resolved", False),
-            # For unresolved, sort by created_at descending (-timestamp)
             -parse_date(x["created_at"]).timestamp() if not x.get("resolved", False) and parse_date(x["created_at"]) else float('inf'),
-            # For resolved, sort by resolved_at ascending (older resolved at bottom)
             parse_date(x["resolved_at"]).timestamp() if x.get("resolved", False) and parse_date(x["resolved_at"]) else float('inf')
         ))
 
         fault_window = tk.Toplevel(self.root)
         fault_window.title(f"Faults for Room {room_number}")
         fault_window.geometry("800x550")
-        fault_window.configure(bg="#e0e0e0")  # Slight gray background
+        fault_window.configure(bg="#e0e0e0")
 
         tk.Label(
-            fault_window, text=f"Faults - Room {room_number}",
-            font=("Arial", 14, "bold"), bg="#2C3E50", fg="white", pady=10
+            fault_window,
+            text=f"Faults - Room {room_number}",
+            font=("Arial", 14, "bold"),
+            bg="#2C3E50",
+            fg="white",
+            pady=10
         ).pack(fill=tk.X)
 
+        # Treeview Frame
         tree_frame = tk.Frame(fault_window, bg="#e0e0e0")
         tree_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         columns = ("id", "description", "resolved", "created_at", "resolved_at")
-        headings = {
-            "id": "ID",
-            "description": "Description",
-            "resolved": "Resolved",
-            "created_at": "Created Date",
-            "resolved_at": "Resolved Date"
-        }
-
         tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
+
         for col in columns:
-            tree.heading(col, text=headings[col])
+            tree.heading(col, text=col.replace("_", " ").title())
             tree.column(col, anchor="center")
 
         tree.column("id", width=50)
@@ -409,16 +403,19 @@ class RoomManagement:
         tree.column("created_at", width=150)
         tree.column("resolved_at", width=150)
 
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+
         style = ttk.Style()
         style.theme_use("default")
         style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background="#d0d0d0")
-        style.configure("Treeview", font=("Arial", 12), rowheight=30, background="#f4f4f4", fieldbackground="#f4f4f4")
+        style.configure("Treeview", font=("Arial", 12), rowheight=30, background="#f4f4f4")
         style.map("Treeview", background=[("selected", "#3399ff")])
 
         tree.tag_configure("unresolved", font=("Arial", 12, "bold"))
         tree.tag_configure("resolved", font=("Arial", 12), foreground="gray")
-
-        tree.pack(fill="both", expand=True)
 
         for fault in response:
             fault_id = fault.get("id")
@@ -461,10 +458,26 @@ class RoomManagement:
                 tree.set(selected_item[0], column="resolved", value="Done✅")
                 tree.set(selected_item[0], column="resolved_at", value=now_str)
                 tree.item(selected_item[0], tags=("resolved",))
+
+                # ✅ If all faults resolved, set room status to 'available'
+                all_resolved = all(tree.set(child, "resolved") == "Done✅" for child in tree.get_children())
+                if all_resolved:
+                    status_update = api_request(
+                        f"/rooms/{room_number}/status",
+                        method="PUT",
+                        data={"status": "available"},
+                        token=self.token
+                    )
+
+                    if status_update:
+                        messagebox.showinfo("Room Updated", f"All faults resolved. Room {room_number} set to 'available'.")
+                    else:
+                        messagebox.showerror("info", "Failed to update room status to available.")
             else:
                 messagebox.showerror("Error", "Failed to update fault status.")
 
-        btn_frame = ctk.CTkFrame(fault_window, fg_color="#e0e0e0")  # Use CTkFrame for styling consistency
+        # Button frame
+        btn_frame = ctk.CTkFrame(fault_window, fg_color="#e0e0e0")
         btn_frame.pack(pady=10)
 
         resolve_button = ctk.CTkButton(
@@ -597,7 +610,6 @@ class RoomManagement:
             maintenance_frame.pack(fill="x", pady=5)
 
         def submit_update(original_room_number=room_number):
-
             new_room_number = room_number_entry.get()
             new_room_type = room_type_entry.get()
             new_amount = amount_entry.get()
@@ -613,40 +625,29 @@ class RoomManagement:
                 messagebox.showwarning("Warning", "Amount must be a number")
                 return
 
+            faults_payload = []
+            for fault_data, var in maintenance_check_vars:
+                faults_payload.append({
+                    "room_number": room_data["room_number"],
+                    "description": fault_data["description"],
+                    "done": var.get()
+                })
+
+
             data = {
-                "room_number": str(new_room_number),
-                "room_type": new_room_type,
-                "amount": new_amount,
-                "status": new_status,
-                "faults": []  # Add this line
+                "room_type": room_type_entry.get(),
+                "amount": float(amount_entry.get()),
+                "status": status_entry.get(),
+                "faults": faults_payload
             }
 
+            update_response = api_request(f"/rooms/{original_room_number}", method="PUT", data=data, token=self.token)
 
-            if new_status == "maintenance":
-                faults = []
-                room_number = room_number_entry.get().strip()
-
-                for fault_dict, done_var in maintenance_check_vars:
-                    description = fault_dict.get("description", "").strip()
-                    if description:
-                        faults.append({
-                            "description": description,
-                            "done": done_var.get(),
-                            "room_number": room_number
-                        })
-
-                data["faults"] = faults
-
-
-
-                data["faults"] = faults
-
-            response = api_request(f"/rooms/{original_room_number}", "PUT", data, self.token)
-
-            if response:
+            if update_response:
                 messagebox.showinfo("Success", "Room updated successfully")
                 update_window.destroy()
-                self.fetch_rooms()
+                #self.load_rooms()  # or self.display_rooms() — depending on what you named it
+
             else:
                 messagebox.showerror("Error", "Failed to update room")
 
