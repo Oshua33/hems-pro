@@ -105,16 +105,21 @@ class Dashboard(ctk.CTk):
         center_title.bind("<Enter>", on_enter)
         center_title.bind("<Leave>", on_leave)
 
-        # === SIDEBAR ===
-        self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=180, bd=2, relief=tk.RIDGE)
+       # === SIDEBAR ===
+        self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=100, bd=2, relief=tk.RIDGE)
         self.sidebar_container.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
         menu_title = tk.Label(self.sidebar_container, text="MENU", fg="white", bg="#2C3E50",
-                              font=("Arial", 14, "bold"))
-        menu_title.pack(pady=10)
+                            font=("Arial", 14, "bold"))
+        menu_title.pack(pady=8)
 
         self.sidebar = tk.Frame(self.sidebar_container, bg="#34495E", bd=2, relief=tk.GROOVE)
-        self.sidebar.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.sidebar.pack(fill=tk.BOTH, expand=True, padx=8, pady=5)
+
+        # === Uniform Button Style ===
+        button_font = ("Arial", 12)
+        button_padx = 6
+        button_pady = 6
 
         menu_items = [
             ("👤 Users", self.manage_users),
@@ -126,7 +131,8 @@ class Dashboard(ctk.CTk):
 
         for text, command in menu_items:
             btn = tk.Button(self.sidebar, text=text, command=command, fg="white", bg="#2C3E50",
-                            font=("Arial", 12), relief=tk.RAISED, padx=10, pady=8, anchor="w", bd=2)
+                            font=button_font, relief=tk.RAISED,
+                            padx=button_padx, pady=button_pady, anchor="w", bd=2)
             btn.pack(fill=tk.X, pady=5, padx=10)
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
             btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#2C3E50"))
@@ -135,25 +141,22 @@ class Dashboard(ctk.CTk):
         self.reservation_alert_btn = tk.Button(
             self.sidebar,
             text="🔔 Reserve Alert",
-            command=self.open_reservation_alert,  # Your existing function
-            fg="white", bg="#7f8c8d",  # Default gray
-            font=("Arial", 12, "bold"),
-            relief=tk.RAISED, padx=5, pady=6, anchor="w", bd=2
+            command=self.open_reservation_alert,
+            fg="white", bg="#F82710",  # Red alert color
+            font=button_font,
+            relief=tk.RAISED,
+            padx=button_padx, pady=button_pady, anchor="w", bd=2
         )
-        self.reservation_alert_btn.pack(fill=tk.X, pady=4, padx=5)
+        self.reservation_alert_btn.pack(fill=tk.X, pady=5, padx=10)
 
-        # Start background alert check
-        self.schedule_reservation_check()
-
+        # === LOGOUT BUTTON (darker red) ===
         logout_btn = tk.Button(
             self.sidebar, text="🚪 Logout", command=self.logout, fg="white",
-            bg="#B03A2E", font=("Arial", 12), relief=tk.RAISED,
-            padx=10, pady=8, anchor="w", bd=2
+            bg="#641A12",  # Slightly darker red
+            font=button_font, relief=tk.RAISED,
+            padx=button_padx, pady=button_pady, anchor="w", bd=2
         )
-        logout_btn.pack(fill=tk.X, pady=20, padx=10)
-        logout_btn.bind("<Enter>", lambda e: logout_btn.config(bg="#922B21"))
-        logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#B03A2E"))
-
+        logout_btn.pack(fill=tk.X, pady=5, padx=10)
 
     # === RESERVATION ALERT CHECK ===
     def check_reservation_alert(self):

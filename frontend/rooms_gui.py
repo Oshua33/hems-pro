@@ -475,13 +475,13 @@ class RoomManagement:
             save_response = api_request("/rooms/faults/update", method="PUT", data=update_data, token=self.token)
 
             if save_response:
-                tree.set(selected_item[0], column="resolved", value="Pending")
-                tree.set(selected_item[0], column="resolved_at", value="-")
+                tree.set(selected_item[0], column="Resolved", value="Pending")
+                tree.set(selected_item[0], column="Resolved_at", value="-")
                 tree.item(selected_item[0], tags=("unresolved",))
 
                 # If room was marked 'available' when all faults resolved, you might want to update room status accordingly
                 # For example, set status to 'maintenance' or another appropriate status if there's at least one unresolved fault
-                any_unresolved = any(tree.set(child, "resolved") == "Pending" for child in tree.get_children())
+                any_unresolved = any(tree.set(child, "Resolved") == "Pending" for child in tree.get_children())
                 if any_unresolved:
                     status_update = api_request(
                         f"/rooms/{room_number}/status",
@@ -518,12 +518,12 @@ class RoomManagement:
 
             if save_response:
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-                tree.set(selected_item[0], column="resolved", value="Done✅")
-                tree.set(selected_item[0], column="resolved_at", value=now_str)
+                tree.set(selected_item[0], column="Resolved", value="Done✅")
+                tree.set(selected_item[0], column="Resolved_at", value=now_str)
                 tree.item(selected_item[0], tags=("resolved",))
 
                 # ✅ If all faults resolved, set room status to 'available'
-                all_resolved = all(tree.set(child, "resolved") == "Done✅" for child in tree.get_children())
+                all_resolved = all(tree.set(child, "Resolved") == "Done✅" for child in tree.get_children())
                 if all_resolved:
                     status_update = api_request(
                         f"/rooms/{room_number}/status",
