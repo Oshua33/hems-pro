@@ -83,3 +83,20 @@ class CheckInUpdateSchema(BaseModel):
     phone_number: str
 
 
+class BookingOut(BaseModel):
+    id: int
+    room_number: str
+    guest_name: str
+    address: str
+    arrival_date: date
+    departure_date: date
+    booking_type: Literal["checked-in", "reservation", "complimentary"]
+    phone_number: str
+    status: Optional[str] = "reserved"
+    payment_status: Optional[str] = "pending"
+    number_of_days: Optional[int] = None  # ✅ supported and computed
+    booking_cost: Optional[float] = None
+    created_by: str
+    
+    class Config:
+        from_attributes = True

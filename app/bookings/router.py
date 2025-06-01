@@ -11,6 +11,7 @@ from sqlalchemy import and_
 from app.rooms import models as room_models  # Import room models
 from app.bookings import schemas, models as  booking_models
 from app.payments import models as payment_models
+from app.bookings.schemas import BookingOut
 from loguru import logger
 from datetime import datetime
 import os
@@ -200,7 +201,48 @@ def create_booking(
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
    
-    
+
+
+@router.get("/reservation-alerts", response_model=list[BookingOut])
+def get_reservation_alerts(db: Session = Depends(get_db)):
+    try:
+        today = date.today()
+
+        reservations = (
+            db.query(booking_models.Booking)
+            .filter(
+                booking_models.Booking.status == "reserved",
+                booking_models.Booking.deleted == False,
+                booking_models.Booking.arrival_date >= today  # Only today and future
+            )
+            .order_by(booking_models.Booking.arrival_date)
+            .all()
+        )
+
+        return [
+            BookingOut(
+                id=r.id,
+                room_number=r.room.room_number if r.room else "N/A",
+                guest_name=r.guest_name,
+                address=r.address,
+                arrival_date=r.arrival_date,
+                departure_date=r.departure_date,
+                booking_type=r.booking_type,
+                phone_number=r.phone_number,
+                status=r.status,
+                payment_status=r.payment_status,
+                number_of_days=r.number_of_days,
+                booking_cost=r.booking_cost,
+                created_by=r.created_by
+            )
+            for r in reservations
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching reservations: {str(e)}")
+
+
+
+
 
 @router.get("/list")
 def list_bookings(

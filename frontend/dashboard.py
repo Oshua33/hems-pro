@@ -4,15 +4,19 @@ from users_gui import UserManagement
 from rooms_gui import RoomManagement
 from bookings_gui import BookingManagement
 from payment_gui import PaymentManagement
-from event_gui import EventManagement  
+from event_gui import EventManagement
+from reservation_alert import ReservationAlertWindow
 from utils import load_token, get_user_role
 import os
 from PIL import Image, ImageTk
+import requests
+import threading
+import time
+import customtkinter as ctk
 
-
-
-class Dashboard:
+class Dashboard(ctk.CTk):
     def __init__(self, root, username, token):
+        super().__init__()
         self.root = root
         self.username = username
         self.token = token
@@ -25,7 +29,7 @@ class Dashboard:
 
         self.root.configure(bg="#2c3e50")
 
-        # Loading label (same style as before)
+        # Loading label
         self.loading_text = "wait...loading files.... "
         self.progress = 0
         self.max_progress = 100
@@ -62,47 +66,36 @@ class Dashboard:
 
     def build_ui(self):
         self.loading_label.destroy()
-        # Your dashboard UI code here
 
-
-        
         self.user_role = get_user_role(self.token)
 
         # Set application icon
         icon_path = os.path.abspath("frontend/icon.ico")
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
-        
-        # === SOFT SHADOW HEADER EFFECT ===
 
-        # Shadow Frame (slightly offset)
-        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=40)  # Darker grey-blue
+        # === HEADER ===
+        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=40)
         self.header_shadow.pack(fill=tk.X)
 
-        # Actual Header (on top of shadow)
         self.header = tk.Frame(self.root, bg="#2C3E50", height=46)
-        self.header.place(relx=0, rely=0, relwidth=1)  # Using place() to sit above shadow
+        self.header.place(relx=0, rely=0, relwidth=1)
 
-        # Left Title
         left_title = tk.Label(self.header, text="Dashboard", fg="white", bg="#2C3E50",
-                            font=("Helvetica", 14, "bold"))
+                              font=("Helvetica", 14, "bold"))
         left_title.pack(side=tk.LEFT, padx=20, pady=10)
 
-        # Center Title (HEMS)
         center_title = tk.Label(self.header, text="🏨 H E M S", fg="gold", bg="#2C3E50",
                                 font=("Helvetica", 16, "bold"))
         center_title.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Right Title
         right_title = tk.Label(self.header, text="Hotel & Event Management System", fg="white", bg="#2C3E50",
-                            font=("Helvetica", 12))
+                               font=("Helvetica", 12))
         right_title.pack(side=tk.RIGHT, padx=20, pady=10)
 
-        # Bottom Border
         border = tk.Frame(self.root, bg="#1abc9c", height=2)
         border.pack(fill=tk.X)
 
-        # Hover Animation for Center Title
         def on_enter(event):
             center_title.config(fg="#1abc9c")
 
@@ -112,29 +105,23 @@ class Dashboard:
         center_title.bind("<Enter>", on_enter)
         center_title.bind("<Leave>", on_leave)
 
-
-
-
-        # SIDEBAR CONTAINER FRAME
+        # === SIDEBAR ===
         self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=220, bd=2, relief=tk.RIDGE)
         self.sidebar_container.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
-        # SIDEBAR MENU TITLE
-        menu_title = tk.Label(self.sidebar_container, text="MENU", fg="white", bg="#2C3E50", 
-                               font=("Arial", 14, "bold"))
+        menu_title = tk.Label(self.sidebar_container, text="MENU", fg="white", bg="#2C3E50",
+                              font=("Arial", 14, "bold"))
         menu_title.pack(pady=10)
 
-        # SIDEBAR FRAME (Inside Container)
         self.sidebar = tk.Frame(self.sidebar_container, bg="#34495E", bd=2, relief=tk.GROOVE)
         self.sidebar.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # MENU BUTTONS IN SIDEBAR WITH SYMBOLS
         menu_items = [
-            ("👤 Users", self.manage_users),         # User icon
-            ("🏨 Rooms", self.manage_rooms),         # Hotel/room icon
-            ("📅 Bookings", self.manage_bookings),   # Calendar/booking icon
-            ("💳 Payments", self.manage_payments),   # Credit card/payment icon
-            ("🎉 Events", self.manage_events),       # Celebration/event icon
+            ("👤 Users", self.manage_users),
+            ("🏨 Rooms", self.manage_rooms),
+            ("📅 Bookings", self.manage_bookings),
+            ("💳 Payments", self.manage_payments),
+            ("🎉 Events", self.manage_events),
         ]
 
         for text, command in menu_items:
@@ -144,21 +131,39 @@ class Dashboard:
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
             btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#2C3E50"))
 
-        # LOGOUT BUTTON (Under "Events" in Sidebar)
-        logout_btn = tk.Button(self.sidebar, text="🚪 Logout", command=self.logout, fg="white", 
+        # === RESERVATION ALERT BUTTON ===
+        self.reservation_alert_btn = tk.Button(self.sidebar, text="🔔 Reserve Alert", command=self.open_reservation_alert,
+
+                                               fg="white", bg="#7f8c8d", font=("Arial", 12, "bold"),
+                                               relief=tk.RAISED, padx=10, pady=8, anchor="w", bd=2)
+        self.reservation_alert_btn.pack(fill=tk.X, pady=5, padx=10)
+
+        # Start checking for reservation alerts
+    
+
+        # === LOGOUT BUTTON ===
+        logout_btn = tk.Button(self.sidebar, text="🚪 Logout", command=self.logout, fg="white",
                                bg="#E74C3C", font=("Arial", 12), relief=tk.RAISED, padx=10, pady=8, anchor="w", bd=2)
         logout_btn.pack(fill=tk.X, pady=20, padx=10)
-        logout_btn.bind("<Enter>", lambda e: logout_btn.config(bg="#C0392B"))  # Darker red on hover
-        logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#E74C3C"))  # Back to default
+        logout_btn.bind("<Enter>", lambda e: logout_btn.config(bg="#C0392B"))
+        logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#E74C3C"))
 
-        # MAIN CONTENT FRAME
+        # === MAIN CONTENT ===
         self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=4, relief=tk.RIDGE)
         self.main_content.pack(fill=tk.BOTH, expand=True, padx=2, pady=10)
 
-        welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username), 
+        welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username),
                                  fg="#2C3E50", bg="#ECF0F1", font=("Arial", 14, "bold"))
         welcome_label.pack(pady=20)
 
+    
+
+
+
+        
+
+
+    
     def manage_users(self):
         if self.user_role != "admin":
             messagebox.showerror("Access Denied", "You do not have permission to manage users.")
@@ -175,8 +180,12 @@ class Dashboard:
         PaymentManagement(self.root, self.token)
 
     def manage_events(self):
-        """Opens the Event Management window"""
         EventManagement(self.root, self.token)
+
+    def open_reservation_alert(self):
+        ReservationAlertWindow(self, self.token)
+
+
 
     def logout(self):
         self.root.destroy()
@@ -189,7 +198,7 @@ if __name__ == "__main__":
     token = load_token()
     if token:
         root = tk.Tk()
-        Dashboard(root, token)
+        Dashboard(root, "Admin", token)
         root.mainloop()
     else:
         print("No token found. Please log in.")
