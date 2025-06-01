@@ -51,7 +51,12 @@ def create_booking(
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     
-    room = db.query(room_models.Room).filter(room_models.Room.room_number == room_number).first()
+    normalized_room_number = room_number.strip().lower()
+
+    room = db.query(room_models.Room).filter(
+        func.lower(room_models.Room.room_number) == normalized_room_number
+    ).first()
+
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
@@ -104,16 +109,8 @@ def create_booking(
             detail="Complimentary bookings can only be made for today's date.",
         )
 
-    normalized_room_number = room_number.strip().lower()
-
-    room = (
-        db.query(room_models.Room)
-        .filter(func.lower(room_models.Room.room_number) == normalized_room_number)
-        .first()
-    )
-    if not room:
-        raise HTTPException(status_code=404, detail=f"Room {room_number} not found.")
-
+    
+    
     overlapping_booking = (
         db.query(booking_models.Booking)
         .filter(

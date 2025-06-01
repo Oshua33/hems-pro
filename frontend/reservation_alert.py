@@ -3,6 +3,7 @@ from tkinter import ttk
 from CTkMessagebox import CTkMessagebox
 import requests
 import tkinter as tk  # Add this import at the top of your file
+import requests
 
 
 class ReservationAlertWindow(ctk.CTkToplevel):
@@ -42,22 +43,69 @@ class ReservationAlertWindow(ctk.CTkToplevel):
     
 
     def create_ui(self):
-        self.label = ctk.CTkLabel(self, text="🔔 Reserved Bookings", font=("Arial", 16, "bold"))
-        self.label.pack(pady=10)
+        # 🔹 Set main background color (light grayish-blue for contrast)
+        self.configure(fg_color="#ecf0f3")  # Soft neutral background
 
+        # 🔹 Title Label
+        self.label = ctk.CTkLabel(
+            self,
+            text="🔔 Reserved Bookings",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#2c3e50"  # Deep blue-gray
+        )
+        self.label.pack(pady=(20, 10))
+
+        # 🔹 Table container with card style
+        table_frame = ctk.CTkFrame(
+            self,
+            corner_radius=15,
+            fg_color="white",
+            border_color="#d1d9e6",  # Soft border
+            border_width=2
+        )
+        table_frame.pack(fill="both", expand=True, padx=25, pady=15)
+
+        # 🔹 Define table columns
         columns = (
             "ID", "Room No", "Guest Name", "Address", "Arrival Date", "Departure Date",
-            "Booking Type", "Phone Number", "Payment Status", " Days",
+            "Booking Type", "Phone Number", "Payment", "Days",
             "Booking Cost", "Created By"
         )
 
-        self.tree = ttk.Treeview(self, columns=columns, show="headings")
+        # 🔹 Apply style to Treeview
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview.Heading",
+                        font=("Segoe UI", 11, "bold"),
+                        background="#dfe6ed",  # Light header background
+                        foreground="#2c3e50")  # Darker text
+        style.configure("Treeview",
+                        font=("Segoe UI", 10),
+                        rowheight=30,
+                        background="white",
+                        foreground="#34495e",
+                        fieldbackground="white",
+                        borderwidth=0)
+        style.map("Treeview", background=[("selected", "#d0e7f9")])
+
+        # 🔹 Treeview Widget
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=15
+        )
 
         for col in columns:
-            self.tree.heading(col, text=col, anchor=tk.CENTER)  # Center the header text
-            self.tree.column(col, width=80, anchor=tk.CENTER)   # Center the cell data
+            self.tree.heading(col, text=col, anchor=tk.CENTER)
+            self.tree.column(col, anchor=tk.CENTER, width=75)
 
-        self.tree.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+        self.tree.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=8)
+
+        # 🔹 Vertical scrollbar
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        scrollbar.pack(side="right", fill="y", pady=8)
+        self.tree.configure(yscrollcommand=scrollbar.set)
 
 
         
@@ -93,3 +141,8 @@ class ReservationAlertWindow(ctk.CTkToplevel):
                 CTkMessagebox(title="Error", message=f"Failed to fetch reservation data: {response.status_code}")
         except Exception as e:
             CTkMessagebox(title="Error", message=f"Error: {e}")
+
+
+    
+
+    

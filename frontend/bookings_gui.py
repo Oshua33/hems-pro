@@ -781,10 +781,6 @@ class BookingManagement:
 
 
 
-
-    import tkinter.simpledialog as simpledialog
-
-
     def search_guest(self, guest_name):
         if not hasattr(self, "entries"):
             messagebox.showerror("Error", "Form is not initialized properly.")
@@ -903,7 +899,7 @@ class BookingManagement:
             attachment_path = getattr(self, "attachment_full_path", None)
 
             data = {
-                "room_number": self.entries["Room Number"].get(),
+                "room_number": self.entries["Room Number"].get().strip().lower(),
                 "guest_name": self.entries["Guest Name"].get(),
                 "gender": self.entries["Gender"].get(),
                 "mode_of_identification": self.entries["Mode of Identification"].get(),
