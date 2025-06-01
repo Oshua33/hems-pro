@@ -106,7 +106,7 @@ class Dashboard(ctk.CTk):
         center_title.bind("<Leave>", on_leave)
 
         # === SIDEBAR ===
-        self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=220, bd=2, relief=tk.RIDGE)
+        self.sidebar_container = tk.Frame(self.root, bg="#2C3E50", width=180, bd=2, relief=tk.RIDGE)
         self.sidebar_container.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
         menu_title = tk.Label(self.sidebar_container, text="MENU", fg="white", bg="#2C3E50",
@@ -131,30 +131,65 @@ class Dashboard(ctk.CTk):
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1ABC9C"))
             btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#2C3E50"))
 
-        # === RESERVATION ALERT BUTTON ===
-        self.reservation_alert_btn = tk.Button(self.sidebar, text="🔔 Reserve Alert", command=self.open_reservation_alert,
+        # === RESERVE ALERT BUTTON ===
+        self.reservation_alert_btn = tk.Button(
+            self.sidebar,
+            text="🔔 Reserve Alert",
+            command=self.open_reservation_alert,  # Your existing function
+            fg="white", bg="#7f8c8d",  # Default gray
+            font=("Arial", 12, "bold"),
+            relief=tk.RAISED, padx=5, pady=6, anchor="w", bd=2
+        )
+        self.reservation_alert_btn.pack(fill=tk.X, pady=4, padx=5)
 
-                                               fg="white", bg="#7f8c8d", font=("Arial", 12, "bold"),
-                                               relief=tk.RAISED, padx=10, pady=8, anchor="w", bd=2)
-        self.reservation_alert_btn.pack(fill=tk.X, pady=5, padx=10)
+        # Start background alert check
+        self.schedule_reservation_check()
 
-        # Start checking for reservation alerts
+        logout_btn = tk.Button(
+            self.sidebar, text="🚪 Logout", command=self.logout, fg="white",
+            bg="#B03A2E", font=("Arial", 12), relief=tk.RAISED,
+            padx=10, pady=8, anchor="w", bd=2
+        )
+        logout_btn.pack(fill=tk.X, pady=20, padx=10)
+        logout_btn.bind("<Enter>", lambda e: logout_btn.config(bg="#922B21"))
+        logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#B03A2E"))
+
+
+    # === RESERVATION ALERT CHECK ===
+    def check_reservation_alert(self):
+        try:
+            response = requests.get("http://localhost:8000/bookings/reservations/alerts")
+            data = response.json()
+            #print("Reservation alert response:", data)  # 🔍 Add this line
+            has_active = data["active_reservations"]
+
+
+            if has_active:
+                #print("Reservation exists - setting red")
+                self.reservation_alert_btn.config(
+                    bg="#E74C3C", activebackground="#E74C3C"
+                )
+            else:
+                #print("No active reservations - setting gray")
+                self.reservation_alert_btn.config(
+                    bg="#7f8c8d", activebackground="#7f8c8d"
+                )
+
+            self.reservation_alert_btn.update_idletasks()
+
+        except Exception as e:
+            print("Failed to fetch reservation alert:", e)
+
+
+    # === SCHEDULED PERIODIC CHECK ===
+    def schedule_reservation_check(self):
+        self.check_reservation_alert()
+        self.root.after(1000, self.schedule_reservation_check)  # Check every 30 seconds
+
+    # Call the scheduler once after UI is set up (outside the method)
     
 
-        # === LOGOUT BUTTON ===
-        logout_btn = tk.Button(self.sidebar, text="🚪 Logout", command=self.logout, fg="white",
-                               bg="#E74C3C", font=("Arial", 12), relief=tk.RAISED, padx=10, pady=8, anchor="w", bd=2)
-        logout_btn.pack(fill=tk.X, pady=20, padx=10)
-        logout_btn.bind("<Enter>", lambda e: logout_btn.config(bg="#C0392B"))
-        logout_btn.bind("<Leave>", lambda e: logout_btn.config(bg="#E74C3C"))
 
-        # === MAIN CONTENT ===
-        self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=4, relief=tk.RIDGE)
-        self.main_content.pack(fill=tk.BOTH, expand=True, padx=2, pady=10)
-
-        welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username),
-                                 fg="#2C3E50", bg="#ECF0F1", font=("Arial", 14, "bold"))
-        welcome_label.pack(pady=20)
 
     
 

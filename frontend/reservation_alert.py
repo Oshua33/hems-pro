@@ -9,11 +9,37 @@ class ReservationAlertWindow(ctk.CTkToplevel):
     def __init__(self, parent, token):
         super().__init__(parent)
         self.title("Reservation Alerts")
-        self.geometry("1150x500")
+        self.geometry("1000x500")
         self.token = token
 
         self.create_ui()
         self.load_reservations()
+
+
+    def apply_grid_effect(self, tree=None):
+        if tree is None:
+            tree = self.tree  # Default to main tree if none is provided
+
+        for i, item in enumerate(tree.get_children()):
+            # Get existing tags as a list
+            existing_tags = list(tree.item(item, "tags"))
+            
+            # Remove any old 'evenrow' or 'oddrow' tags first (optional cleanup)
+            existing_tags = [tag for tag in existing_tags if tag not in ("evenrow", "oddrow")]
+
+            # Append the new tag
+            if i % 2 == 0:
+                existing_tags.append("evenrow")
+            else:
+                existing_tags.append("oddrow")
+
+            # Set the updated tags back on the item
+            tree.item(item, tags=existing_tags)
+
+        # Configure tag styles for background colors only
+        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("oddrow", background="white")
+    
 
     def create_ui(self):
         self.label = ctk.CTkLabel(self, text="🔔 Reserved Bookings", font=("Arial", 16, "bold"))
@@ -29,13 +55,12 @@ class ReservationAlertWindow(ctk.CTkToplevel):
 
         for col in columns:
             self.tree.heading(col, text=col, anchor=tk.CENTER)  # Center the header text
-            self.tree.column(col, width=90, anchor=tk.CENTER)   # Center the cell data
+            self.tree.column(col, width=80, anchor=tk.CENTER)   # Center the cell data
 
         self.tree.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
 
-
-
+        
     def load_reservations(self):
         url = "http://127.0.0.1:8000/bookings/reservation-alerts"  # Updated to match backend prefix
         headers = {"Authorization": f"Bearer {self.token}"}
@@ -62,6 +87,8 @@ class ReservationAlertWindow(ctk.CTkToplevel):
                         item.get("booking_cost", ""),
                         item.get("created_by", "")
                     ))
+
+                    self.apply_grid_effect()
             else:
                 CTkMessagebox(title="Error", message=f"Failed to fetch reservation data: {response.status_code}")
         except Exception as e:

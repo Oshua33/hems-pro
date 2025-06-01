@@ -200,7 +200,24 @@ def create_booking(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-   
+
+@router.get("/reservations/alerts")
+def get_active_reservations(db: Session = Depends(get_db)):
+    today = date.today()
+    reservations = db.query(booking_models.Booking).filter(
+        booking_models.Booking.status == "reserved",
+        booking_models.Booking.arrival_date >= today  # ← fixed field name
+    ).all()
+
+    print(f"Today: {today}")
+    print(f"Reservations found: {len(reservations)}")
+    for r in reservations:
+        print(f"Booking: {r.id}, Status: {r.status}, Arrival Date: {r.arrival_date}")
+
+    return {"active_reservations": len(reservations) > 0}
+
+
+
 
 
 @router.get("/reservation-alerts", response_model=list[BookingOut])
@@ -669,6 +686,25 @@ def update_booking(
 
     try:
         today = date.today()
+
+        # ✅ Add these validations like in the create endpoint
+        if departure_date <= arrival_date:
+            raise HTTPException(
+                status_code=400,
+                detail="Departure date must be later than the arrival date.",
+            )
+
+        if booking_type == "checked-in" and arrival_date != today:
+            raise HTTPException(
+                status_code=400,
+                detail="Checked-in bookings can only be created for today's date.",
+            )
+
+        if booking_type == "reservation" and arrival_date <= today:
+            raise HTTPException(
+                status_code=400,
+                detail="Reservation bookings must be scheduled for a future date.",
+            )
 
        
 

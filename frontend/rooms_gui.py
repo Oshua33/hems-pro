@@ -402,18 +402,18 @@ class RoomManagement:
         tree_frame = tk.Frame(fault_window, bg="#e0e0e0")
         tree_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
-        columns = ("id", "description", "resolved", "created_at", "resolved_at")
+        columns = ("Id", "Fault Description", "Resolved", "Created_at", "Resolved_at")
         tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
 
         for col in columns:
             tree.heading(col, text=col.replace("_", " ").title())
             tree.column(col, anchor="center")
 
-        tree.column("id", width=50)
-        tree.column("description", width=250)
-        tree.column("resolved", width=100)
-        tree.column("created_at", width=150)
-        tree.column("resolved_at", width=150)
+        tree.column("Id", width=50)
+        tree.column("Fault Description", width=250)
+        tree.column("Resolved", width=100)
+        tree.column("Created_at", width=150)
+        tree.column("Resolved_at", width=150)
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=vsb.set)
