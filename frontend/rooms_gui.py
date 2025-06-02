@@ -230,6 +230,12 @@ class RoomManagement:
 
         tree = ttk.Treeview(content_frame, columns=("Room Number", "Room Type", "Amount"), show="headings")
 
+        style.map("Treeview", background=[("selected", "#810808F1")])
+
+        # Define a tag style for maintenance rows
+        tree.tag_configure("maintenance", background="#4b1e1e", foreground="yellow")  # Dark red bg, yellow text
+
+
         for col in ("Room Number", "Room Type", "Amount"):
             tree.heading(col, text=col, anchor="center")
             tree.column(col, anchor="center", width=180)
@@ -237,19 +243,16 @@ class RoomManagement:
         for room in available_rooms:
             status = room.get("status")
 
+            symbol = "⚠️" if status == "maintenance" else ""
+            room_number = f"{symbol} {room['room_number']}".strip()
+            room_type = room['room_type']
+            amount = room['amount']
+
             if status == "maintenance":
-                # Surround each field with warning symbol
-                symbol = "⚠️"
-                room_number = f"{symbol} {room['room_number']}"
-                room_type = f"{room['room_type']}"
-                amount = f"{room['amount']}"
-
+                tree.insert("", tk.END, values=(room_number, room_type, amount), tags=("maintenance",))
             else:
-                room_number = room['room_number']
-                room_type = room['room_type']
-                amount = room['amount']
+                tree.insert("", tk.END, values=(room_number, room_type, amount))
 
-            tree.insert("", tk.END, values=(room_number, room_type, amount))
 
         tree.pack(padx=10, pady=10, fill="both", expand=True)
 
