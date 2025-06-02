@@ -594,11 +594,6 @@ class BookingManagement:
     
 
 
-
-
-
-
-
     def create_booking(self, booking_data=None):
         """Opens a pop-up window for creating or updating a booking with CustomTkinter."""
         self.clear_right_frame()
@@ -1834,12 +1829,174 @@ class BookingManagement:
         x_scroll.pack(fill=tk.X)
         self.tree.configure(xscroll=x_scroll.set)
 
+        # --- View Booking Button using CustomTkinter ---
+        view_button = ctk.CTkButton(
+            frame,
+            text="View Booking",
+            corner_radius=20,
+            command=self.view_selected_guest_Status
+        )
+        view_button.pack(pady=3)
+
+
         # ✅ Add Label for Total Booking Cost at the Bottom
         self.total_cost_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
         self.total_cost_label.pack(pady=10)  # Placed at the bottom
 
         self.total_entries_label = tk.Label(frame, text="Total Entries: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="green")
         self.total_entries_label.pack()
+
+        
+    def view_selected_guest_Status(self):
+        #selected_item = self.tree.focus()
+
+        if hasattr(self, "tree"):
+            selected_item = self.tree.focus()
+        else:
+            messagebox.showerror("Error", "Booking list not available.")
+            return
+
+
+        booking_data = self.tree.item(selected_item)["values"]
+
+
+        field_names = [
+            "ID", "Room", "Guest Name", "Gender", "Booking Cost", "Arrival",
+            "Departure", "Status", "Number of Days", "Booking Type", "Phone Number", "Booking Date",
+            "Payment Status", "Mode of Identification", "Identification Number",
+            "Address", "Vehicle No", "Attachment", "Created By"
+        ]
+
+        popup = ctk.CTkToplevel(self.root)
+        popup.title("Guest Booking Details")
+        popup.geometry("700x500+100+20")
+        popup.configure(fg_color="white")
+        popup.grab_set()
+
+        hotel_label = ctk.CTkLabel(
+            popup, text=HOTEL_NAME, font=("Arial", 17, "bold"), text_color="#0f2e4d"
+        )
+        hotel_label.pack(pady=(10, 0))
+
+        title_label = ctk.CTkLabel(
+            popup,
+            text="Guest Booking Details",
+            font=("Arial", 15, "bold"),
+            text_color="#1e3d59"
+        )
+        title_label.pack(pady=(5, 10))
+
+        content_frame = ctk.CTkFrame(
+            popup,
+            fg_color="white",
+            border_color="#cccccc",
+            border_width=1,
+            corner_radius=12
+        )
+        content_frame.pack(fill="both", expand=False, padx=15, pady=(5, 10))
+
+        content_frame.grid_columnconfigure(0, weight=0)
+        content_frame.grid_columnconfigure(1, weight=0)
+        content_frame.grid_columnconfigure(2, weight=0)
+        content_frame.grid_columnconfigure(3, weight=0)
+
+        rows = []
+        attachment_url = None
+
+        for idx, (field, value) in enumerate(zip(field_names, booking_data)):
+            col = 0 if idx < 10 else 2
+            row = idx % 10
+
+            label_field = ctk.CTkLabel(
+                content_frame,
+                text=f"{field}:",
+                font=("Arial", 12, "bold"),
+                text_color="#2c3e50",
+                anchor="w"
+            )
+            label_field.grid(row=row, column=col, sticky="w", padx=(20, 15), pady=3)
+
+            label_value = ctk.CTkLabel(
+                content_frame,
+                text=str(value),
+                font=("Arial", 12),
+                text_color="#34495e",
+                anchor="w",
+                wraplength=240
+            )
+            label_value.grid(row=row, column=col + 1, sticky="w", padx=(0, 25), pady=3)
+
+            rows.append((field, value))
+
+            if field.lower() == "attachment" and value:
+                attachment_url = value
+
+        # --- Optional: Display Attachment as Image Preview (top-right corner) ---
+        if attachment_url:
+            try:
+                filename = os.path.basename(attachment_url)
+                url = f"http://127.0.0.1:8000/files/attachments/{filename}"
+                response = requests.get(url)
+
+                img = Image.open(BytesIO(response.content))
+                img = img.convert("RGBA")
+                ctk_image = CTkImage(light_image=img, size=(120, 120))
+
+                attachment_preview = ctk.CTkLabel(
+                    master=popup,
+                    image=ctk_image,
+                    text="",
+                    width=120,
+                    height=120
+                )
+                attachment_preview.image = ctk_image
+                attachment_preview.place(x=600, y=20)
+            except Exception as e:
+                print("")
+
+        # --- Action Buttons ---
+        button_frame = ctk.CTkFrame(popup, fg_color="white")
+        button_frame.pack(pady=(10, 15))
+
+        pdf_button = ctk.CTkButton(
+            master=button_frame,
+            text="Print Details",
+            command=lambda: self.export_booking_to_pdf(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        pdf_button.grid(row=0, column=0, padx=5)
+
+        guest_form_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Guest Form",
+            command=lambda: self.export_guest_form(rows),
+            fg_color="#1e3d59",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        guest_form_btn.grid(row=0, column=1, padx=5)
+
+        close_btn = ctk.CTkButton(
+            master=button_frame,
+            text="Close",
+            command=popup.destroy,
+            fg_color="#cc0000",
+            text_color="white",
+            corner_radius=20,
+            font=("Arial", 12, "bold"),
+            width=120,
+            height=25
+        )
+        close_btn.grid(row=0, column=2, padx=5)
+    
 
 
 

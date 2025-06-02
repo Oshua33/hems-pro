@@ -193,14 +193,6 @@ class Dashboard(ctk.CTk):
     
 
 
-
-    
-
-
-
-        
-
-
     
     def manage_users(self):
         if self.user_role != "admin":

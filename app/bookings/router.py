@@ -423,7 +423,7 @@ def list_bookings_by_status(
                 "booking_cost": booking.booking_cost,
                 "created_by": booking.created_by,
                 "vehicle_no": booking.vehicle_no,
-                #"attachment": booking.attachment
+                "attachment": booking.attachment
             }
             for booking in bookings
         ]
