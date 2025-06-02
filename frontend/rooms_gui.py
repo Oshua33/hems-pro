@@ -188,7 +188,7 @@ class RoomManagement:
             return
 
         available_rooms = response["available_rooms"]
-        available_rooms.sort(key=self.natural_sort_key)
+        #available_rooms.sort(key=self.natural_sort_key)
 
         # Only count rooms that are NOT under maintenance
         total_available = sum(1 for room in available_rooms if room.get("status") != "maintenance")
@@ -240,9 +240,9 @@ class RoomManagement:
             if status == "maintenance":
                 # Surround each field with warning symbol
                 symbol = "⚠️"
-                room_number = f"{symbol} {room['room_number']} {symbol}"
-                room_type = f"{symbol} {room['room_type']} {symbol}"
-                amount = f"{symbol} {room['amount']} {symbol}"
+                room_number = f"{symbol} {room['room_number']}"
+                room_type = f"{room['room_type']}"
+                amount = f"{room['amount']}"
 
             else:
                 room_number = room['room_number']

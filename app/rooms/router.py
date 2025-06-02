@@ -112,6 +112,8 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 
 
 
+import re
+
 @router.get("/available")
 def list_available_rooms(db: Session = Depends(get_db)):
     today = date.today()
@@ -158,11 +160,26 @@ def list_available_rooms(db: Session = Depends(get_db)):
         if room.status != "maintenance":
             available_count += 1
 
+    # Helper for natural ascending sort
+    def natural_sort_key(room):
+        return [int(part) if part.isdigit() else part.lower()
+                for part in re.split(r'(\d+)', room["room_number"])]
+
+    # Sort both groups separately in ascending natural order
+    available_sorted = sorted(
+        [r for r in serialized_rooms if r["status"] != "maintenance"],
+        key=natural_sort_key
+    )
+    maintenance_sorted = sorted(
+        [r for r in serialized_rooms if r["status"] == "maintenance"],
+        key=natural_sort_key
+    )
+
     return {
         "message": "Available rooms fetched successfully.",
         "total_rooms": total_rooms,
-        "total_available_rooms": available_count,  # Maintenance excluded here
-        "available_rooms": serialized_rooms,       # But included in the list
+        "total_available_rooms": available_count,
+        "available_rooms": available_sorted + maintenance_sorted,
     }
 
 
