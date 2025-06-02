@@ -250,8 +250,8 @@ def update_room(
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     room_number = room_number.lower()
     room = db.query(room_models.Room).filter(func.lower(room_models.Room.room_number) == room_number).first()
