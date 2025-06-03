@@ -136,7 +136,7 @@ class ReservationAlertWindow(ctk.CTkToplevel):
                         item.get("created_by", "")
                     ))
 
-                    self.apply_grid_effect()
+                self.apply_grid_effect()
             else:
                 CTkMessagebox(title="Error", message=f"Failed to fetch reservation data: {response.status_code}")
         except Exception as e:

@@ -56,6 +56,9 @@ class Dashboard(ctk.CTk):
             # Once at 100%, stop animation and load dashboard
             self.load_dashboard()
 
+        
+
+
     def load_dashboard(self):
         # Stop the animation if running
         if hasattr(self, 'animation_job'):
@@ -75,22 +78,22 @@ class Dashboard(ctk.CTk):
             self.root.iconbitmap(icon_path)
 
         # === HEADER ===
-        self.header_shadow = tk.Frame(self.root, bg="#1a252f", height=40)
+        self.header_shadow = tk.Frame(self.root, bg="#1E3C72", height=40)
         self.header_shadow.pack(fill=tk.X)
 
-        self.header = tk.Frame(self.root, bg="#2C3E50", height=46)
+        self.header = tk.Frame(self.root, bg="#1E3C72", height=46)
         self.header.place(relx=0, rely=0, relwidth=1)
 
-        left_title = tk.Label(self.header, text="Dashboard", fg="white", bg="#2C3E50",
+        left_title = tk.Label(self.header, text="Dashboard", fg="gold", bg="#1E3C72",
                               font=("Helvetica", 14, "bold"))
         left_title.pack(side=tk.LEFT, padx=20, pady=10)
 
-        center_title = tk.Label(self.header, text="🏨 H E M S", fg="gold", bg="#2C3E50",
+        center_title = tk.Label(self.header, text="🏨 H E M S", fg="gold", bg="#1E3C72",
                                 font=("Helvetica", 16, "bold"))
         center_title.place(relx=0.5, rely=0.5, anchor="center")
 
-        right_title = tk.Label(self.header, text="Hotel & Event Management System", fg="white", bg="#2C3E50",
-                               font=("Helvetica", 12))
+        right_title = tk.Label(self.header, text="Hotel & Event Management System", fg="white", bg="#1E3C72",
+                               font=("Helvetica", 12, "bold"))
         right_title.pack(side=tk.RIGHT, padx=20, pady=10)
 
         border = tk.Frame(self.root, bg="#1abc9c", height=2)
@@ -115,6 +118,8 @@ class Dashboard(ctk.CTk):
 
         self.sidebar = tk.Frame(self.sidebar_container, bg="#34495E", bd=2, relief=tk.GROOVE)
         self.sidebar.pack(fill=tk.BOTH, expand=True, padx=8, pady=5)
+
+        
 
         # === Uniform Button Style ===
         button_font = ("Arial", 12)
@@ -142,12 +147,16 @@ class Dashboard(ctk.CTk):
             self.sidebar,
             text="🔔 Reserve Alert",
             command=self.open_reservation_alert,
-            fg="white", bg="#F82710",  # Red alert color
+            fg="white", bg="#7f8c8d",  # Red alert color
             font=button_font,
             relief=tk.RAISED,
             padx=button_padx, pady=button_pady, anchor="w", bd=2
         )
         self.reservation_alert_btn.pack(fill=tk.X, pady=5, padx=10)
+
+        
+    
+
 
         # === LOGOUT BUTTON (darker red) ===
         logout_btn = tk.Button(
@@ -158,22 +167,46 @@ class Dashboard(ctk.CTk):
         )
         logout_btn.pack(fill=tk.X, pady=5, padx=10)
 
+        # MAIN CONTENT FRAME
+        self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=5, relief=tk.RIDGE)
+        self.main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username), 
+                                 fg="#2C3E50", bg="#ECF0F1", font=("Arial", 14, "bold"))
+        welcome_label.pack(pady=20)
+
+        self.schedule_reservation_check()
+
+
+        # Optional: example placeholder inside main content
+        placeholder = tk.Label(
+            self.main_content,
+            text="Welcome to the Dashboard!\nSelect an option from the menu.",
+            font=("Arial", 14),
+            bg="#ECF0F1",
+            fg="#2C3E50",
+            justify="center"
+        )
+        placeholder.place(relx=0.5, rely=0.5, anchor="center")
+
     # === RESERVATION ALERT CHECK ===
     def check_reservation_alert(self):
         try:
             response = requests.get("http://localhost:8000/bookings/reservations/alerts")
             data = response.json()
-            #print("Reservation alert response:", data)  # 🔍 Add this line
-            has_active = data["active_reservations"]
 
+            #print("Reservation alert response:", data)  # ✅ Add this
+            has_active = data.get("active_reservations", False)
+
+            #print("Has active reservation?", has_active)  # ✅ Add this
 
             if has_active:
-                #print("Reservation exists - setting red")
+                #print("Setting alert button to RED")
                 self.reservation_alert_btn.config(
                     bg="#E74C3C", activebackground="#E74C3C"
                 )
             else:
-                #print("No active reservations - setting gray")
+                #print("Setting alert button to GRAY")
                 self.reservation_alert_btn.config(
                     bg="#7f8c8d", activebackground="#7f8c8d"
                 )
