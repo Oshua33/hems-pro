@@ -168,6 +168,11 @@ def create_booking(
         db.commit()
         db.refresh(new_booking)
 
+        # ✅ Update room status to match booking status
+        room.status = booking_status
+        db.commit()
+
+
         return {
             "message": f"Booking created successfully for room {room.room_number}.",
             "booking_details": {

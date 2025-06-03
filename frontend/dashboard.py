@@ -43,6 +43,11 @@ class Dashboard(ctk.CTk):
         )
         self.loading_label.pack(expand=True, fill="both")
 
+
+        self.blinking = False
+        self.blink_state = True
+
+
         # Start counter animation and then load dashboard
         self.animate_loading()
         self.root.after(3000, self.load_dashboard)  # Delay before loading real UI
@@ -145,7 +150,7 @@ class Dashboard(ctk.CTk):
         # === RESERVE ALERT BUTTON ===
         self.reservation_alert_btn = tk.Button(
             self.sidebar,
-            text="🔔 Reserve Alert",
+            text="🔔 Reservation",
             command=self.open_reservation_alert,
             fg="white", bg="#7f8c8d",  # Red alert color
             font=button_font,
@@ -189,24 +194,34 @@ class Dashboard(ctk.CTk):
         )
         placeholder.place(relx=0.5, rely=0.5, anchor="center")
 
+
+    def blink_reserve_alert(self):
+        if not self.blinking:
+            return  # Stop blinking if no active reservation
+
+        if self.blink_state:
+            self.reservation_alert_btn.config(bg="#E74C3C", activebackground="#E74C3C")
+        else:
+            self.reservation_alert_btn.config(bg="#7f8c8d", activebackground="#7f8c8d")
+
+        self.blink_state = not self.blink_state
+        self.root.after(500, self.blink_reserve_alert)  # Blink every 500ms
+   
+
     # === RESERVATION ALERT CHECK ===
     def check_reservation_alert(self):
         try:
             response = requests.get("http://localhost:8000/bookings/reservations/alerts")
             data = response.json()
 
-            #print("Reservation alert response:", data)  # ✅ Add this
             has_active = data.get("active_reservations", False)
 
-            #print("Has active reservation?", has_active)  # ✅ Add this
-
             if has_active:
-                #print("Setting alert button to RED")
-                self.reservation_alert_btn.config(
-                    bg="#E74C3C", activebackground="#E74C3C"
-                )
+                if not self.blinking:
+                    self.blinking = True
+                    self.blink_reserve_alert()
             else:
-                #print("Setting alert button to GRAY")
+                self.blinking = False
                 self.reservation_alert_btn.config(
                     bg="#7f8c8d", activebackground="#7f8c8d"
                 )
@@ -220,7 +235,7 @@ class Dashboard(ctk.CTk):
     # === SCHEDULED PERIODIC CHECK ===
     def schedule_reservation_check(self):
         self.check_reservation_alert()
-        self.root.after(1000, self.schedule_reservation_check)  # Check every 30 seconds
+        self.root.after(5000, self.schedule_reservation_check)  # Check every 30 seconds
 
     # Call the scheduler once after UI is set up (outside the method)
     

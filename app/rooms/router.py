@@ -118,20 +118,15 @@ import re
 def list_available_rooms(db: Session = Depends(get_db)):
     today = date.today()
 
-    # Step 1: Get rooms not currently booked
+    # Step 1: Get rooms not booked as reserved or checked-in for today
+    unavailable_room_numbers = db.query(booking_models.Booking.room_number).filter(
+        booking_models.Booking.status.in_(["reserved", "checked-in"]),
+        booking_models.Booking.arrival_date <= today,
+        booking_models.Booking.departure_date >= today,
+    ).subquery()
+
     available_rooms_query = db.query(room_models.Room).filter(
-        not_(
-            room_models.Room.room_number.in_(
-                db.query(booking_models.Booking.room_number)
-                .filter(
-                    booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
-                    and_(
-                        booking_models.Booking.arrival_date <= today,
-                        booking_models.Booking.departure_date >= today,
-                    )
-                )
-            )
-        )
+        not_(room_models.Room.room_number.in_(unavailable_room_numbers))
     )
 
     all_available_rooms = available_rooms_query.all()
@@ -147,7 +142,7 @@ def list_available_rooms(db: Session = Depends(get_db)):
 
     # Step 2: Prepare data for frontend
     serialized_rooms = []
-    available_count = 0  # Exclude maintenance from this count
+    available_count = 0  # Count excludes maintenance rooms
 
     for room in all_available_rooms:
         serialized_rooms.append({

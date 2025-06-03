@@ -17,7 +17,7 @@ class RoomManagement:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x_coordinate = (screen_width // 2) - (window_width // 2)
-        y_coordinate = (screen_height // 2) - (window_height // 2) - 10  # Move slightly up
+        y_coordinate = (screen_height // 2) - (window_height // 2) + 14 # Move slightly up
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
         self.user_role = get_user_role(self.token)
@@ -70,7 +70,7 @@ class RoomManagement:
         card_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(10, 5))
 
         # Treeview (Room List Table)
-        columns = ("Room Number", "Room Type", "Amount", "Status", "Booking Type")
+        columns = ("Room Number", "Room Type", "Amount", "Room Status", "Booking Type")
         self.tree = ttk.Treeview(card_frame, columns=columns, show="headings")
 
         for col in columns:
@@ -320,7 +320,7 @@ class RoomManagement:
 
         # Status Dropdown
         tk.Label(container, text="Status:", bg="#f8f9fa").pack(anchor="w")
-        status_options = ["available", "maintenance"]
+        status_options = ["available", "checked-in", "reserved", "maintenance", "complimentery"]
         status_entry = ttk.Combobox(container, values=status_options, state="readonly", width=27)
         status_entry.pack(pady=3)
         status_entry.current(0)
