@@ -215,6 +215,12 @@ class Dashboard(ctk.CTk):
             data = response.json()
 
             has_active = data.get("active_reservations", False)
+            count = data.get("count", 0)
+
+            # 🔹 Update button text with count
+            self.reservation_alert_btn.config(
+                text=f"🔔 Reservation ({count})" if count > 0 else "🔔 Reservation"
+            )
 
             if has_active:
                 if not self.blinking:

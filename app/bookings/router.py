@@ -209,16 +209,14 @@ def get_active_reservations(db: Session = Depends(get_db)):
     reservations = db.query(booking_models.Booking).filter(
         booking_models.Booking.status == "reserved",
         booking_models.Booking.arrival_date >= today,
-        booking_models.Booking.deleted == False  # ✅ This was missing!
+        booking_models.Booking.deleted == False
     ).all()
 
-    
-    print(f"Today: {today}")
-    print(f"Reservations found: {len(reservations)}")
-    for r in reservations:
-        print(f"Booking: {r.id}, Status: {r.status}, Arrival Date: {r.arrival_date}")
-
-    return {"active_reservations": len(reservations) > 0}
+    count = len(reservations)
+    return {
+        "active_reservations": count > 0,
+        "count": count  # 🔹 Include count
+    }
 
 
 
