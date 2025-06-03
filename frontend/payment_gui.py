@@ -140,7 +140,7 @@ class PaymentManagement:
 
         # Set window size and position
         window_width = 1375
-        window_height = 600
+        window_height = 587
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x_coordinate = (screen_width // 2) - (window_width // 2)
@@ -153,13 +153,13 @@ class PaymentManagement:
 
         # Header Frame
         self.header_frame = tk.Frame(self.container, bg="#2C3E50", height=45)
-        self.header_frame.pack(fill=tk.X, pady=(0, 10))  # More breathing room after header
+        self.header_frame.pack(fill=tk.X, pady=(0, 5))  # More breathing room after header
         self.header_frame.pack_propagate(False)  # Prevent auto resizing based on child widgets
 
         # Title Label (left side of header)
         self.title_label = tk.Label(
             self.header_frame,
-            text="                                                                                               💳Payment Management",
+            text="💳Payment Management",
             font=("Helvetica", 16, "bold"),
             fg="gold",
             bg="#2C3E50",
@@ -201,30 +201,27 @@ class PaymentManagement:
         self.print_button.pack(side=tk.LEFT, padx=5)
 
 
-         # ==== Main Content Frame (Holds Sidebar + Right Section) ====
+         # ========== Main Content Frame (Sidebar + Right Content) ==========
         self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-         # ==== Menu Container (With "Menu" Heading) ====
-        self.Menu = tk.Frame(self.main_frame, bg="#2C3E50", width=230)
-        self.Menu.pack(side=tk.LEFT, fill=tk.Y)
+        # Sidebar Frame
+        self.left_frame = tk.Frame(self.main_frame, bg="#2C3E50", width=140)  # Set desired width
+        self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        self.left_frame.pack_propagate(False)  # Prevent frame from resizing
 
-        # === "Menu" Heading ===
-        self.menu_label = tk.Label(self.Menu, text="MENU", font=("Helvetica", 12, "bold"), 
-                                   fg="white", bg="#34495E", pady=5)
+        # Sidebar Label
+        self.menu_label = tk.Label(self.left_frame, text="MENU", font=("Helvetica", 12, "bold"), 
+                                fg="white", bg="#34495E", pady=5)
         self.menu_label.pack(fill=tk.X)
 
-        # Sidebar Section (Inside `Menu` Frame)
-        self.left_frame = tk.Frame(self.Menu, bg="#2C3E50", width=220)
-        self.left_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Right Section (Main Content)
+        # Right Content Frame
         self.right_frame = tk.Frame(self.main_frame, bg="#ffffff", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
+                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
         self.subheading_label.pack(pady=10)
 
         # Payment Action Buttons

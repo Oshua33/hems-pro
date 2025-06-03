@@ -14,6 +14,7 @@ class ReservationAlertWindow(ctk.CTkToplevel):
         self.token = token
 
         self.create_ui()
+        self.center_window()  # Do this after creating the UI
         self.load_reservations()
 
 
@@ -40,6 +41,26 @@ class ReservationAlertWindow(ctk.CTkToplevel):
         # Configure tag styles for background colors only
         tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
         tree.tag_configure("oddrow", background="white")
+
+
+    def center_window(self):
+        self.update_idletasks()  # Ensures window dimensions are calculated
+
+        # Desired window size (you set this in geometry or can retrieve it)
+        width = 1000
+        height = 500
+
+        # Get screen width and height
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Calculate center coordinates
+        x = int((screen_width / 2) - (width / 2)) + 50  # shift 50px right
+        y = int((screen_height / 2) - (height / 2))
+
+        # Apply geometry with centering
+        self.geometry(f"{width}x{height}+{x}+{y}")
+    
     
 
     def create_ui(self):

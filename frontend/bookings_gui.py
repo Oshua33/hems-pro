@@ -188,7 +188,7 @@ class BookingManagement:
         # Title Label (left side of header)
         self.title_label = tk.Label(
             self.header_frame,
-            text="                                                                                             📅 Booking Management",
+            text="📅 Booking Management",
             font=("Helvetica", 16, "bold"),
             fg="gold",
             bg="#2C3E50",
