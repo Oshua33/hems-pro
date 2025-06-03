@@ -58,18 +58,24 @@ class RoomManagement:
         style.map("TButton", background=[("active", "#2980B9")])  # Hover effect
 
     def setup_ui(self):
-        self.root.configure(bg="#f8f9fa")  # Light gray background for modern UI
+        self.root.configure(bg="#f4f6f8")  # Soft gray for modern background
 
-        # Title Label
-        title_label = tk.Label(self.root, text="Room Management", font=("Helvetica", 18, "bold"),
-                               bg="#2C3E50", fg="white", padx=10, pady=10)
+        # Header
+        title_label = tk.Label(
+            self.root,
+            text="Room Management",
+            font=("Segoe UI", 20, "bold"),
+            bg="#2C3E50",
+            fg="white",
+            pady=6
+        )
         title_label.pack(fill=tk.X)
 
-        # Frame for Treeview (Card-like Container)
-        card_frame = tk.Frame(self.root, bg="white", relief=tk.RIDGE, bd=2)
-        card_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(10, 5))
+        # Card-style container for the Treeview
+        card_frame = tk.Frame(self.root, bg="white", relief=tk.RIDGE, bd=1)
+        card_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(12, 6))
 
-        # Treeview (Room List Table)
+        # Treeview (Room Table)
         columns = ("Room Number", "Room Type", "Amount", "Room Status", "Booking Type")
         self.tree = ttk.Treeview(card_frame, columns=columns, show="headings")
 
@@ -77,42 +83,44 @@ class RoomManagement:
             self.tree.heading(col, text=col)
             self.tree.column(col, width=140, anchor="center")
 
-        self.tree.pack(fill=tk.BOTH, expand=True)
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-       
+        # Apply alternating row colors
+        self.apply_grid_effect(self.tree)
 
-        # Compact Button Frame
-        btn_frame = ctk.CTkFrame(self.root, fg_color="#f8f9fa")
-        btn_frame.pack(pady=5, padx=5)
+        # Professional Button Frame
+        btn_frame = ctk.CTkFrame(self.root, fg_color="#f4f6f8")
+        btn_frame.pack(pady=6, padx=10)
 
-        # Buttons with Icons and Compact Styling
+        # Shared button style
+        button_style = {
+            "width": 105,
+            "height": 28,
+            "corner_radius": 8,
+            "font": ("Segoe UI", 11, "bold"),
+            "text_color": "white",
+            "fg_color": "#1e3d59",
+            "hover_color": "#2563eb"
+        }
+
+        # Define buttons
         buttons = [
-            ("➕ Add", self.open_room_form),
-            ("✏️ Update", self.update_room),
-            ("❌ Delete", self.delete_room),
-            ("🧾 View Faults", self.view_faults),
-            ("🟢 Rooms Available", self.list_available_rooms),
-            ("🔄 Refresh", self.fetch_rooms)
+            ("Add", self.open_room_form),
+            ("Update", self.update_room),
+            ("Delete", self.delete_room),
+            ("View Faults", self.view_faults),
+            ("Rooms Available", self.list_available_rooms),
+            ("Refresh", self.fetch_rooms),
         ]
 
-        for idx, (text, command) in enumerate(buttons):
-            btn = ctk.CTkButton(
-                btn_frame,
-                text=text,
-                command=command,
-                width=100,               # Reduced width
-                height=25,               # Reduced height
-                corner_radius=10,
-                font=("Segoe UI", 11, "bold"),  # Slightly smaller font
-                text_color="white",
-                fg_color="#1e3d59",
-                hover_color="#2563eb"
-            )
-            btn.grid(row=0, column=idx, padx=7, pady=7)
-        
-            # Disable buttons for non-admin users
-            if self.user_role != "admin" and text in ["➕ Add",  "❌ Delete"]:
-                btn.configure(state="disabled", fg_color="#adb5bd", hover_color="#adb5bd")
+        for idx, (label, cmd) in enumerate(buttons):
+            btn = ctk.CTkButton(btn_frame, text=label, command=cmd, **button_style)
+            btn.grid(row=0, column=idx, padx=6, pady=6)
+
+            # Disable restricted buttons
+            if self.user_role != "admin" and label in ["Add", "Delete"]:
+                btn.configure(state="disabled", fg_color="#b0b3b8", hover_color="#b0b3b8")
+
 
                 
 
