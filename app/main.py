@@ -80,9 +80,12 @@ app.include_router(eventpayment_router, prefix="/eventpayment", tags=["Event_Pay
 app.include_router(license_router, prefix="/license", tags=["License"])
 
 
-if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, log_level="info")
-
 @app.get("/debug/ping")
 def debug_ping():
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, log_level="info", access_log=False)
+
+

@@ -328,7 +328,7 @@ class RoomManagement:
 
         # Status Dropdown
         tk.Label(container, text="Status:", bg="#f8f9fa").pack(anchor="w")
-        status_options = ["available", "checked-in", "reserved", "maintenance", "complimentery"]
+        status_options = ["available", "maintenance"]
         status_entry = ttk.Combobox(container, values=status_options, state="readonly", width=27)
         status_entry.pack(pady=3)
         status_entry.current(0)
