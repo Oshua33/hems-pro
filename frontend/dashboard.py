@@ -173,11 +173,11 @@ class Dashboard(ctk.CTk):
         logout_btn.pack(fill=tk.X, pady=5, padx=10)
 
         # MAIN CONTENT FRAME
-        self.main_content = tk.Frame(self.root, bg="#ECF0F1", bd=5, relief=tk.RIDGE)
+        self.main_content = tk.Frame(self.root, bg="#AEB0B1", bd=5, relief=tk.RIDGE)
         self.main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
+        #bg="#ECF0F1" bg="#75888D"
         welcome_label = tk.Label(self.main_content, text="Welcome, {}".format(self.username), 
-                                 fg="#2C3E50", bg="#ECF0F1", font=("Arial", 14, "bold"))
+                                 fg="#2C3E50", bg="#AEB0B1", font=("Arial", 14, "bold"))
         welcome_label.pack(pady=20)
 
         self.schedule_reservation_check()
@@ -188,7 +188,7 @@ class Dashboard(ctk.CTk):
             self.main_content,
             text="Welcome to the Dashboard!\nSelect an option from the menu.",
             font=("Arial", 14),
-            bg="#ECF0F1",
+            bg="#AEB0B1",
             fg="#2C3E50",
             justify="center"
         )

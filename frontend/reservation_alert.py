@@ -39,7 +39,7 @@ class ReservationAlertWindow(ctk.CTkToplevel):
             tree.item(item, tags=existing_tags)
 
         # Configure tag styles for background colors only
-        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("evenrow", background="#e5f5e8") 
         tree.tag_configure("oddrow", background="white")
 
 

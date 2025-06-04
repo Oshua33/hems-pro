@@ -157,7 +157,7 @@ class EventManagement:
         
 
          # ==== Main Content Frame (Holds Sidebar + Right Section) ====
-        self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
+        self.main_frame = tk.Frame(self.container, bg="#AAB1B3")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
          # ==== Menu Container (With "Menu" Heading) ====
@@ -174,12 +174,12 @@ class EventManagement:
         self.left_frame.pack(fill=tk.BOTH, expand=True)
 
         # Right Section (Main Content)
-        self.right_frame = tk.Frame(self.main_frame, bg="#ffffff", relief="ridge", borderwidth=2)
+        self.right_frame = tk.Frame(self.main_frame, bg="#EAF1F3", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
+                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#EAF1F3")
         self.subheading_label.pack(pady=10)
  
         # Event Action Buttons
@@ -265,7 +265,7 @@ class EventManagement:
             else:
                 tree.item(item, tags=("oddrow",))
 
-        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("evenrow", background="#e5f5e8")  
         tree.tag_configure("oddrow", background="white")
    
 

@@ -46,7 +46,7 @@ class RoomManagement:
             tree.item(item, tags=existing_tags)
 
         # Configure tag styles for background colors only
-        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
+        tree.tag_configure("evenrow", background="#e5f5e8")  
         tree.tag_configure("oddrow", background="white")
 
 
@@ -58,7 +58,7 @@ class RoomManagement:
         style.map("TButton", background=[("active", "#2980B9")])  # Hover effect
 
     def setup_ui(self):
-        self.root.configure(bg="#f4f6f8")  # Soft gray for modern background
+        self.root.configure(bg="#9aa0a5")  # Soft gray for modern background
 
         # Header
         title_label = tk.Label(
@@ -72,7 +72,7 @@ class RoomManagement:
         title_label.pack(fill=tk.X)
 
         # Card-style container for the Treeview
-        card_frame = tk.Frame(self.root, bg="white", relief=tk.RIDGE, bd=1)
+        card_frame = tk.Frame(self.root, bg="#E3EAEC", relief=tk.RIDGE, bd=1)
         card_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(12, 6))
 
         # Treeview (Room Table)

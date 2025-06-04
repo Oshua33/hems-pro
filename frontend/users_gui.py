@@ -17,7 +17,7 @@ class UserManagement:
         self.user_management_window.title("HEMS - User Management")
         self.user_management_window.geometry("750x480")
         self.user_management_window.resizable(False, False)
-        self.user_management_window.configure(fg_color="#2C3E50")  # Dark background
+        self.user_management_window.configure(fg_color="#2C3E50")  # Dark background "#2C3E50"
 
         self.user_management_window.transient(self.parent)
         self.user_management_window.grab_set()
@@ -40,7 +40,7 @@ class UserManagement:
             self.user_management_window,
             text="User Management",
             font=("Segoe UI", 22, "bold"),
-            fg_color="#1E2B38",  # Darker header bar
+            fg_color="#98A2AC",  # Darker header bar
             text_color="white",
             height=45,
             corner_radius=8
@@ -105,7 +105,7 @@ class UserManagement:
         for i, item in enumerate(tree.get_children()):
             tag = "evenrow" if i % 2 == 0 else "oddrow"
             tree.item(item, tags=(tag,))
-        tree.tag_configure("evenrow", background="#ecf0f1")  # Light gray
+        tree.tag_configure("evenrow", background="#e5f5e8")  
         tree.tag_configure("oddrow", background="white")
 
     def fetch_users(self):

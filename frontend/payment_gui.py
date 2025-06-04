@@ -148,7 +148,7 @@ class PaymentManagement:
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
          # ========== Main Layout ==========
-        self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
+        self.container = tk.Frame(self.root, bg="#AAB1B3", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
@@ -202,7 +202,7 @@ class PaymentManagement:
 
 
          # ========== Main Content Frame (Sidebar + Right Content) ==========
-        self.main_frame = tk.Frame(self.container, bg="#f0f0f0")
+        self.main_frame = tk.Frame(self.container, bg="#AAB1B3")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Sidebar Frame
@@ -216,12 +216,12 @@ class PaymentManagement:
         self.menu_label.pack(fill=tk.X)
 
         # Right Content Frame
-        self.right_frame = tk.Frame(self.main_frame, bg="#ffffff", relief="ridge", borderwidth=2)
+        self.right_frame = tk.Frame(self.main_frame, bg="#EAF1F3", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#ffffff")
+                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#EAF1F3")
         self.subheading_label.pack(pady=10)
 
         # Payment Action Buttons
@@ -288,9 +288,8 @@ class PaymentManagement:
             else:
                 tree.item(item, tags=("oddrow",))
 
-        tree.tag_configure("evenrow", background="#d9d9d9")  # medium gray
-        #tree.tag_configure("oddrow", background="#f0f0f0")   # light gray
-        tree.tag_configure("oddrow", background="white")      # White
+        tree.tag_configure("evenrow", background="#e5f5e8")  
+        tree.tag_configure("oddrow", background="white")     # White
 
 
 
