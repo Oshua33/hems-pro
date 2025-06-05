@@ -1,4 +1,4 @@
-HEMS-main/
+HEMS-project/
 │
 ├── app/                      # Backend (FastAPI application)
 │   ├── __init__.py

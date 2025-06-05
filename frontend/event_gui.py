@@ -102,7 +102,7 @@ class EventManagement:
         self.root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
 
         # ========== Main Layout ==========
-        self.container = tk.Frame(self.root, bg="#ECF0F1", padx=10, pady=10)  # Light background for overall app
+        self.container = tk.Frame(self.root, bg="#AAB1B3", padx=10, pady=10)  # Light background for overall app
         self.container.pack(fill=tk.BOTH, expand=True)
 
         # Header Frame
@@ -174,12 +174,12 @@ class EventManagement:
         self.left_frame.pack(fill=tk.BOTH, expand=True)
 
         # Right Section (Main Content)
-        self.right_frame = tk.Frame(self.main_frame, bg="#EAF1F3", relief="ridge", borderwidth=2)
+        self.right_frame = tk.Frame(self.main_frame, bg="#D6D8DA", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#EAF1F3")
+                                         font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#D6D8DA")
         self.subheading_label.pack(pady=10)
  
         # Event Action Buttons

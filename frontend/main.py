@@ -119,6 +119,8 @@ class Application:
             messagebox.showerror("Print Error", f"Could not print: {e}")
 
 
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = Application(root)
