@@ -253,12 +253,12 @@ class BookingManagement:
         self.menu_label.pack(fill=tk.X)
 
         # Right Content Frame
-        self.right_frame = tk.Frame(self.main_frame, bg="#EAF1F3", relief="ridge", borderwidth=2)
+        self.right_frame = tk.Frame(self.main_frame, bg="#D6D8DA", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#EAF1F3")
+                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#D6D8DA")
         self.subheading_label.pack(pady=10)
 
     
@@ -985,11 +985,11 @@ class BookingManagement:
         
         
         # Create a new frame for the table
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=5, pady=5)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=5, pady=5)
         #frame = tk.Frame(self.right_frame, bg="#ffffff")
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Bookings Report", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Bookings Report", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         filter_frame = tk.Frame(frame, bg="#ffffff")
         filter_frame.pack(pady=5)
@@ -1039,11 +1039,11 @@ class BookingManagement:
 
 
         # Label to display total booking cost
-        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="red")
+        self.total_booking_cost_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="red")
         self.total_booking_cost_label.pack(pady=10)
 
         # Total Entries Label (Blue)
-        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#D6D8DA")
         self.total_entries_label.pack(side="left", padx=(0, 10))
 
 
@@ -1327,7 +1327,7 @@ class BookingManagement:
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Booking Details")
         view_window.geometry("700x500+100+10")
-        view_window.configure(fg_color="white")
+        view_window.configure(fg_color="#ebebeb")
         view_window.grab_set()
 
         hotel_label = ctk.CTkLabel(
@@ -1758,10 +1758,10 @@ class BookingManagement:
         self.clear_right_frame()  # Ensure old UI elements are removed
 
         # Create a new frame for the table with scrollable functionality
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Bookings by Status", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Bookings by Status", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Filter Frame
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -1840,10 +1840,10 @@ class BookingManagement:
 
 
         # ✅ Add Label for Total Booking Cost at the Bottom
-        self.total_cost_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_cost_label = tk.Label(frame, text="Total Booking Cost: 0.00", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_cost_label.pack(pady=10)  # Placed at the bottom
 
-        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="green")
+        self.total_entries_label = tk.Label(frame, text="Total Entries: 0", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="green")
         self.total_entries_label.pack()
 
         
@@ -1870,7 +1870,7 @@ class BookingManagement:
         popup = ctk.CTkToplevel(self.root)
         popup.title("Guest Booking Details")
         popup.geometry("700x500+100+20")
-        popup.configure(fg_color="white")
+        popup.configure(fg_color="#ebebeb")
         popup.grab_set()
 
         hotel_label = ctk.CTkLabel(
@@ -2099,10 +2099,10 @@ class BookingManagement:
 
         self.clear_right_frame()
         
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(frame, text="Search Booking by Guest Name", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Search Booking by Guest Name", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
         
         search_frame = tk.Frame(frame, bg="#ffffff")
         search_frame.pack(pady=5)
@@ -2151,13 +2151,13 @@ class BookingManagement:
 
 
         # Create a horizontal frame for the summary labels
-        summary_frame = tk.Frame(frame, bg="#ffffff")
+        summary_frame = tk.Frame(frame, bg="#D6D8DA")
         summary_frame.pack(fill=tk.X, pady=10)
 
-        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="blue", bg="#ffffff")
+        self.total_entries_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="blue", bg="#D6D8DA")
         self.total_entries_label.pack(side=tk.LEFT, padx=10)
 
-        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="red", bg="#ffffff")
+        self.total_cost_label = tk.Label(summary_frame, text="", font=("Arial", 12, "bold"), fg="red", bg="#D6D8DA")
         self.total_cost_label.pack(side=tk.LEFT, padx=20)
 
 
@@ -2179,7 +2179,7 @@ class BookingManagement:
         popup = ctk.CTkToplevel(self.root)
         popup.title("Guest Booking Details")
         popup.geometry("700x500+100+20")
-        popup.configure(fg_color="white")
+        popup.configure(fg_color="#ebebeb")
         popup.grab_set()
 
         hotel_label = ctk.CTkLabel(
@@ -2382,10 +2382,10 @@ class BookingManagement:
 
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Search Booking by Room Number", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Search Booking by Room Number", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Centered Frame for Search Inputs
         search_frame = tk.Frame(frame, bg="#ffffff")
@@ -2460,15 +2460,15 @@ class BookingManagement:
         
 
 # Frame to hold totals and view button
-        totals_frame = tk.Frame(frame, bg="#ffffff")
+        totals_frame = tk.Frame(frame, bg="#D6D8DA")
         totals_frame.pack(pady=10, anchor="w")  # Left-align
 
         # Total Entries Label (Blue)
-        self.total_entries_label = tk.Label(totals_frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_entries_label = tk.Label(totals_frame, text="Total Entries: 0", fg="blue", font=("Arial", 12, "bold"), bg="#D6D8DA")
         self.total_entries_label.pack(side="left", padx=(0, 10))
 
         # Total Booking Cost Label (Red)
-        self.total_label = tk.Label(totals_frame, text="Total Booking Cost: 0.00", fg="red", font=("Arial", 12, "bold"), bg="#ffffff")
+        self.total_label = tk.Label(totals_frame, text="Total Booking Cost: 0.00", fg="red", font=("Arial", 12, "bold"), bg="#D6D8DA")
         self.total_label.pack(side="left", padx=(0, 10))
 
 

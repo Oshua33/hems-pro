@@ -216,12 +216,12 @@ class PaymentManagement:
         self.menu_label.pack(fill=tk.X)
 
         # Right Content Frame
-        self.right_frame = tk.Frame(self.main_frame, bg="#EAF1F3", relief="ridge", borderwidth=2)
+        self.right_frame = tk.Frame(self.main_frame, bg="#D6D8DA", relief="ridge", borderwidth=2)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Subheading Label
         self.subheading_label = tk.Label(self.right_frame, text="Select an option",
-                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#EAF1F3")
+                                        font=("Helvetica", 14, "bold"), fg="#2C3E50", bg="#D6D8DA")
         self.subheading_label.pack(pady=10)
 
         # Payment Action Buttons
@@ -696,10 +696,10 @@ class PaymentManagement:
         self.current_view = "payments"
 
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Payments Report", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Payments Report", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Filter Frame
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -741,19 +741,19 @@ class PaymentManagement:
 
         
         # Payment Breakdown Frame (Closer to Summary Frame)
-        breakdown_frame = tk.Frame(frame, bg="#ffffff", padx=5, pady=5)  # Reduced padding
+        breakdown_frame = tk.Frame(frame, bg="#D6D8DA", padx=5, pady=5)  # Reduced padding
         breakdown_frame.pack(fill=tk.X, pady=5)  # Reduced vertical spacing
 
-        self.total_cash_label = tk.Label(breakdown_frame, text="Total Cash: 0", font=("Arial", 12), bg="#ffffff", fg="red")
+        self.total_cash_label = tk.Label(breakdown_frame, text="Total Cash: 0", font=("Arial", 12), bg="#D6D8DA", fg="red")
         self.total_cash_label.grid(row=0, column=0, padx=10)  # Reduced horizontal spacing
 
-        self.total_pos_label = tk.Label(breakdown_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#ffffff", fg="blue")
+        self.total_pos_label = tk.Label(breakdown_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#D6D8DA", fg="blue")
         self.total_pos_label.grid(row=0, column=1, padx=10)
 
-        self.total_bank_label = tk.Label(breakdown_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#ffffff", fg="purple")
+        self.total_bank_label = tk.Label(breakdown_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#D6D8DA", fg="purple")
         self.total_bank_label.grid(row=0, column=2, padx=10)
 
-        self.total_label = tk.Label(breakdown_frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_label = tk.Label(breakdown_frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_label.grid(row=0, column=3, padx=10)
 
 
@@ -987,10 +987,10 @@ class PaymentManagement:
         self.current_view = "status"
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Payments by Status", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Payments by Status", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
         
         filter_frame = tk.Frame(frame, bg="#ffffff")
         filter_frame.pack(pady=5)
@@ -1126,7 +1126,7 @@ class PaymentManagement:
                         self.right_frame,
                         text=f"Total Payment: {total_payment:,.2f}",
                         font=("Arial", 12, "bold"),
-                        bg="#ffffff", fg="blue"
+                        bg="#D6D8DA", fg="blue"
                     )
                     self.total_payment_label.pack(pady=10)
 
@@ -1151,10 +1151,10 @@ class PaymentManagement:
         self.current_view = "debtors"
 
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Debtor List", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Debtor List", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Filter Frame
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -1204,18 +1204,18 @@ class PaymentManagement:
         self.tree.configure(xscroll=x_scroll.set)
 
         # Total Debt Display
-        self.total_frame = tk.Frame(self.right_frame, bg="#ffffff", pady=2)
+        self.total_frame = tk.Frame(self.right_frame, bg="#D6D8DA", pady=2)
         self.total_frame.pack(fill=tk.X)
 
         self.total_current_label = tk.Label(
             self.total_frame, text="Total Current Debt: 0.00", font=("Arial", 12, "bold"),
-            bg="#ffffff", fg="blue"
+            bg="#D6D8DA", fg="blue"
         )
         self.total_current_label.grid(row=0, column=0, padx=120, pady=2)
 
         self.total_gross_label = tk.Label(
             self.total_frame, text="Total Gross Debt: 0.00", font=("Arial", 12, "bold"),
-            bg="#ffffff", fg="red"
+            bg="#D6D8DA", fg="red"
         )
         self.total_gross_label.grid(row=0, column=1, padx=20, pady=2)
 
@@ -1289,14 +1289,14 @@ class PaymentManagement:
         self.clear_right_frame()
         self.current_view = "daily_payments"
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Total Daily Payments", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Total Daily Payments", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         fetch_btn = ttk.Button(
             frame,
-            text="Fetch Today's Payments",
+            text="Fetch Today's Payments", 
             command=self.fetch_total_daily_payments
         )
         fetch_btn.pack(pady=5)
@@ -1325,20 +1325,20 @@ class PaymentManagement:
         self.tree.configure(xscroll=x_scroll.set)
 
         # Frame for horizontal display of totals
-        totals_frame = tk.Frame(frame, bg="#ffffff")
+        totals_frame = tk.Frame(frame, bg="#D6D8DA")
         totals_frame.pack(fill=tk.X, pady=5)
 
-        self.pos_card_label = tk.Label(totals_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#ffffff", fg="green")
+        self.pos_card_label = tk.Label(totals_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#D6D8DA", fg="green")
         self.pos_card_label.pack(side=tk.LEFT, padx=20)
 
-        self.bank_transfer_label = tk.Label(totals_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#ffffff", fg="purple")
+        self.bank_transfer_label = tk.Label(totals_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#D6D8DA", fg="purple")
         self.bank_transfer_label.pack(side=tk.LEFT, padx=20)
 
-        self.cash_label = tk.Label(totals_frame, text="Total Cash: 0", font=("Arial", 12), bg="#ffffff", fg="red")
+        self.cash_label = tk.Label(totals_frame, text="Total Cash: 0", font=("Arial", 12), bg="#D6D8DA", fg="red")
         self.cash_label.pack(side=tk.LEFT, padx=20)
 
         # Total Amount Label (Centered Below the Frame)
-        self.total_label = tk.Label(frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_label = tk.Label(frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_label.pack(pady=5)
 
     def fetch_total_daily_payments(self):
@@ -1395,10 +1395,10 @@ class PaymentManagement:
     def search_payment_by_id(self):
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Search Payment by ID", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Search Payment by ID", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         search_frame = tk.Frame(frame, bg="#ffffff")
         search_frame.pack(pady=5)
@@ -1509,10 +1509,10 @@ class PaymentManagement:
     def void_payment(self):
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Void Payment", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Void Payment", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         input_frame = tk.Frame(frame, bg="#ffffff")
         input_frame.pack(pady=5)

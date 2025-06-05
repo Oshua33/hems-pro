@@ -586,10 +586,10 @@ class EventManagement:
         self.clear_right_frame()
         self.current_view = "event_list"
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="📅 List Events", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="📅 List Events", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # ---------------- Filter Section ---------------- #
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -637,7 +637,7 @@ class EventManagement:
         self.tree.configure(xscroll=x_scroll.set)
 
         # Total Amount Label
-        self.total_label = tk.Label(frame, text="Total Event Amount: 0.00", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_label = tk.Label(frame, text="Total Event Amount: 0.00", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_label.pack(pady=10)
 
     def fetch_events(self, start_date_entry, end_date_entry):
@@ -709,10 +709,10 @@ class EventManagement:
     def search_event_by_id(self):
         self.clear_right_frame()
         
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(frame, text="Search Event by ID", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Search Event by ID", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
         
         search_frame = tk.Frame(frame, bg="#ffffff")
         search_frame.pack(pady=5)
@@ -1211,10 +1211,10 @@ class EventManagement:
         self.clear_right_frame()
         self.current_view = "event_payments"
         
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Event Payments", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Event Payments", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         filter_frame = tk.Frame(frame, bg="#ffffff")
         filter_frame.pack(pady=5)
@@ -1256,23 +1256,23 @@ class EventManagement:
         x_scroll.pack(fill=tk.X)
         self.tree.configure(xscroll=x_scroll.set)
 
-        self.total_payment_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_payment_label = tk.Label(frame, text="", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_payment_label.pack(pady=10)
 
       # Payment Breakdown Frame (Closer to Summary Frame)
-        breakdown_frame = tk.Frame(frame, bg="#ffffff", padx=1, pady=1)  # Reduced padding
+        breakdown_frame = tk.Frame(frame, bg="#D6D8DA", padx=1, pady=1)  # Reduced padding
         breakdown_frame.pack(fill=tk.X, pady=1)  # Reduced vertical spacing
 
-        self.total_cash_label = tk.Label(breakdown_frame, text="Total Cash: 0", font=("Arial", 12), bg="#ffffff", fg="red")
+        self.total_cash_label = tk.Label(breakdown_frame, text="Total Cash: 0", font=("Arial", 12), bg="#D6D8DA", fg="red")
         self.total_cash_label.grid(row=0, column=0, padx=10)  # Reduced horizontal spacing
 
-        self.total_pos_label = tk.Label(breakdown_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#ffffff", fg="blue")
+        self.total_pos_label = tk.Label(breakdown_frame, text="Total POS Card: 0", font=("Arial", 12), bg="#D6D8DA", fg="blue")
         self.total_pos_label.grid(row=0, column=1, padx=10)
 
-        self.total_bank_label = tk.Label(breakdown_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#ffffff", fg="purple")
+        self.total_bank_label = tk.Label(breakdown_frame, text="Total Bank Transfer: 0", font=("Arial", 12), bg="#D6D8DA", fg="purple")
         self.total_bank_label.grid(row=0, column=2, padx=10)
 
-        self.total_label = tk.Label(breakdown_frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+        self.total_label = tk.Label(breakdown_frame, text="Total Amount: 0", font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_label.grid(row=0, column=3, padx=10)
 
     def fetch_event_payments(self, start_date_entry, end_date_entry):
@@ -1297,7 +1297,7 @@ class EventManagement:
                     return
 
                 if not data:
-                    self.total_payment_label.config(text="Total Payments: 0.00")
+                    #self.total_payment_label.config(text="Total Payments: 0.00")
                     messagebox.showinfo("No Results", "No payments found for the selected filters.")
                     return
 
@@ -1352,10 +1352,10 @@ class EventManagement:
         self.clear_right_frame()
         self.current_view = "event_debtors"
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Event Debtor List", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Event Debtor List", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Filter Frame
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -1403,18 +1403,18 @@ class EventManagement:
         x_scroll.pack(fill=tk.X)
         self.tree.configure(xscroll=x_scroll.set)
 
-        self.total_frame = tk.Frame(self.right_frame, bg="#ffffff", pady=2)
+        self.total_frame = tk.Frame(self.right_frame, bg="#D6D8DA", pady=2)
         self.total_frame.pack(fill=tk.X)
 
         self.total_current_label = tk.Label(
             self.total_frame, text="Total Current Debt: 0.00", font=("Arial", 12, "bold"),
-            bg="#ffffff", fg="blue"
+            bg="#D6D8DA", fg="blue"
         )
         self.total_current_label.grid(row=0, column=0, padx=120, pady=2)
 
         self.total_gross_label = tk.Label(
             self.total_frame, text="Total Gross Debt: 0.00", font=("Arial", 12, "bold"),
-            bg="#ffffff", fg="red"
+            bg="#D6D8DA", fg="red"
         )
         self.total_gross_label.grid(row=0, column=1, padx=20, pady=2)
 
@@ -1481,10 +1481,10 @@ class EventManagement:
         self.clear_right_frame()  # Ensure old UI elements are removed
 
         # Create a new frame for the table with scrollable functionality
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="List Payments by Status", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="List Payments by Status", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Filter Frame
         filter_frame = tk.Frame(frame, bg="#ffffff")
@@ -1529,7 +1529,7 @@ class EventManagement:
         
         # Total Payment Amount Label
         self.total_cost_label = tk.Label(frame, text="Total Payment Amount: 0.00", 
-                                 font=("Arial", 12, "bold"), bg="#ffffff", fg="blue")
+                                 font=("Arial", 12, "bold"), bg="#D6D8DA", fg="blue")
         self.total_cost_label.pack(pady=5)
 
         
@@ -1623,10 +1623,10 @@ class EventManagement:
         """GUI for searching a payment by ID."""
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Search Payment by ID", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Search Payment by ID", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         # Search Input Frame
         search_frame = tk.Frame(frame, bg="#ffffff")
@@ -1727,10 +1727,10 @@ class EventManagement:
     def void_payment(self):
         self.clear_right_frame()
 
-        frame = tk.Frame(self.right_frame, bg="#ffffff", padx=10, pady=10)
+        frame = tk.Frame(self.right_frame, bg="#D6D8DA", padx=10, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        tk.Label(frame, text="Void Event Payment", font=("Arial", 14, "bold"), bg="#ffffff").pack(pady=10)
+        tk.Label(frame, text="Void Event Payment", font=("Arial", 14, "bold"), bg="#D6D8DA").pack(pady=10)
 
         input_frame = tk.Frame(frame, bg="#ffffff")
         input_frame.pack(pady=5)
