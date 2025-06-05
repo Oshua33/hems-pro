@@ -44,6 +44,8 @@ class LoginGUI:
 
     def create_register_ui(self):
         self.clear_window()
+
+        #Light mode: #EBEBEB (or similar light gray)
         
         frame = ctk.CTkFrame(self.main_frame, corner_radius=15)
         frame.pack(padx=40, pady=20, fill="x", expand=True)
