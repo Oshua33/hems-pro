@@ -777,7 +777,7 @@ class PaymentManagement:
         view_window = ctk.CTkToplevel(self.root)
         view_window.title("Payment Details")
         view_window.geometry("500x550+147+40")
-        view_window.configure(fg_color="white")
+        view_window.configure(fg_color="#ebebeb")
 
         # Hotel Name Header
         hotel_label = ctk.CTkLabel(
@@ -800,8 +800,8 @@ class PaymentManagement:
         # Card Frame
         content_frame = ctk.CTkFrame(
             master=view_window,
-            fg_color="white",
-            border_color="#cccccc",
+            fg_color="#F7F4F4",
+            border_color="#ada6a6",
             border_width=1,
             corner_radius=12
         )
