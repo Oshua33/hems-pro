@@ -1348,8 +1348,8 @@ class BookingManagement:
 
         content_frame = ctk.CTkFrame(
             view_window,
-            fg_color="white",
-            border_color="#cccccc",
+            fg_color="#F7F4F4",
+            border_color="#ada6a6",
             border_width=1,
             corner_radius=12
         )
@@ -1888,8 +1888,8 @@ class BookingManagement:
 
         content_frame = ctk.CTkFrame(
             popup,
-            fg_color="white",
-            border_color="#cccccc",
+            fg_color="#F7F4F4",
+            border_color="#ada6a6",
             border_width=1,
             corner_radius=12
         )
@@ -2197,8 +2197,8 @@ class BookingManagement:
 
         content_frame = ctk.CTkFrame(
             popup,
-            fg_color="white",
-            border_color="#cccccc",
+            fg_color="#F7F4F4",
+            border_color="#ada6a6",
             border_width=1,
             corner_radius=12
         )
