@@ -1,0 +1,60 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { loginUser } from "../../api/auth";
+import "./../../styles/AuthForm.css";
+import { Link } from "react-router-dom";
+
+
+const LoginPage = () => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const token = await loginUser(username, password);
+      localStorage.setItem("token", token);
+      localStorage.setItem("username", username);
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Invalid username or password.");
+    }
+  };
+
+  return (
+  <div className="auth-page-wrapper">
+    <div className="auth-container">
+      <div className="auth-logo-text">H <span>E</span> M <span>S</span></div>
+      <h2>Login</h2>
+      <form onSubmit={handleLogin}>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        {error && <div className="error">{error}</div>}
+        <button type="submit">Login</button>
+        <p>
+          Don't have an account? <Link to="/register">Register</Link>
+        </p>
+      </form>
+    </div>
+  </div>
+);
+
+};
+
+export default LoginPage;

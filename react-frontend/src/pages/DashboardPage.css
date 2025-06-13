@@ -1,0 +1,146 @@
+/* Container holds sidebar and main content side by side */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f0f2f5;
+  position: relative;
+  overflow: hidden; /* prevent scroll */
+}
+
+
+/* Sidebar styling */
+.sidebar {
+  width: 180px; /* reduced width */
+  background: #1f2937; /* dark slate */
+  color: white;
+  padding: 20px 15px; /* less horizontal padding */
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column; /* vertical stack */
+  border-radius: 0 10px 10px 0;
+  z-index: 1;
+}
+
+/* Sidebar Title */
+.sidebar-title {
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #4ade80; /* green accent */
+  padding-bottom: 8px;
+  text-align: center;  /* <-- centered text */
+}
+
+/* Sidebar buttons - vertical list */
+.sidebar-button {
+  background: transparent;
+  border: none;
+  color: #d1d5db;
+  text-align: left;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: block; /* force block to ensure vertical stacking */
+  width: 100%;
+  white-space: nowrap;
+}
+
+.sidebar-button:hover {
+  background-color: #4ade80; /* green accent */
+  color: #111827;
+}
+
+/* Special colors for reservation button */
+.reservation-button {
+  background-color: #beb6b6; /* red */
+  color: white;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: auto; /* shrink to content */
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+  /* Remove 100% width for wrapping */
+}
+
+/* Adjust reservation button hover */
+.reservation-button:hover {
+  background-color: #b91c1c; /* darker red */
+  color: white;
+}
+
+/* Logout button - moved outside sidebar at top-right of dashboard */
+.logout-button {
+  background-color: #b91c1c; /* darker red */
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 2px solid #ef4444; /* bright red border */
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: auto;
+  transition: background-color 0.3s ease;
+  text-align: center;
+  white-space: nowrap;
+  z-index: 100; /* above sidebar */
+}
+
+.logout-button:hover {
+  background-color: #7f1d1d; /* even darker red */
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 40px;
+  background-color: #c5c9cf;
+  overflow: hidden; /* disable vertical scroll */
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+
+
+/* Header */
+.header {
+  height: 80px; /* slightly taller if desired */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0; /* remove bottom margin */
+  padding-top: 1px; /* bring it closer to top */
+
+}
+
+.header-title {
+  font-size: 1.2rem; /* smaller heading */
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+
+.content-area {
+  background-color: #ddd8d8;
+  padding: 30px 40px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 80px); /* fills space below header */
+  box-sizing: border-box;
+  overflow: auto; /* allow inner scrolling if needed */
+}
+
