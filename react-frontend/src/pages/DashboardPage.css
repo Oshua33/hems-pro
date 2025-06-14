@@ -104,43 +104,121 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 40px;
+  padding: 10px 20px; /* tighter layout */
   background-color: #c5c9cf;
-  overflow: hidden; /* disable vertical scroll */
+  overflow: hidden;
   height: 100vh;
   box-sizing: border-box;
 }
 
 
 
+
 /* Header */
 .header {
-  height: 80px; /* slightly taller if desired */
+  height: 60px; /* shorter */
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0; /* remove bottom margin */
-  padding-top: 1px; /* bring it closer to top */
-
+  padding-top: 0;  /* bring closer to top */
+  margin: 0;
 }
 
+
 .header-title {
-  font-size: 1.2rem; /* smaller heading */
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: #1a45a1;
   margin: 0;
+}
+
+
+.dashboard-icon {
+  margin-right: 10px;
+  font-size: 1.4rem;
+  color: #0f4ad6; /* or your theme color */
+  vertical-align: middle;
 }
 
 
 .content-area {
   background-color: #ddd8d8;
-  padding: 30px 40px;
+  padding: 20px 30px;  /* smaller padding */
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
   flex: 1;
   width: 100%;
-  height: calc(100vh - 80px); /* fills space below header */
+  height: auto; /* allow content to grow naturally */
   box-sizing: border-box;
-  overflow: auto; /* allow inner scrolling if needed */
+  overflow: auto;
 }
 
+
+.sidebar-item-wrapper {
+  position: relative;
+}
+
+/* Keep sidebar-button green if submenu is visible or hovered */
+.sidebar-button-active {
+  background-color: #4ade80;
+  color: #1655dd;
+}
+
+/* Submenu background and shadow matching green accent */
+.submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: #4ade80; /* Match hover color */
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 0.5rem 0;
+  z-index: 100;
+  white-space: nowrap;
+  min-width: 200px;
+}
+
+/* Submenu items match green theme and transition */
+.submenu-item {
+  display: block;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 10px 16px;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #111827;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Submenu hover color darker for feedback */
+.submenu-item:hover {
+  background-color:  #4ade80; /* slightly darker green */
+  color: #0f4ad6;
+}
+
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  max-height: 95%;
+  overflow-y: auto;
+}

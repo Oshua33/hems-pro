@@ -25,7 +25,11 @@ const RoomsPage = () => {
       setLoading(true);
       const response = await fetch("http://localhost:8000/rooms/");
       const data = await response.json();
-      setRooms(data.rooms || data || []);
+      const sortedRooms = (data.rooms || data || []).sort((a, b) =>
+        a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
+      );
+      setRooms(sortedRooms);
+
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
       setError("Failed to load rooms.");

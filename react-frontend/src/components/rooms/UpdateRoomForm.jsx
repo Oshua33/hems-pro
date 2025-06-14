@@ -14,6 +14,8 @@ const UpdateRoomForm = ({ room, onClose, onRoomUpdated }) => {
   const [newFault, setNewFault] = useState("");
   const token = localStorage.getItem("token");
 
+  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
