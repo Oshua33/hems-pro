@@ -1,0 +1,47 @@
+react-frontend/
+├── src/
+│   ├── api/               ← Axios API calls (e.g., users.js, auth.js)
+│   ├── components/        ← Reusable components (e.g., Modal, Table, Navbar)
+│   ├── modules/           ← Feature modules (e.g., users, bookings)
+│   ├── pages/             ← Page-level components (UsersPage, DashboardPage)
+│   ├── App.js             ← Routing and layout
+│   ├── main.jsx           ← App bootstrap
+
+
+// Directory structure
+// src/
+// ├── components/
+// │   ├── Auth/
+// │   │   ├── LoginForm.jsx
+// │   │   ├── RegisterForm.jsx
+// │   │   └── AuthPage.jsx
+// ├── pages/
+// │   └── AuthPage.jsx
+// ├── routes/
+// │   └── PrivateRoute.jsx
+// ├── api/
+// │   └── auth.js
+// ├── App.jsx
+// └── main.jsx
+
+
+/src
+  ├── components/
+  │   ├── Sidebar.js
+  │   ├── Header.js
+  │   ├── LoadingScreen.js
+  │   ├── MainContent.js
+  │   ├── ReservationAlertButton.js
+  │   └── ProtectedRoute.js
+  ├── views/
+  │   ├── Dashboard.js
+  │   ├── Users.js
+  │   ├── Rooms.js
+  │   ├── Bookings.js
+  │   ├── Payments.js
+  │   ├── Events.js
+  │   └── ReservationAlerts.js
+  ├── services/
+  │   └── api.js
+  ├── App.js
+  └── index.js

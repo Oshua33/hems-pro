@@ -45,7 +45,7 @@ class BookingSchemaResponse(BaseModel):
     room_number: str
     guest_name: str
     gender: Literal["Male", "Female"]
-    mode_of_identification: Literal["National Id Card", "Voter Card", "Id Card", "Passport"]
+    mode_of_identification: Literal["National Id Card", "Driver License", "Voter Card", "Id Card", "Passport"]
     identification_number: Optional[str]
     address: str
     arrival_date: date

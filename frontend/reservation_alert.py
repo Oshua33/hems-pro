@@ -80,8 +80,8 @@ class ReservationAlertWindow(ctk.CTkToplevel):
         table_frame = ctk.CTkFrame(
             self,
             corner_radius=15,
-            fg_color="white",
-            border_color="#d1d9e6",  # Soft border
+            fg_color="#F7F4F4",
+            border_color="#ada6a6",
             border_width=2
         )
         table_frame.pack(fill="both", expand=True, padx=25, pady=15)

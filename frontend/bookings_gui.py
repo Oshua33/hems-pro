@@ -649,7 +649,7 @@ class BookingManagement:
         combo_box_values = {
             "Gender": ["Male", "Female"],
             "Booking Type": ["checked-in", "reservation", "complimentary"],
-            "Mode of Identification": ["National Id Card", "Voter Card", "Id Card", "Passport"]
+            "Mode of Identification": ["National Id Card","Driver License", "Voter Card", "Id Card", "Passport"]
         }
 
         # Form Grid Layout
