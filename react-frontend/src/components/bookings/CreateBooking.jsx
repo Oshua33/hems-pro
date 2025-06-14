@@ -137,7 +137,7 @@ const CreateBooking = () => {
         <div className="form-row">
           <input type="text" name="room_number" placeholder="Room No" onChange={handleChange} value={formData.room_number} required />
           <input type="text" name="guest_name" placeholder="Guest Name" onChange={handleChange} value={formData.guest_name} required />
-          <button type="button" className="search-btn" onClick={handleSearchGuest}>Search</button>
+          <button type="button" className="search-btn" onClick={handleSearchGuest}>🔍Search</button>
         </div>
 
         <div className="form-row">
