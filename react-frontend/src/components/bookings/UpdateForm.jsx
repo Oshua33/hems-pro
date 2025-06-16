@@ -191,7 +191,9 @@ const UpdateForm = ({ booking, onClose }) => {
             <button type="submit" disabled={loading}>
               {loading ? "Updating..." : "Update"}
             </button>
-            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="button" onClick={onClose} className="cancel-btn">
+              Cancel
+            </button>
           </div>
 
           {message && (

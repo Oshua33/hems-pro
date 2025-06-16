@@ -54,34 +54,28 @@
 
 /* Table */
 .booking-table {
-  width: 100%;
   border-collapse: collapse;
   table-layout: auto;
-  min-width: 1200px;
-  font-size: 0.75rem;
+  width: 100%;
 }
 
-/* Sticky table header */
-.booking-table thead th {
-  position: sticky;
-  top: 0px; /* height of .booking-header including padding 4px*/
-  z-index: 15;
-  background-color: #f2f2f2;
-  padding: 0.4rem 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid #ccc;
-  white-space: nowrap;
-  font-weight: 600;
-  font-size: 0.78rem;
-}
-
-/* Table cells */
+.booking-table thead th,
 .booking-table td {
-  padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid #ddd;
+  padding: 2px 4px;       /* uniform padding: top, right, bottom, left */
+  text-align: left;
   white-space: nowrap;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #ddd;
 }
+
+.booking-table thead th {
+  background-color: #f2f2f2;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  font-weight: 600;
+}
+
 
 /* Row colors */
 .booking-table tbody tr:nth-child(even) {
@@ -155,7 +149,7 @@ button {
 
 .view-btn,
 .update-btn {
-  background-color: #918d9c;
+  background-color: #a6a3af;
   color: white;
   border: none;
   padding: 5px 10px;
@@ -168,4 +162,101 @@ button {
 .view-btn:hover,
 .update-btn:hover {
   background-color: #5333a3; /* darker shade on hover */
+}
+
+
+.top-right-controls {
+  position: absolute;
+  right: 2rem;
+  top: 2rem;
+  z-index: 10;
+}
+
+.column-dropdown-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.list-booking-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+}
+
+.booking-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.column-control-wrapper {
+  position: relative;
+}
+
+.column-toggle-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.column-dropdown-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  width: 200px;
+}
+
+.column-dropdown-menu label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+
+.payment-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* Use red for both 'incomplete' and 'pending' */
+.payment-btn.incomplete {
+  background-color: #e74c3c; /* Red */
+}
+
+.payment-btn.complimentary {
+  background-color: #a6a3af; /* Gray */
+}
+
+.payment-btn.void {
+  background-color: #a6a3af; /* Gray */
+}
+
+.payment-btn.completed {
+  background-color: #32a763; /* Green */
+}
+
+.payment-btn.excess {
+  background-color: #03f162; /* very bright green */
+  
 }
