@@ -1,0 +1,133 @@
+.update-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 10, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.update-form-container {
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 720px;
+  max-height: 94vh;
+  overflow-y: auto;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.update-form-container h2 {
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  text-align: center;
+  font-size: 1.35rem;
+  color: #333;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.form-group input,
+.form-group select {
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  transition: border 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+.attachment-section .attachment-info {
+  background: #f4f4f4;
+  padding: 6px;
+  margin-bottom: 6px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  color: #555;
+  word-break: break-all;
+}
+
+.attachment-section code {
+  color: #333;
+  background-color: #eee;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.form-actions button {
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.form-actions button[type="submit"] {
+  background-color: #3498db;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+  background-color: #2980b9;
+}
+
+.form-actions button[type="button"] {
+  background-color: #ccc;
+  color: #333;
+}
+
+.form-actions button[type="button"]:hover {
+  background-color: #bbb;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px; /* space between buttons */
+  margin-top: 24px;
+}
+
+
+.update-message {
+  margin-top: 12px; /* reduced spacing */
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.92rem;
+  color: red;
+}
+

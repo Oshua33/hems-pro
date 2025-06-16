@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import "./ListBooking.css";
 import ViewForm from "./ViewForm";
+import UpdateForm from "./UpdateForm";
 import { openViewForm } from "./viewFormUtils";
+
+
 
 
 const ListBooking = () => {
@@ -12,9 +15,11 @@ const ListBooking = () => {
   const [endDate, setEndDate] = useState("");
   const [hasFiltered, setHasFiltered] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-
   const [totalBookings, setTotalBookings] = useState(0);
   const [totalBookingCost, setTotalBookingCost] = useState(0);
+  const [bookingToUpdate, setBookingToUpdate] = useState(null);
+
+
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -51,8 +56,9 @@ const ListBooking = () => {
   };
 
   const handleUpdate = (booking) => {
-    alert(`Update Booking: ID ${booking.id}`);
+    setBookingToUpdate(booking);
   };
+
 
   const handleCloseView = () => {
     setSelectedBooking(null);
@@ -180,6 +186,23 @@ const ListBooking = () => {
       {selectedBooking && (
         <ViewForm booking={selectedBooking} onClose={handleCloseView} />
       )}
+
+      {bookingToUpdate && (
+  <UpdateForm
+    booking={bookingToUpdate}
+    onClose={(updatedBooking) => {
+      if (updatedBooking) {
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === updatedBooking.id ? updatedBooking : b
+          )
+        );
+      }
+      setBookingToUpdate(null);
+    }}
+  />
+)}
+
     </div>
   );
 };
