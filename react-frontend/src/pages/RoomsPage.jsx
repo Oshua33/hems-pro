@@ -7,6 +7,7 @@ import UpdateRoomForm from "../components/rooms/UpdateRoomForm";
 import AddRoomForm from "../components/rooms/AddRoomForm";
 import RoomFaultsView from "../components/rooms/RoomFaultsView";
 import AvailableRooms from "../components/rooms/AvailableRooms";
+import DeleteRoomModal from "../components/rooms/DeleteRoomModal";
 
 const RoomsPage = () => {
   const [rooms, setRooms] = useState([]);
@@ -29,7 +30,6 @@ const RoomsPage = () => {
         a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
       );
       setRooms(sortedRooms);
-
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
       setError("Failed to load rooms.");
@@ -43,27 +43,9 @@ const RoomsPage = () => {
     setModalView("edit");
   };
 
-  const handleDelete = async (room) => {
-    if (window.confirm(`Are you sure you want to delete room ${room.room_number}?`)) {
-      try {
-        const response = await fetch(`http://localhost:8000/rooms/${room.room_number}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (response.ok) {
-          alert("Room deleted.");
-          fetchRooms();
-        } else {
-          const errorData = await response.json();
-          alert(`Failed to delete room: ${errorData.detail}`);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Server error.");
-      }
-    }
+  const handleDelete = (room) => {
+    setSelectedRoom(room);
+    setModalView("delete");
   };
 
   const handleViewFaults = (room) => {
@@ -155,11 +137,25 @@ const RoomsPage = () => {
             )}
 
             {modalView === "faults" && selectedRoom && (
-              <RoomFaultsView room={selectedRoom} onClose={handleCloseModal} />
+              <RoomFaultsView
+                room={selectedRoom}
+                onClose={handleCloseModal}
+              />
             )}
 
             {modalView === "add" && (
-              <AddRoomForm onClose={handleCloseModal} onRoomAdded={fetchRooms} />
+              <AddRoomForm
+                onClose={handleCloseModal}
+                onRoomAdded={fetchRooms}
+              />
+            )}
+
+            {modalView === "delete" && selectedRoom && (
+              <DeleteRoomModal
+                room={selectedRoom}
+                onClose={handleCloseModal}
+                onRoomDeleted={fetchRooms}
+              />
             )}
           </div>
         </div>
