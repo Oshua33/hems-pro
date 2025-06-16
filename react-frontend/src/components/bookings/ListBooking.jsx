@@ -1,22 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./ListBooking.css";
+import ViewForm from "./ViewForm";
+import { openViewForm } from "./viewFormUtils";
+
 
 const ListBooking = () => {
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const [totalBookings, setTotalBookings] = useState(0);
+  const [totalBookingCost, setTotalBookingCost] = useState(0);
 
   const fetchBookings = async () => {
     setLoading(true);
+    setHasFiltered(true);
+    setError(null);
+
     try {
       let url = "http://localhost:8000/bookings/list";
       const params = [];
+
       if (startDate) params.push(`start_date=${startDate}`);
       if (endDate) params.push(`end_date=${endDate}`);
       if (params.length > 0) url += "?" + params.join("&");
@@ -29,6 +37,8 @@ const ListBooking = () => {
 
       const data = await response.json();
       setBookings(data.bookings || []);
+      setTotalBookings(data.total_bookings || 0);
+      setTotalBookingCost(data.total_booking_cost || 0);
     } catch (err) {
       setError("Failed to fetch bookings");
     } finally {
@@ -37,11 +47,15 @@ const ListBooking = () => {
   };
 
   const handleView = (booking) => {
-    alert(`View Booking: ID ${booking.id}`);
+    openViewForm(booking); // ✅ Use utility directly
   };
 
   const handleUpdate = (booking) => {
     alert(`Update Booking: ID ${booking.id}`);
+  };
+
+  const handleCloseView = () => {
+    setSelectedBooking(null);
   };
 
   return (
@@ -63,11 +77,10 @@ const ListBooking = () => {
         </div>
       </div>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
-      ) : (
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {hasFiltered && (
         <div className="booking-table-wrapper">
           <table className="booking-table">
             <thead>
@@ -78,7 +91,7 @@ const ListBooking = () => {
                 <th>Gender</th>
                 <th>Arrival</th>
                 <th>Departure</th>
-                <th>No. of Days</th>
+                <th>Days</th>
                 <th>Booking Type</th>
                 <th>Phone</th>
                 <th>Booking Date</th>
@@ -117,7 +130,12 @@ const ListBooking = () => {
                   <td>{b.vehicle_no}</td>
                   <td>
                     {b.attachment ? (
-                      <a href={b.attachment} target="_blank" rel="noopener noreferrer">
+                      <a
+                        className="attachment-link"
+                        href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         View
                       </a>
                     ) : (
@@ -125,14 +143,42 @@ const ListBooking = () => {
                     )}
                   </td>
                   <td>
-                    <button onClick={() => handleView(b)}>View</button>
-                    <button onClick={() => handleUpdate(b)}>Update</button>
+                    <button className="view-btn" onClick={() => handleView(b)}>
+                      View Form
+                    </button>
+                    <button className="update-btn" onClick={() => handleUpdate(b)}>
+                      Update
+                    </button>
                   </td>
                 </tr>
               ))}
+              {bookings.length === 0 && !loading && (
+                <tr>
+                  <td colSpan="20" style={{ textAlign: "center" }}>
+                    No bookings found for the selected date range.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+
+          {bookings.length > 0 && (
+            <div className="booking-summary">
+              <p>
+                <strong>Total Entries:</strong> {totalBookings}
+              </p>
+              <p>
+                <strong>Total Booking Cost:</strong> ₦
+                {totalBookingCost.toLocaleString()}
+              </p>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* 🚀 Auto Guest Form Print */}
+      {selectedBooking && (
+        <ViewForm booking={selectedBooking} onClose={handleCloseView} />
       )}
     </div>
   );

@@ -1,70 +1,89 @@
 .list-booking-container {
-  padding: 0; /* No extra padding to bring everything to the edge */
+  padding: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background-color: #f1efef;
+  overflow: hidden;
 }
 
+/* Sticky combined header area */
 .booking-header {
-  background-color: white;
   position: sticky;
   top: 0;
-  z-index: 10;
-  padding: 0.3rem 1rem 0.3rem 1rem; /* minimal vertical padding, side spacing retained */
+  z-index: 20;
+  background-color: white;
+  padding: 0.6rem;
   border-bottom: 1px solid #ccc;
 }
 
-.booking-header h2 {
-  margin: 0;
-  font-size: 1rem; /* Slightly smaller title */
-}
-
+/* Date filters inside the sticky header */
 .date-range-filters {
   display: flex;
-  gap: 0.4rem;
   flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.date-range-filters input[type="date"],
+.date-range-filters button {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  min-width: 100px;
+}
+
+.date-range-filters button {
+  background-color: #58606e;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.date-range-filters button:hover {
+  background-color: #3d64a8;
+}
+
+/* Table scrollable area */
+.booking-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Table */
+.booking-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  min-width: 1200px;
   font-size: 0.75rem;
 }
 
-.booking-table-wrapper {
-  flex: 1;
-  overflow: auto;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 0 1rem; /* Increase side width for full content */
-}
-
-.booking-table {
-  width: 100%; /* Full width */
-  border-collapse: collapse;
-  table-layout: auto;
-  font-size: 0.75rem; /* Smaller data text for compactness */
-  min-width: 1200px;
-}
-
+/* Sticky table header */
 .booking-table thead th {
   position: sticky;
-  top: 0;
+  top: 0px; /* height of .booking-header including padding 4px*/
+  z-index: 15;
   background-color: #f2f2f2;
   padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid #ccc;
   text-align: left;
+  border-bottom: 1px solid #ccc;
   white-space: nowrap;
-  z-index: 5;
+  font-weight: 600;
   font-size: 0.78rem;
-  font-weight: 700; /* BOLD column headings */
 }
 
+/* Table cells */
 .booking-table td {
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid #ddd;
   white-space: nowrap;
   font-size: 0.72rem;
-  font-weight: normal; /* Regular weight for content */
 }
 
-
+/* Row colors */
 .booking-table tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }
@@ -73,6 +92,7 @@
   background-color: #f1f1f1;
 }
 
+/* Buttons */
 button {
   padding: 3px 8px;
   font-size: 0.7rem;
@@ -82,4 +102,70 @@ button {
   border: none;
   border-radius: 3px;
   cursor: pointer;
+}
+
+/* Summary below table */
+.booking-summary {
+  margin-top: 1rem;
+  padding-left: 0.6rem;
+  font-size: 0.9rem;
+  display: flex;
+  gap: 2rem;
+  font-weight: 800;
+  color: #003366; /* Dark blue text */
+
+}
+
+.attachment-link {
+  color: #390fd3;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+
+
+.attachment-preview {
+  position: fixed;
+  top: 10%;
+  left: 10%;
+  width: 60%;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  z-index: 1000;
+  max-height: 70%;
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.preview-body {
+  text-align: center;
+}
+
+.view-btn,
+.update-btn {
+  background-color: #918d9c;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 5px;
+  transition: background-color 0.2s ease;
+}
+
+.view-btn:hover,
+.update-btn:hover {
+  background-color: #5333a3; /* darker shade on hover */
 }
