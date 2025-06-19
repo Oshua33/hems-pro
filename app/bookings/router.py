@@ -387,7 +387,8 @@ def list_bookings_by_status(
         query = db.query(booking_models.Booking)
 
         # Special condition: If searching for "complimentary", filter by payment_status
-        if status:
+        # Only apply status filters if status is set and is NOT "none"
+        if status and status.lower() != "all":
             if status.lower() == "complimentary":
                 query = query.filter(booking_models.Booking.payment_status == "complimentary")
             else:
@@ -433,11 +434,17 @@ def list_bookings_by_status(
             for booking in bookings
         ]
 
-        # Return the formatted response
+
+        # Add this after formatted_bookings is created
+        total_cost = sum(booking.booking_cost for booking in bookings)
+
+        # Updated return block
         return {
             "total_bookings": len(formatted_bookings),
-            "bookings": formatted_bookings if formatted_bookings else []  # Ensure bookings is always a list
+            "total_cost": total_cost,
+            "bookings": formatted_bookings
         }
+
 
     except Exception as e:
         logger.error(f"Error retrieving bookings by status and booking date: {str(e)}")
@@ -452,53 +459,57 @@ def list_bookings_by_status(
 @router.get("/search")
 def search_guest_name(
     guest_name: str,
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    """
-    Search for bookings by guest name.
-    Returns all bookings matching the given guest name.
-    """
     try:
-        bookings = db.query(booking_models.Booking).filter(
-            booking_models.Booking.guest_name.ilike(f"%{guest_name}%"),
-        ).all()
+        query = db.query(booking_models.Booking).filter(
+            booking_models.Booking.guest_name.ilike(f"%{guest_name}%")
+        )
+
+        # Optional date filters on booking_date
+        if start_date:
+            query = query.filter(booking_models.Booking.booking_date >= datetime.combine(start_date, datetime.min.time()))
+        if end_date:
+            query = query.filter(booking_models.Booking.booking_date <= datetime.combine(end_date, datetime.max.time()))
+
+        bookings = query.all()
 
         if not bookings:
             raise HTTPException(status_code=404, detail=f"No bookings found for guest '{guest_name}'.")
 
-        formatted_bookings = []
-        total_cost = 0.0
+        total_cost = sum(
+            b.booking_cost or 0
+            for b in bookings
+            if b.status.lower() not in ("cancelled", "complimentary")
+        )
 
-        for booking in bookings:
-            formatted_bookings.append({
-                "id": booking.id,
-                "room_number": booking.room_number,
-                "guest_name": booking.guest_name,
-                "gender": booking.gender,
-                "arrival_date": booking.arrival_date,
-                "departure_date": booking.departure_date,
-                "number_of_days": booking.number_of_days,
-                "booking_type": booking.booking_type,
-                "phone_number": booking.phone_number,
-                "booking_date": booking.booking_date,
-                "status": booking.status,
-                "payment_status": booking.payment_status,
-                "mode_of_identification": booking.mode_of_identification,
-                "identification_number": booking.identification_number,
-                "address": booking.address,
-                "booking_cost": booking.booking_cost,
-                "created_by": booking.created_by,
-                "vehicle_no": booking.vehicle_no,
-                 "attachment": booking.attachment
-            })
-
-            # Count only non-cancelled bookings
-            #total_entries = sum(1 for booking in bookings if booking.status.lower() != "cancelled")
-
-            # Only add cost if status is not 'cancelled' or 'complimentary'
-            if booking.status.lower() not in ["cancelled", "complimentary"]:
-                total_cost += booking.booking_cost or 0.0
+        formatted_bookings = [
+            {
+                "id": b.id,
+                "room_number": b.room_number,
+                "guest_name": b.guest_name,
+                "gender": b.gender,
+                "arrival_date": b.arrival_date,
+                "departure_date": b.departure_date,
+                "number_of_days": b.number_of_days,
+                "booking_type": b.booking_type,
+                "phone_number": b.phone_number,
+                "booking_date": b.booking_date,
+                "status": b.status,
+                "payment_status": b.payment_status,
+                "mode_of_identification": b.mode_of_identification,
+                "identification_number": b.identification_number,
+                "address": b.address,
+                "booking_cost": b.booking_cost,
+                "created_by": b.created_by,
+                "vehicle_no": b.vehicle_no,
+                "attachment": b.attachment
+            }
+            for b in bookings
+        ]
 
         return {
             "total_bookings": len(formatted_bookings),
