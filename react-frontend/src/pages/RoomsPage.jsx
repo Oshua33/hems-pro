@@ -140,6 +140,7 @@ const RoomsPage = () => {
               <RoomFaultsView
                 room={selectedRoom}
                 onClose={handleCloseModal}
+                onRefresh={fetchRooms} // ✅ this line is the fix
               />
             )}
 

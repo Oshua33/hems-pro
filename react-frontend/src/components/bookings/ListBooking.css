@@ -1,72 +1,124 @@
+/* ───────────── Main Container ───────────── */
 .list-booking-container {
-  padding: 0;
+  padding: 0px;
+  font-family: Arial, sans-serif;
+}
+
+/* ───────────── Header Row (Line 1) ───────────── */
+.list-booking-header-row {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #f1efef;
-  overflow: hidden;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0px;
 }
 
-/* Sticky combined header area */
-.booking-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background-color: white;
-  padding: 0.6rem;
-  border-bottom: 1px solid #ccc;
+.compact-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #003366;
+  margin: 0;
 }
 
-/* Date filters inside the sticky header */
-.date-range-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-  font-size: 0.85rem;
+/* ───────────── Column Selector ───────────── */
+.column-control-wrapper {
+  position: relative;
 }
 
-.date-range-filters input[type="date"],
-.date-range-filters button {
-  padding: 0.4rem 0.6rem;
-  font-size: 0.85rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  min-width: 100px;
-}
-
-.date-range-filters button {
-  background-color: #58606e;
+.column-toggle-button {
+  padding: 6px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: #4a5568;
   color: #fff;
   border: none;
+  border-radius: 4px;
+}
+
+.column-toggle-button:hover {
+  background-color: #2f3e53;
+}
+
+.column-dropdown-menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background: #fcfafa;
+  border: 1px solid #aaa5a5;
+  padding: 25px;
+  z-index: 100;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 1px; /* spacing between checkboxes */
+}
+
+.column-dropdown-menu label {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
   cursor: pointer;
 }
 
-.date-range-filters button:hover {
-  background-color: #3d64a8;
+/* ───────────── Filter Controls Section (Line 2) ───────────── */
+/* Reduce spacing around filter section */
+.filter-controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+  padding-left: 10px;
+  margin-bottom: 4px;
+  border-left: 2px solid #4a5568;
+}
+/* Smaller and tighter filter rows */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
 
-/* Table scrollable area */
+/* Label style */
+.filter-row label {
+  font-size: 0.75rem;
+  margin-right: 2px;
+  white-space: nowrap;
+  width: 90px; /* Ensures all labels align */
+}
+
+/* Ensure consistent spacing between date inputs */
+.filter-row input[type="date"] + input[type="date"] {
+  margin-left: 4px;
+}
+
+/* Button style */
+.filter-row button {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  margin-left: 2px;
+}
+/* Reduce top margin of table wrapper to pull it up */
+.booking-table-wrapper {
+  margin-top: -20px;
+}
+/* ───────────── Table Styles ───────────── */
 .booking-table-wrapper {
   flex: 1;
   overflow-y: auto;
 }
 
-/* Table */
-.booking-table {
-  border-collapse: collapse;
-  table-layout: auto;
-  width: 100%;
-}
+
 
 .booking-table thead th,
 .booking-table td {
-  padding: 2px 4px;       /* uniform padding: top, right, bottom, left */
+  padding: 4px 4px; /* reduced from 6px 8px */
   text-align: left;
   white-space: nowrap;
-  font-size: 0.75rem;
+  font-size: 0.72rem; /* optional: slightly smaller text */
   border-bottom: 1px solid #ddd;
 }
+
 
 .booking-table thead th {
   background-color: #f2f2f2;
@@ -76,20 +128,18 @@
   font-weight: 600;
 }
 
-
-/* Row colors */
 .booking-table tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }
 
 .booking-table tbody tr:hover {
-  background-color: #f1f1f1;
+  background-color: #eef1f7;
 }
 
-/* Buttons */
+/* ───────────── Action Buttons ───────────── */
 button {
-  padding: 3px 8px;
-  font-size: 0.7rem;
+  padding: 4px 8px;
+  font-size: 0.75rem;
   margin: 0 2px;
   background-color: #4a5568;
   color: white;
@@ -98,26 +148,24 @@ button {
   cursor: pointer;
 }
 
-/* Summary below table */
+/* ───────────── Summary Row ───────────── */
 .booking-summary {
-  margin-top: 1rem;
+  margin-top: 0.6rem;
   padding-left: 0.6rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   display: flex;
-  gap: 2rem;
-  font-weight: 800;
-  color: #003366; /* Dark blue text */
-
+  gap: 1.5rem;
+  font-weight: 700;
+  color: #003366;
 }
 
+/* ───────────── Attachments ───────────── */
 .attachment-link {
   color: #390fd3;
   text-decoration: underline;
   cursor: pointer;
   font-weight: bold;
 }
-
-
 
 .attachment-preview {
   position: fixed;
@@ -134,19 +182,8 @@ button {
   border-radius: 8px;
 }
 
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.5rem;
-}
 
-.preview-body {
-  text-align: center;
-}
-
+/* ───────────── Action Buttons ───────────── */
 .view-btn,
 .update-btn {
   background-color: #a6a3af;
@@ -161,74 +198,10 @@ button {
 
 .view-btn:hover,
 .update-btn:hover {
-  background-color: #5333a3; /* darker shade on hover */
+  background-color: #5333a3;
 }
 
-
-.top-right-controls {
-  position: absolute;
-  right: 2rem;
-  top: 2rem;
-  z-index: 10;
-}
-
-.column-dropdown-menu {
-  position: absolute;
-  background: white;
-  border: 1px solid #ccc;
-  padding: 1rem;
-  margin-top: 0.5rem;
-  max-height: 300px;
-  overflow-y: auto;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
-}
-
-.list-booking-header {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  position: relative;
-}
-
-.booking-header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.column-control-wrapper {
-  position: relative;
-}
-
-.column-toggle-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.column-dropdown-menu {
-  position: absolute;
-  top: 40px;
-  right: 0;
-  background: white;
-  border: 1px solid #ccc;
-  padding: 10px;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  max-height: 300px;
-  overflow-y: auto;
-  width: 200px;
-}
-
-.column-dropdown-menu label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-
+/* ───────────── Payment Buttons ───────────── */
 .payment-btn {
   padding: 4px 8px;
   border: none;
@@ -239,24 +212,51 @@ button {
   margin-left: 4px;
 }
 
-/* Use red for both 'incomplete' and 'pending' */
-.payment-btn.incomplete {
-  background-color: #e74c3c; /* Red */
+.payment-btn.incomplete,
+.payment-btn.pending {
+  background-color: #e74c3c;
 }
 
-.payment-btn.complimentary {
-  background-color: #a6a3af; /* Gray */
-}
-
+.payment-btn.complimentary,
 .payment-btn.void {
-  background-color: #a6a3af; /* Gray */
+  background-color: #a6a3af;
 }
 
 .payment-btn.completed {
-  background-color: #32a763; /* Green */
+  background-color: #32a763;
 }
 
 .payment-btn.excess {
-  background-color: #03f162; /* very bright green */
-  
+  background-color: #03f162;
+}
+
+.booking-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+/* In your CSS file (e.g., BookingList.css or global.css) */
+.fetch-button {
+  background-color: #5c6980;
+  color: white;
+  padding: 10px 24px; /* Increased horizontal padding */
+  font-size: 16px;
+  min-width: 100px;    /* Ensures button has a decent width */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.fetch-button:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.fetch-button:active {
+  background-color: #1d4ed8;
+  transform: translateY(1px);
 }

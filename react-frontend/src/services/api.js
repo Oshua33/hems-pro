@@ -6,3 +6,4 @@ export const getUserRole = async (token) => {
   });
   return res.data.role;
 };
+

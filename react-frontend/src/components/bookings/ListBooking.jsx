@@ -5,8 +5,6 @@ import UpdateForm from "./UpdateForm";
 import CreatePayment from "../payments/CreatePayment";
 import { openViewForm } from "./viewFormUtils";
 
-
-// Define all columns
 const ALL_COLUMNS = [
   { key: "id", label: "ID" },
   { key: "room_number", label: "Room" },
@@ -36,20 +34,16 @@ const ListBooking = () => {
   const [error, setError] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
   const [hasFiltered, setHasFiltered] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [totalBookings, setTotalBookings] = useState(0);
   const [totalBookingCost, setTotalBookingCost] = useState(0);
   const [bookingToUpdate, setBookingToUpdate] = useState(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
-  const [paymentBooking, setPaymentBooking] = useState(null); // Booking for payment
-
-
-  const handlePayment = (booking) => {
-    setPaymentBooking(booking); // Open payment form for selected booking
-  };
-
-
+  const [paymentBooking, setPaymentBooking] = useState(null);
+  const [status, setStatus] = useState("none");
 
 
   const getInitialVisibleColumns = () => {
@@ -59,7 +53,6 @@ const ListBooking = () => {
   };
 
   const [visibleColumns, setVisibleColumns] = useState(getInitialVisibleColumns);
-
 
   const handleToggleColumn = (key) => {
     setVisibleColumns((prev) => {
@@ -75,29 +68,63 @@ const ListBooking = () => {
     setError(null);
 
     try {
+      const token = localStorage.getItem("token");
       let url = "http://localhost:8000/bookings/list";
-      const params = [];
+      const params = {};
 
-      if (startDate) params.push(`start_date=${startDate}`);
-      if (endDate) params.push(`end_date=${endDate}`);
-      if (params.length > 0) url += "?" + params.join("&");
+      // 1. Status Filter (only if not "none")
+      if (status && status !== "none") {
+        url = "http://localhost:8000/bookings/status";
+        params.status = status;
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+      }
+      // 2. Guest Name Filter (only when status is "none")
+      else if (guestName) {
+        url = "http://localhost:8000/bookings/search";
+        params.guest_name = guestName;
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+      }
+      // 3. Room Number Filter (only when status is "none" and guest is empty)
+      else if (roomNumber) {
+        url = `http://localhost:8000/bookings/room/${roomNumber}`;
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+      }
+      // 🚫 4. Invalid filter case
+      else {
+        // Clear current data
+        setBookings([]);
+        setTotalBookings(0);
+        setTotalBookingCost(0);
 
-      const response = await fetch(url, {
+        setError("Please provide a filter (guest name, room, or status) to fetch bookings.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${url}?${new URLSearchParams(params)}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
       const data = await response.json();
+
       setBookings(data.bookings || []);
-      setTotalBookings(data.total_bookings || 0);
-      setTotalBookingCost(data.total_booking_cost || 0);
+      setTotalBookings(data.total_bookings || data.bookings?.length || 0);
+      setTotalBookingCost(data.total_cost || data.total_booking_cost || 0);
     } catch (err) {
-      setError("Failed to fetch bookings");
+      setError("Failed to fetch bookings.");
+      setBookings([]); // Optional: also clear on error
     } finally {
       setLoading(false);
     }
   };
+
+
+
 
   const handleView = (booking) => {
     openViewForm(booking);
@@ -111,18 +138,25 @@ const ListBooking = () => {
     setSelectedBooking(null);
   };
 
+  const handlePayment = (booking) => {
+    setPaymentBooking(booking);
+  };
+
   return (
     <div className="list-booking-container">
-      <div className="list-booking-header">
-        <div className="booking-header-top">
-          <h2>📄 Booking List</h2>
+        <div className="list-booking-container">
+        {/* Line 1: Header with Booking List on the left and Column Selector on the right */}
+        <div className="list-booking-header-row">
+          <h2 className="compact-title">📄 Booking Management</h2>
+
           <div className="column-control-wrapper">
             <button
               className="column-toggle-button"
               onClick={() => setShowColumnMenu(!showColumnMenu)}
             >
-              🛠️ Hide Columns
+              🛠️ Select Columns
             </button>
+
             {showColumnMenu && (
               <div className="column-dropdown-menu">
                 {ALL_COLUMNS.map((col) => (
@@ -140,20 +174,66 @@ const ListBooking = () => {
           </div>
         </div>
 
-        <div className="date-range-filters">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-          <button onClick={fetchBookings}>Filter</button>
+        {/* Line 2: Filters aligned below the heading */}
+        <div className="filter-controls-section">
+          <div className="filter-row">
+            <label>Sort by Status:</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="none">None</option> {/* Means ignore status filter */}
+              <option value="All">All</option>   {/* Means get all statuses */}
+              <option value="checked-in">Checked-In</option>
+              <option value="reserved">Reserved</option>
+              <option value="checked-out">Checked-Out</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="complimentary">Complimentary</option>
+            </select>
+
+          </div>
+
+          <div className="filter-row">
+            <label>Sort by Guest:</label>
+            <input
+              type="text"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="e.g. John"
+            />
+          </div>
+
+          <div className="filter-row">
+            <label>Sort by Room:</label>
+            <input
+              type="text"
+              value={roomNumber}
+              onChange={(e) => setRoomNumber(e.target.value)}
+              placeholder="e.g. A3"
+            />
+          </div>
+
+          <div className="filter-row">
+            <label>Date Range:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <button className="fetch-button" onClick={fetchBookings}>
+            Fetch
+          </button>
+          </div>
         </div>
       </div>
+
+
+
+      
+
+      
 
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -221,26 +301,23 @@ const ListBooking = () => {
                         Update
                       </button>
                       <button
-                      className={`payment-btn ${
-                        b.payment_status === "payment excess"
-                          ? "excess"
-                          : b.payment_status === "payment completed"
-                          ? "completed"
-                          : b.payment_status === "complimentary"
-                          ? "complimentary"
-                          : b.payment_status === "void"
-                          ? "void"
-                          : ["payment incomplete", "pending"].includes(b.payment_status)
-                          ? "incomplete"
-                          : ""
-                      }`}
-                      onClick={() => handlePayment(b)}
-                    >
-                      Payment
-                    </button>
-
-
-
+                        className={`payment-btn ${
+                          b.payment_status === "payment excess"
+                            ? "excess"
+                            : b.payment_status === "payment completed"
+                            ? "completed"
+                            : b.payment_status === "complimentary"
+                            ? "complimentary"
+                            : b.payment_status === "void"
+                            ? "void"
+                            : ["payment incomplete", "pending"].includes(b.payment_status)
+                            ? "incomplete"
+                            : ""
+                        }`}
+                        onClick={() => handlePayment(b)}
+                      >
+                        Payment
+                      </button>
                     </td>
                   )}
                 </tr>
@@ -248,7 +325,7 @@ const ListBooking = () => {
               {bookings.length === 0 && !loading && (
                 <tr>
                   <td colSpan={ALL_COLUMNS.length} style={{ textAlign: "center" }}>
-                    No bookings found for the selected date range.
+                    No bookings found for the selected filters.
                   </td>
                 </tr>
               )}
@@ -257,13 +334,8 @@ const ListBooking = () => {
 
           {bookings.length > 0 && (
             <div className="booking-summary">
-              <p>
-                <strong>Total Entries:</strong> {totalBookings}
-              </p>
-              <p>
-                <strong>Total Booking Cost:</strong> ₦
-                {totalBookingCost.toLocaleString()}
-              </p>
+              <p><strong>Total Entries:</strong> {totalBookings}</p>
+              <p><strong>Total Booking Cost:</strong> ₦{totalBookingCost.toLocaleString()}</p>
             </div>
           )}
         </div>
@@ -288,23 +360,21 @@ const ListBooking = () => {
       )}
 
       {paymentBooking && (
-  <CreatePayment
-    booking={paymentBooking}
-    onClose={() => setPaymentBooking(null)}
-    onSuccess={(newPayment) => {
-      // Update the bookings list with updated payment status
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === paymentBooking.id
-            ? { ...b, payment_status: newPayment.status }
-            : b
-        )
-      );
-      setPaymentBooking(null); // Close modal after success
-    }}
-  />
-)}
-
+        <CreatePayment
+          booking={paymentBooking}
+          onClose={() => setPaymentBooking(null)}
+          onSuccess={(newPayment) => {
+            setBookings((prev) =>
+              prev.map((b) =>
+                b.id === paymentBooking.id
+                  ? { ...b, payment_status: newPayment.status }
+                  : b
+              )
+            );
+            setPaymentBooking(null);
+          }}
+        />
+      )}
     </div>
   );
 };

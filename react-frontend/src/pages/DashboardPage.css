@@ -169,15 +169,19 @@
   position: absolute;
   left: 100%;
   top: 0;
-  background: #4ade80; /* Match hover color */
+  transform: translateY(30px); /* ✅ Moves it downward visually */
+  background: #ced4d0;
   border: none;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   padding: 0.5rem 0;
   z-index: 100;
   white-space: nowrap;
-  min-width: 200px;
+  min-width: 150px;
 }
+
+
+
 
 /* Submenu items match green theme and transition */
 .submenu-item {

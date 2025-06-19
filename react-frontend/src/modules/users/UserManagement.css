@@ -1,5 +1,5 @@
 .user-container {
-  background: #fcfbfb;
+  background: rgba(252, 251, 251, 0.74);
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -22,7 +22,7 @@
 
 .user-table {
   display: grid;
-  border: 1px solid #ccc;
+  border: 1px solid #ac9f9f;
   border-radius: 8px;
   overflow: hidden;
   margin-top: 15px;
@@ -47,6 +47,13 @@
 
 .table-row:last-child {
   border-bottom: none;
+}
+
+
+/* Add striped effect to even rows */
+.table-row:nth-child(even) {
+  background-color: #d3d0d0;
+  
 }
 
 .table-row div,
@@ -167,11 +174,6 @@
   margin-bottom: 8px;
 }
 
-.form-buttons button {
-  font-size: 12px;
-  margin-right: 8px;
-  padding: 4px 10px;
-}
 
 .popup-toast {
   position: fixed;
@@ -267,3 +269,28 @@
   gap: 10px;
 }
 
+.form-buttons button {
+  font-size: 14px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  margin-right: 10px;
+  cursor: pointer;
+  color: white;
+  background-color: #28a745; /* default to green for create */
+  transition: background-color 0.3s ease;
+}
+
+/* First button is 'Create' */
+.form-buttons button[type="submit"]:hover {
+  background-color: #218838; /* darker green */
+}
+
+/* Second button is 'Cancel' */
+.form-buttons button[type="button"] {
+  background-color: #4d6f8f; /* grey */
+}
+
+.form-buttons button[type="button"]:hover {
+  background-color: #36617e; /* darker grey */
+}

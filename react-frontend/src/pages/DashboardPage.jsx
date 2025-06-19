@@ -20,10 +20,7 @@ const DashboardPage = () => {
 
   const bookingSubmenu = [
     { label: "➕ Create Booking", path: "/dashboard/bookings/create" },
-    { label: "📋 List Booking", path: "/dashboard/bookings/list" },
-    { label: "🔖 Sort by Status", path: "/dashboard/bookings/sort-status" },
-    { label: "🙍 Sort Guest by Name", path: "/dashboard/bookings/sort-name" },
-    { label: "🚪 Sort Guest by Room", path: "/dashboard/bookings/sort-room" },
+    { label: "🔍 Search Booking", path: "/dashboard/bookings/list" },
     { label: "✅ Checkout Guest", path: "/dashboard/bookings/checkout" },
     { label: "❌ Cancel Booking", path: "/dashboard/bookings/cancel" },
   ];

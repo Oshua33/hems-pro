@@ -2,7 +2,7 @@
 
 .rooms-container {
   padding: 30px;
-  background-color: #f9fafb;
+  background-color: #f8f8f8;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -71,7 +71,7 @@
 .rooms-table th,
 .rooms-table td {
   text-align: left;
-  padding: 8px 12px; /* reduced padding for compact rows */
+  padding: 4px 8px; /* reduced padding for compact rows */
   border-bottom: 1px solid #e0e0e0;
   vertical-align: middle;
 }
@@ -91,6 +91,11 @@
 .rooms-table tr:hover {
   background-color: #f9f9f9;
 }
+
+.rooms-table tbody tr:nth-child(even) {
+  background-color: #f2f6fa; /* light grid color for even rows */
+}
+
 
 .action-btn {
   margin-right: 5px;
