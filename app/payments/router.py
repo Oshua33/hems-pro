@@ -585,7 +585,81 @@ def get_debtor_list(
             detail="Debtor records not found",
         )
 
+@router.get("/outstanding")
+def list_outstanding_bookings(
+    db: Session = Depends(get_db),
+    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    try:
+        # Fetch all bookings that are not cancelled or complimentary or fully paid
+        bookings = db.query(booking_models.Booking).filter(
+            booking_models.Booking.status != "cancelled",
+            booking_models.Booking.payment_status != "payment completed",
+            booking_models.Booking.payment_status != "complimentary",
+            booking_models.Booking.status != "checked-out"
+        ).all()
 
+        if not bookings:
+            raise HTTPException(status_code=404, detail="No outstanding bookings found.")
+
+        outstanding = []
+
+        for booking in bookings:
+            room = db.query(room_models.Room).filter(
+                room_models.Room.room_number == booking.room_number
+            ).first()
+
+            if not room:
+                continue
+
+            total_due = booking.number_of_days * room.amount
+
+            all_payments = db.query(payment_models.Payment).filter(
+                payment_models.Payment.booking_id == booking.id,
+                payment_models.Payment.status != "voided"
+            ).all()
+
+            total_paid = sum(p.amount_paid for p in all_payments)
+            total_discount = sum(p.discount_allowed or 0 for p in all_payments)
+
+            balance_due = total_due - (total_paid + total_discount)
+            
+
+
+            if balance_due > 0:
+                outstanding.append({
+                    "booking_id": booking.id,
+                    "guest_name": booking.guest_name,
+                    "room_number": booking.room_number,
+                    "room_price": room.amount,
+                    "number_of_days": booking.number_of_days,
+                    "total_due": total_due,
+                    "total_paid": total_paid,
+                    "discount_allowed": total_discount,
+                    "amount_due": balance_due,
+                    "booking_date": make_timezone_aware(booking.booking_date),
+                    "payment_status": booking.payment_status,
+                })
+
+        if not outstanding:
+            raise HTTPException(status_code=404, detail="No outstanding balances found.")
+
+        outstanding.sort(key=lambda x: x["booking_date"], reverse=True)
+
+        
+
+        total_outstanding_balance = sum(item["amount_due"] for item in outstanding)
+
+        return {
+            "total_outstanding": len(outstanding),
+            "total_outstanding_balance": total_outstanding_balance,
+            "outstanding_bookings": outstanding
+        }
+
+
+    except Exception as e:
+        logger.error(f"Error in list_outstanding_bookings: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not fetch outstanding bookings.")
 
 
 @router.get("/{payment_id}")
