@@ -11,6 +11,7 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [disableForm, setDisableForm] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,17 +39,20 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
         throw new Error(data.detail || "Payment failed");
       }
 
-      setMessage("✅ " + data.message);
+      setMessage("✅ " + (data.message || "Payment successful"));
+      setDisableForm(true);
+      setLoading(false);
 
-      // Pass status info to parent via onSuccess
-      if (onSuccess) {
-        const status = data.updated_booking?.payment_status || "pending";
-        onSuccess({ status });
-      }
-
+      // Delay calling onSuccess to show the message
+      setTimeout(() => {
+        if (onSuccess) {
+          const status = data.updated_booking?.payment_status || "pending";
+          onSuccess({ status });
+        }
+        onClose(); // Close the modal after 3 seconds
+      }, 10000);
     } catch (err) {
-      setError(err.message);
-    } finally {
+      setError(err.message || "An error occurred");
       setLoading(false);
     }
   };
@@ -57,6 +61,10 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
     <div className="payment-form-overlay">
       <div className="payment-form-container">
         <h2>💳 Create Payment for Booking #{booking.id}</h2>
+
+        {error && <p className="error">{error}</p>}
+        {message && <p className="success">{message}</p>}
+
         <form onSubmit={handleSubmit}>
           <label>Amount Paid (₦)</label>
           <input
@@ -64,6 +72,7 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
             value={amountPaid}
             onChange={(e) => setAmountPaid(e.target.value)}
             required
+            disabled={disableForm}
           />
 
           <label>Discount Allowed (₦)</label>
@@ -71,6 +80,7 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
             type="number"
             value={discountAllowed}
             onChange={(e) => setDiscountAllowed(e.target.value)}
+            disabled={disableForm}
           />
 
           <label>Payment Method</label>
@@ -78,6 +88,7 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
             required
+            disabled={disableForm}
           >
             <option value="cash">Cash</option>
             <option value="bank transfer">Bank Transfer</option>
@@ -90,17 +101,17 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
             value={paymentDate}
             onChange={(e) => setPaymentDate(e.target.value)}
             required
+            disabled={disableForm}
           />
 
-          {error && <p className="error">{error}</p>}
-          {message && <p className="success">{message}</p>}
-
           <div className="payment-buttons">
-            <button type="submit" disabled={loading}>
-              {loading ? "Processing..." : "Submit Payment"}
-            </button>
+            {!disableForm && (
+              <button type="submit" disabled={loading}>
+                {loading ? "Processing..." : "Submit Payment"}
+              </button>
+            )}
             <button type="button" onClick={onClose} className="cancel-btn">
-              Cancel
+              {disableForm ? "Close" : "Cancel"}
             </button>
           </div>
         </form>

@@ -83,3 +83,23 @@
 .payment-buttons .cancel-btn:active {
   background-color: #b71c1c;
 }
+
+.success {
+  color: green;
+  background-color: #e6f4ea;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.error {
+  color: red;
+  background-color: #fdecea;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-weight: 600;
+  text-align: center;
+}

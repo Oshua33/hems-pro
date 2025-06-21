@@ -32,6 +32,7 @@
   color: #fff;
   border: none;
   border-radius: 4px;
+  border-radius: 8px;
 }
 
 .column-toggle-button:hover {
@@ -70,21 +71,32 @@
   padding-left: 10px;
   margin-bottom: 4px;
   border-left: 2px solid #4a5568;
+  
 }
 /* Smaller and tighter filter rows */
+
+
 .filter-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0;
+  gap: 12px;               /* spacing between label and input */
+  margin-bottom: 0px;     /* reduce vertical spacing between rows */
 }
 
-/* Label style */
 .filter-row label {
   font-size: 0.75rem;
-  margin-right: 2px;
+  width: 80px;           /* fixed width to align inputs */
+  color: #333;
   white-space: nowrap;
-  width: 90px; /* Ensures all labels align */
+}
+
+.filter-row input,
+.filter-row select {
+  width: 110px;           /* adjust as needed */
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  border: 1px solid #cabebe;
+  border-radius: 8px;
 }
 
 /* Ensure consistent spacing between date inputs */
@@ -94,8 +106,8 @@
 
 /* Button style */
 .filter-row button {
-  padding: 4px 8px;
-  font-size: 0.7rem;
+  padding: 4px 12px;
+  font-size: 0.9rem;
   margin-left: 2px;
 }
 /* Reduce top margin of table wrapper to pull it up */
@@ -239,15 +251,15 @@ button {
 
 /* In your CSS file (e.g., BookingList.css or global.css) */
 .fetch-button {
-  background-color: #5c6980;
+  background-color: #2657c2;
   color: white;
-  padding: 10px 24px; /* Increased horizontal padding */
-  font-size: 16px;
-  min-width: 100px;    /* Ensures button has a decent width */
+  padding: 4px 14px;     /* Reduced padding */
+  font-size: 14px;        /* Reduced font size from 40px to 14px */
+  min-width: 80px;        /* Optional: Slightly smaller button width */
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
@@ -256,7 +268,3 @@ button {
   transform: translateY(-1px);
 }
 
-.fetch-button:active {
-  background-color: #1d4ed8;
-  transform: translateY(1px);
-}

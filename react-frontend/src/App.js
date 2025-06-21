@@ -19,10 +19,9 @@ import BookingsPage from "./pages/BookingsPage";
 
 import CreateBooking from "./components/bookings/CreateBooking";
 import ListBooking from "./components/bookings/ListBooking";
-
-
-import CheckoutBooking from "./components/bookings/CheckoutBooking";
+import CheckoutGuest from "./components/bookings/CheckoutGuest";
 import CancelBooking from "./components/bookings/CancelBooking";
+// import ViewBooking from "./components/bookings/ViewBooking"; // ← only add this if you really need a dynamic route
 
 const App = () => {
   const [isLicenseVerified, setIsLicenseVerified] = useState(false);
@@ -63,16 +62,13 @@ const App = () => {
         >
           <Route path="users" element={<UsersPage />} />
           <Route path="rooms" element={<RoomsPage />} />
-
-          {/* Bookings submenu routes */}
-          <Route path="users" element={<UsersPage />} />
-          <Route path="rooms" element={<RoomsPage />} />
           <Route path="bookings" element={<BookingsPage />}>
+            <Route index element={<ListBooking />} /> {/* 👈 default subpage */}
             <Route path="create" element={<CreateBooking />} />
             <Route path="list" element={<ListBooking />} />
-            
-            <Route path="checkout" element={<CheckoutBooking />} />
+            <Route path="checkout" element={<CheckoutGuest />} />
             <Route path="cancel" element={<CancelBooking />} />
+            {/* <Route path=":booking_id" element={<ViewBooking />} /> ← Add last only if needed */}
           </Route>
         </Route>
 

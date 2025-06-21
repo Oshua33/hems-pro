@@ -15,7 +15,9 @@ const UserManagement = ({ token }) => {
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("user");
-  const [adminPassword, setAdminPassword] = useState(""); // 🆕 Admin Password field
+  const [adminPassword, setAdminPassword] = useState("");
+
+  const [userToDelete, setUserToDelete] = useState(null); // 🆕
 
   const navigate = useNavigate();
 
@@ -60,60 +62,65 @@ const UserManagement = ({ token }) => {
     setSelectedAction("list");
   };
 
-  const submitUpdate = async (e) => {
-    e.preventDefault();
+  const confirmDeleteUser = (username) => {
+    setUserToDelete(username);
+  };
+
+  const handleConfirmDelete = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/users/${editingUser.username}`, {
-        method: "PUT",
+      const res = await fetch(`${API_BASE_URL}/users/${userToDelete}`, {
+        method: "DELETE",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          username: editingUser.username,
-          password: editPassword || undefined,
-          role: editRole,
-        }),
       });
+
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Update failed");
+        throw new Error(data.detail || "Delete failed");
       }
-      showPopup(`User ${editingUser.username} updated`);
-      cancelEdit();
+
+      showPopup(data.message || `User ${userToDelete} deleted successfully`);
       fetchUsers();
+      setUserToDelete(null); // close modal
     } catch (err) {
-      showPopup(err.message || "Update failed");
+      console.error("Delete Error:", err);
+      showPopup(err.message || "Delete failed");
     }
   };
 
-  const deleteUser = async (username) => {
-  console.log("Delete function called for:", username);  // <-- add this
-  if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) return;
-
+    const submitUpdate = async (e) => {
+  e.preventDefault();
   try {
-    const res = await fetch(`${API_BASE_URL}/users/${username}`, {
-      method: "DELETE",
+    const res = await fetch(`${API_BASE_URL}/users/${editingUser.username}`, {
+      method: "PUT",
       headers: {
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        username: editingUser.username,
+        password: editPassword || undefined,
+        role: editRole,
+      }),
     });
-
-    const data = await res.json();
-
     if (!res.ok) {
-      throw new Error(data.detail || "Delete failed");
+      const data = await res.json();
+      throw new Error(data.detail || "Update failed");
     }
-
-    showPopup(data.message || `User ${username} deleted successfully`);
-    fetchUsers();  // Refresh list
+    showPopup(`User ${editingUser.username} updated`);
+    cancelEdit();
+    fetchUsers();
   } catch (err) {
-    console.error("Delete Error:", err);
-    showPopup(err.message || "Delete failed");
+    showPopup(err.message || "Update failed");
   }
 };
 
 
+  const handleCancelDelete = () => {
+    setUserToDelete(null);
+  };
 
   const submitAddUser = async (e) => {
     e.preventDefault();
@@ -128,7 +135,7 @@ const UserManagement = ({ token }) => {
           username: newUsername,
           password: newPassword,
           role: newRole,
-          admin_password: adminPassword, // 🆕 Send admin password
+          admin_password: adminPassword,
         }),
       });
       if (!res.ok) {
@@ -139,7 +146,7 @@ const UserManagement = ({ token }) => {
       setNewUsername("");
       setNewPassword("");
       setNewRole("user");
-      setAdminPassword(""); // 🆕 Reset admin password
+      setAdminPassword("");
       setSelectedAction("list");
       fetchUsers();
     } catch (err) {
@@ -174,7 +181,6 @@ const UserManagement = ({ token }) => {
       {error && <div className="error">{error}</div>}
       {popupMsg && <div className="popup-inside">{popupMsg}</div>}
 
-      {/* User List */}
       {selectedAction === "list" && (
         <div className="user-table compact">
           <div className="table-header">
@@ -194,23 +200,33 @@ const UserManagement = ({ token }) => {
                 </button>
                 <button
                   className="btn delete"
-                  onClick={() => deleteUser(user.username)}
-                  disabled={
-                    // Disable only if trying to delete self
-                    user.username === localStorage.getItem("username")
-                  }
+                  onClick={() => confirmDeleteUser(user.username)}
+                  disabled={user.username === localStorage.getItem("username")}
                 >
                   Delete
                 </button>
-
-
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Add User Form */}
+      {userToDelete && (
+        <div className="delete-user-modal">
+          <div className="modal-overlay" onClick={handleCancelDelete}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="close-btn" onClick={handleCancelDelete}>✖</button>
+              <h3>Confirm Delete</h3>
+              <p>Are you sure you want to delete user <strong>{userToDelete}</strong>?</p>
+              <div className="modal-actions">
+                <button className="action-btn delete" onClick={handleConfirmDelete}>Yes, Delete</button>
+                <button className="action-btn cancel" onClick={handleCancelDelete}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedAction === "add" && (
         <form onSubmit={submitAddUser} className="edit-form compact-form">
           <div className="edit-header">
@@ -220,79 +236,47 @@ const UserManagement = ({ token }) => {
             </button>
           </div>
 
-          <label>
-            Username:
-            <input
-              type="text"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              required
-            />
+          <label>Username:
+            <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required />
           </label>
-          <label>
-            Password:
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
+          <label>Password:
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
           </label>
-          <label>
-            Role:
+          <label>Role:
             <select value={newRole} onChange={(e) => setNewRole(e.target.value)} required>
               <option value="user">user</option>
               <option value="admin">admin</option>
             </select>
           </label>
-          <label>
-            Admin Password:
-            <input
-              type="password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              required
-            />
+          <label>Admin Password:
+            <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} required />
           </label>
           <div className="form-buttons">
             <button type="submit">Create</button>
-            <button type="button" onClick={() => setSelectedAction("list")}>
-              Cancel
-            </button>
+            <button type="button" onClick={() => setSelectedAction("list")}>Cancel</button>
           </div>
         </form>
       )}
 
-      {/* Edit User Form */}
       {selectedAction === "update" && editingUser && (
         <form onSubmit={submitUpdate} className="edit-form compact-form">
           <div className="edit-header">
             <h4>Edit: {editingUser.username}</h4>
-            <button type="button" className="close-button" onClick={cancelEdit}>
-              ❌
-            </button>
+            <button type="button" className="close-button" onClick={cancelEdit}>❌</button>
           </div>
 
-          <label>
-            Role:
+          <label>Role:
             <select value={editRole} onChange={(e) => setEditRole(e.target.value)} required>
               <option value="user">user</option>
               <option value="admin">admin</option>
             </select>
           </label>
-          <label>
-            New Password:
-            <input
-              type="password"
-              value={editPassword}
-              onChange={(e) => setEditPassword(e.target.value)}
-            />
+          <label>New Password:
+            <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
           </label>
           <div className="form-buttons">
             <button type="submit">Save</button>
-            <button type="button" onClick={cancelEdit}>
-              Cancel
-            </button>
+            <button type="button" onClick={cancelEdit}>Cancel</button>
           </div>
         </form>
       )}

@@ -177,7 +177,7 @@ const ListBooking = () => {
         {/* Line 2: Filters aligned below the heading */}
         <div className="filter-controls-section">
           <div className="filter-row">
-            <label>Sort by Status:</label>
+            <label>Filter by Status:</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="none">None</option> {/* Means ignore status filter */}
               <option value="All">All</option>   {/* Means get all statuses */}
@@ -191,24 +191,27 @@ const ListBooking = () => {
           </div>
 
           <div className="filter-row">
-            <label>Sort by Guest:</label>
+            <label>Filter Name:</label>
             <input
+              className="filter-input"
               type="text"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="e.g. John"
+              placeholder="Guest name"
             />
           </div>
 
           <div className="filter-row">
-            <label>Sort by Room:</label>
+            <label>Filter by Room:</label>
             <input
+              className="filter-input"
               type="text"
               value={roomNumber}
               onChange={(e) => setRoomNumber(e.target.value)}
-              placeholder="e.g. A3"
+              placeholder="Room No"
             />
           </div>
+
 
           <div className="filter-row">
             <label>Date Range:</label>
@@ -223,7 +226,7 @@ const ListBooking = () => {
               onChange={(e) => setEndDate(e.target.value)}
             />
             <button className="fetch-button" onClick={fetchBookings}>
-            Fetch
+            ↻Refresh
           </button>
           </div>
         </div>
