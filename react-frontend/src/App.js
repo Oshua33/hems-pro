@@ -21,7 +21,11 @@ import CreateBooking from "./components/bookings/CreateBooking";
 import ListBooking from "./components/bookings/ListBooking";
 import CheckoutGuest from "./components/bookings/CheckoutGuest";
 import CancelBooking from "./components/bookings/CancelBooking";
-// import ViewBooking from "./components/bookings/ViewBooking"; // ← only add this if you really need a dynamic route
+import CreatePayment from "./components/payments/CreatePayment";
+import PaymentOutstandingList from "./components/payments/PaymentOutstandingList";
+
+// import SearchPayment from "./components/payments/SearchPayment";
+// import VoidPayment from "./components/payments/VoidPayment";
 
 const App = () => {
   const [isLicenseVerified, setIsLicenseVerified] = useState(false);
@@ -62,14 +66,25 @@ const App = () => {
         >
           <Route path="users" element={<UsersPage />} />
           <Route path="rooms" element={<RoomsPage />} />
+
+          {/* Bookings */}
           <Route path="bookings" element={<BookingsPage />}>
-            <Route index element={<ListBooking />} /> {/* 👈 default subpage */}
+            <Route index element={<ListBooking />} />
             <Route path="create" element={<CreateBooking />} />
             <Route path="list" element={<ListBooking />} />
             <Route path="checkout" element={<CheckoutGuest />} />
             <Route path="cancel" element={<CancelBooking />} />
-            {/* <Route path=":booking_id" element={<ViewBooking />} /> ← Add last only if needed */}
           </Route>
+
+          {/* ✅ Payments - now correctly placed */}
+          <Route path="payments">
+            {/* Step 1: Show list of all bookings with payment incomplete */}
+            <Route path="create" element={<PaymentOutstandingList />} />
+            
+            {/* Step 2: After selecting a booking, redirect here */}
+            <Route path="create/:bookingId" element={<CreatePayment />} />
+          </Route>
+
         </Route>
 
         {/* Fallback */}

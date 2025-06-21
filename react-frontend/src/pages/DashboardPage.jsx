@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import "./DashboardPage.css";
-import { FaHotel } from "react-icons/fa"; // Add at the top
+import { FaHotel } from "react-icons/fa";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ const DashboardPage = () => {
   const userRole = "admin";
 
   const [isBookingsHovered, setBookingsHovered] = useState(false);
+  const [isPaymentsHovered, setPaymentsHovered] = useState(false);
 
   const menu = [
     { name: "🙎 Users", path: "/dashboard/users", adminOnly: true },
@@ -25,6 +26,12 @@ const DashboardPage = () => {
     { label: "❌ Cancel Booking", path: "/dashboard/bookings/cancel" },
   ];
 
+  const paymentSubmenu = [
+    { label: "➕ Create Payment", path: "/dashboard/payments/create" },
+    { label: "🔍 Search Payment", path: "/dashboard/payments/list" },
+    { label: "❌ Void payment", path: "/dashboard/payments/void" },
+  ];
+
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
@@ -34,24 +41,33 @@ const DashboardPage = () => {
         <nav>
           {menu.map((item) => {
             const isBookings = item.name.includes("Bookings");
+            const isPayments = item.name.includes("Payments");
+
             const isSubRoute =
-              location.pathname.startsWith("/dashboard/bookings");
+              location.pathname.startsWith("/dashboard/bookings") ||
+              location.pathname.startsWith("/dashboard/payments");
 
             return (!item.adminOnly || userRole === "admin") ? (
               <div
                 key={item.path}
                 className="sidebar-item-wrapper"
-                onMouseEnter={() => isBookings && setBookingsHovered(true)}
-                onMouseLeave={() => isBookings && setBookingsHovered(false)}
+                onMouseEnter={() => {
+                  if (isBookings) setBookingsHovered(true);
+                  if (isPayments) setPaymentsHovered(true);
+                }}
+                onMouseLeave={() => {
+                  if (isBookings) setBookingsHovered(false);
+                  if (isPayments) setPaymentsHovered(false);
+                }}
                 style={{ position: "relative" }}
               >
                 <button
                   onClick={() => {
-                    if (!isBookings) navigate(item.path);
+                    if (!isBookings && !isPayments) navigate(item.path);
                   }}
                   className={`sidebar-button ${
-                    isBookings && isBookingsHovered
-
+                    (isBookings && isBookingsHovered) ||
+                    (isPayments && isPaymentsHovered)
                       ? "sidebar-button-active"
                       : ""
                   }`}
@@ -64,22 +80,39 @@ const DashboardPage = () => {
 
                 {/* Bookings Submenu */}
                 {isBookings && isBookingsHovered && (
-            <div className="submenu">
-              {bookingSubmenu.map((sub) => (
-                <button
-                  key={sub.path}
-                  onClick={() => {
-                    navigate(sub.path);
-                    setBookingsHovered(false); // 👈 immediately close submenu on click
-                  }}
-                  className="submenu-item"
-                >
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-          )}
+                  <div className="submenu">
+                    {bookingSubmenu.map((sub) => (
+                      <button
+                        key={sub.path}
+                        onClick={() => {
+                          navigate(sub.path);
+                          setBookingsHovered(false);
+                        }}
+                        className="submenu-item"
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
+                {/* Payments Submenu */}
+                {isPayments && isPaymentsHovered && (
+                  <div className="submenu">
+                    {paymentSubmenu.map((sub) => (
+                      <button
+                        key={sub.path}
+                        onClick={() => {
+                          navigate(sub.path);
+                          setPaymentsHovered(false);
+                        }}
+                        className="submenu-item"
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null;
           })}
@@ -102,7 +135,6 @@ const DashboardPage = () => {
       <main className="main-content">
         <header className="header">
           <h1 className="header-title">🏠 Hotel Management Dashboard</h1>
-
         </header>
         <section className="content-area">
           <Outlet />

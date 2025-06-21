@@ -1,9 +1,16 @@
 // src/components/payments/CreatePayment.jsx
 
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom"; // 👈 Needed to access state
 import "./CreatePayment.css";
 
-const CreatePayment = ({ booking, onClose, onSuccess }) => {
+const CreatePayment = ({ booking: bookingProp, onClose, onSuccess }) => {
+  const location = useLocation();
+  const bookingFromState = location.state?.booking;
+
+  // Priority: Prop > Router state > fallback
+  const booking = bookingProp || bookingFromState;
+
   const [amountPaid, setAmountPaid] = useState("");
   const [discountAllowed, setDiscountAllowed] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -13,6 +20,18 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
   const [message, setMessage] = useState("");
   const [disableForm, setDisableForm] = useState(false);
 
+  if (!booking) {
+    return (
+      <div className="payment-form-overlay">
+        <div className="payment-form-container">
+          <h2>❌ Booking data not found</h2>
+          <p>No booking information provided. Please access this page from a valid action.</p>
+          <button onClick={() => window.history.back()}>🔙 Go Back</button>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -20,7 +39,7 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
     setMessage("");
 
     try {
-      const response = await fetch(`http://localhost:8000/payments/${booking.id}`, {
+      const response = await fetch(`http://localhost:8000/payments/${booking.booking_id || booking.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -43,14 +62,13 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
       setDisableForm(true);
       setLoading(false);
 
-      // Delay calling onSuccess to show the message
       setTimeout(() => {
         if (onSuccess) {
           const status = data.updated_booking?.payment_status || "pending";
           onSuccess({ status });
         }
-        onClose(); // Close the modal after 3 seconds
-      }, 10000);
+        if (onClose) onClose();
+      }, 3000);
     } catch (err) {
       setError(err.message || "An error occurred");
       setLoading(false);
@@ -60,7 +78,8 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
   return (
     <div className="payment-form-overlay">
       <div className="payment-form-container">
-        <h2>💳 Create Payment for Booking #{booking.id}</h2>
+        <h2>💳 Create Payment for Booking #{booking.booking_id || booking.id}</h2>
+        <p>👤 Guest: <strong>{booking.guest_name}</strong></p>
 
         {error && <p className="error">{error}</p>}
         {message && <p className="success">{message}</p>}
@@ -110,9 +129,11 @@ const CreatePayment = ({ booking, onClose, onSuccess }) => {
                 {loading ? "Processing..." : "Submit Payment"}
               </button>
             )}
-            <button type="button" onClick={onClose} className="cancel-btn">
-              {disableForm ? "Close" : "Cancel"}
-            </button>
+            {onClose && (
+              <button type="button" onClick={onClose} className="cancel-btn">
+                {disableForm ? "Close" : "Cancel"}
+              </button>
+            )}
           </div>
         </form>
       </div>
