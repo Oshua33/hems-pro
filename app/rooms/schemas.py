@@ -75,3 +75,22 @@ class FaultUpdate(BaseModel):
 class RoomStatusUpdate(BaseModel):
     status: str
 
+class RoomOut(BaseModel):
+    id: int
+    room_number: str
+    room_type: str
+    amount: float
+    status: Literal["available", "maintenance"]
+
+    class Config:
+        from_attributes = True
+
+
+
+
+class RoomListResponse(BaseModel):
+    total_rooms: int
+    rooms: List[RoomOut]
+
+    class Config:
+        from_attributes = True

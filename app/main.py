@@ -13,6 +13,8 @@ import sys
 import os
 from fastapi.staticfiles import StaticFiles
 #from app.bookings import router as booking_router
+from dotenv import load_dotenv
+load_dotenv()  # This loads the .env variables into os.environ
 
 
 import pytz
@@ -64,7 +66,7 @@ app.mount("/files", StaticFiles(directory="uploads"), name="files")
 # ✅ Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000"],  # Change if needed
+    allow_origins=["*"],  # Allow all origins - not recommended for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -9,6 +9,7 @@ from app.bookings import models as booking_models  # Adjust path if needed
 from app.users import schemas
 from sqlalchemy import func
 from datetime import datetime
+from sqlalchemy import desc
 
 
 from typing import List
@@ -17,6 +18,7 @@ from typing import List
 from app.rooms.models import RoomFault  # Not app.models.room
 from app.rooms.schemas import RoomFaultOut , RoomStatusUpdate # Not app.schemas.room
 from app.rooms.schemas import FaultUpdate
+from .schemas import RoomOut  # import the new output schema
 
 
 from datetime import date
@@ -46,66 +48,99 @@ logger.add("app.log", rotation="500 MB", level="DEBUG")
 
 
 
-@router.post("/")
+@router.post("/", response_model=dict)
 def create_room(
     room: schemas.RoomSchema,
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    
     logger.info(f"Room creation request received. User: {current_user.username}, Role: {current_user.role}")
 
-    # Check for admin permissions
     if current_user.role != "admin":
         logger.warning(f"Permission denied for user {current_user.username}. Role: {current_user.role}")
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    # Preserve the original case for storage but use lowercase for validation
     original_room_number = room.room_number
     normalized_room_number = original_room_number.lower()
-    logger.debug(f"Original room number: {original_room_number}, Normalized room number: {normalized_room_number}")
 
-    # Check if a room with the normalized room_number already exists
     existing_room = (
         db.query(room_models.Room)
         .filter(func.lower(room_models.Room.room_number) == normalized_room_number)
         .first()
     )
     if existing_room:
-        logger.warning(f"Room creation failed. Room {original_room_number} already exists in the database.")
+        logger.warning(f"Room creation failed. Room {original_room_number} already exists.")
         raise HTTPException(status_code=400, detail="Room with this number already exists")
 
     logger.info(f"Creating a new room: {original_room_number}")
 
     try:
-        # Create the room using the original case
         new_room = crud.create_room(db, room)
-        logger.info(f"Room {original_room_number} created successfully.")
-        return {"message": "Room created successfully", "room": new_room}
+        return {
+            "message": "Room created successfully",
+            "room": RoomOut.model_validate(new_room)
+        }
     except Exception as e:
-        logger.error(f"Error while creating room {original_room_number}: {str(e)}")
+        logger.error(f"Error creating room {original_room_number}: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while creating the room.")
 
+
+
+
+router = APIRouter()
 
 @router.get("/", response_model=dict)
 def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     """
-    Fetch a list of rooms with basic details: room number, room type, and amount.
-    Also include the total number of rooms in the hotel.
+    Fetch all rooms and update their status dynamically if a booking has expired.
     """
-    # Fetch the list of rooms with pagination
+    today = date.today()
+
+    # Fetch rooms with pagination
     rooms = crud.get_rooms_with_pagination(skip=skip, limit=limit, db=db)
-    
-    # Convert SQLAlchemy rows to dictionaries
-    serialized_rooms = crud.serialize_rooms(rooms)
-    
-    # Get the total count of rooms
+    room_numbers = [room.room_number for room in rooms]
+
+    # Fetch active bookings for those rooms (checked-in, reserved, or complimentary)
+    active_bookings = db.query(
+        booking_models.Booking.room_number,
+        booking_models.Booking.departure_date,
+        booking_models.Booking.status
+    ).filter(
+        booking_models.Booking.room_number.in_(room_numbers),
+        booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+    ).all()
+
+    # Create a map from room_number to the latest departure_date
+    booking_map = {}
+    for booking in active_bookings:
+        # Only consider the latest departure for overlapping bookings
+        if (booking.room_number not in booking_map or 
+            booking.departure_date > booking_map[booking.room_number]):
+            booking_map[booking.room_number] = booking.departure_date
+
+    # Modify room status based on logic
+    serialized_rooms = []
+    for room in rooms:
+        effective_status = room.status
+        if (
+            room.room_number in booking_map and
+            booking_map[room.room_number] < today and
+            room.status in ["checked-in", "reserved", "complimentary"]
+        ):
+            effective_status = "available"  # Override if booking is past
+        serialized_rooms.append({
+            "id": room.id,
+            "room_number": room.room_number,
+            "room_type": room.room_type,
+            "amount": room.amount,
+            "status": effective_status,
+        })
+
     total_rooms = crud.get_total_room_count(db=db)
-    
-    # Return the response as a dictionary
+
     return {
-        "total_rooms": total_rooms,  # Total number of rooms in the hotel
-        "rooms": serialized_rooms,   # List of rooms
+        "total_rooms": total_rooms,
+        "rooms": serialized_rooms,
     }
 
 
@@ -178,6 +213,65 @@ def list_available_rooms(db: Session = Depends(get_db)):
     }
 
 
+import re
+
+@router.get("/unavailable", response_model=dict)
+def list_unavailable_rooms(db: Session = Depends(get_db)):
+    """
+    Return rooms that are currently unavailable based on bookings today,
+    along with the booking details making them unavailable.
+    Also includes number of days, booking date, attachment, and total cost.
+    """
+    today = date.today()
+
+    # Fetch bookings that make a room unavailable today
+    active_bookings = db.query(booking_models.Booking).filter(
+        booking_models.Booking.arrival_date <= today,
+        booking_models.Booking.departure_date >= today,
+        booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+    ).all()
+
+    unavailable_rooms = []
+    total_booking_cost = 0
+
+    for booking in active_bookings:
+        # Calculate number of days
+        number_of_days = (booking.departure_date - booking.arrival_date).days or 1
+
+        unavailable_rooms.append({
+            "booking_id": booking.id,
+            "room_number": booking.room_number,
+            "guest_name": booking.guest_name,
+            "arrival_date": booking.arrival_date,
+            "departure_date": booking.departure_date,
+            "number_of_days": number_of_days,
+            "booking_date": booking.booking_date,
+            "booking_type": booking.booking_type,
+            "status": booking.status,
+            "payment_status": booking.payment_status,
+            "phone_number": booking.phone_number,
+            "booking_cost": booking.booking_cost,
+            "created_by": booking.created_by,
+            "attachment": f"http://localhost:8000/static/attachments/{booking.attachment}" if booking.attachment else None
+        })
+
+        total_booking_cost += booking.booking_cost or 0
+
+    # ⬇️ Natural sort function
+    def natural_sort_key(room):
+        return [int(text) if text.isdigit() else text.lower()
+                for text in re.split(r'(\d+)', room["room_number"])]
+
+    # ⬇️ Sort the result before returning
+    unavailable_rooms = sorted(unavailable_rooms, key=natural_sort_key)
+
+    return {
+        "message": "Unavailable rooms fetched successfully.",
+        "total_unavailable": len(unavailable_rooms),
+        "total_booking_cost": total_booking_cost,
+        "unavailable_rooms": unavailable_rooms,
+    }
+
 @router.put("/faults/update")
 def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
     print("Received data:", faults)
@@ -215,10 +309,49 @@ def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
 
     return {"message": "Faults updated successfully"}
 
+@router.patch("/faults/{fault_id}")
+def update_fault_status(fault_id: int, update: FaultUpdate, db: Session = Depends(get_db)):
+    fault = db.query(RoomFault).filter(RoomFault.id == fault_id).first()
+    if not fault:
+        raise HTTPException(status_code=404, detail="Fault not found")
+
+    fault.resolved = update.resolved
+    fault.resolved_at = datetime.utcnow() if update.resolved else None
+
+    db.commit()
+    db.refresh(fault)
+    return {
+        "id": fault.id,
+        "room_number": fault.room_number,
+        "description": fault.description,
+        "resolved": fault.resolved,
+        "created_at": fault.created_at.strftime('%Y-%m-%d %H:%M') if fault.created_at else None,
+        "resolved_at": fault.resolved_at.strftime('%Y-%m-%d %H:%M') if fault.resolved_at else None
+    }
+
+
+
 
 @router.get("/{room_number}/faults", response_model=List[RoomFaultOut])
 def get_room_faults(room_number: str, db: Session = Depends(get_db)):
-    faults = db.query(RoomFault).filter(func.lower(RoomFault.room_number) == room_number.lower()).all()
+    room_number = room_number.lower()
+
+    unresolved_faults = (
+        db.query(RoomFault)
+        .filter(func.lower(RoomFault.room_number) == room_number, RoomFault.resolved == False)
+        .order_by(desc(RoomFault.created_at))
+        .all()
+    )
+
+    resolved_faults = (
+        db.query(RoomFault)
+        .filter(func.lower(RoomFault.room_number) == room_number, RoomFault.resolved == True)
+        .order_by(desc(RoomFault.resolved_at))
+        .all()
+    )
+
+    combined_faults = unresolved_faults + resolved_faults
+
     return [
         {
             "id": f.id,
@@ -228,7 +361,7 @@ def get_room_faults(room_number: str, db: Session = Depends(get_db)):
             "created_at": f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None,
             "resolved_at": f.resolved_at.strftime('%Y-%m-%d %H:%M') if f.resolved_at else None
         }
-        for f in faults
+        for f in combined_faults
     ]
 
 

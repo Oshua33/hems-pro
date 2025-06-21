@@ -402,7 +402,7 @@ def list_bookings_by_status(
 
 
         # Execute the query and get the results
-        bookings = query.all()
+        bookings = query.order_by(booking_models.Booking.booking_date.desc()).all()
 
         # If no bookings are found, return a message with no bookings found
         if not bookings:
@@ -474,6 +474,9 @@ def search_guest_name(
             query = query.filter(booking_models.Booking.booking_date >= datetime.combine(start_date, datetime.min.time()))
         if end_date:
             query = query.filter(booking_models.Booking.booking_date <= datetime.combine(end_date, datetime.max.time()))
+
+        # ⬇️ Sort bookings by booking_date descending
+        query = query.order_by(booking_models.Booking.booking_date.desc())
 
         bookings = query.all()
 
@@ -611,7 +614,9 @@ def list_bookings_by_room(
             )
 
         # Fetch bookings
-        bookings = bookings_query.all()
+        # Sort by booking_date descending before fetching
+        bookings = bookings_query.order_by(booking_models.Booking.booking_date.desc()).all()
+
 
         if not bookings:
             raise HTTPException(
@@ -844,6 +849,7 @@ def update_booking(
 
 
 
+
 @router.get("/booking/{booking_id}")
 def get_booking_by_id(
     booking_id: int,
@@ -876,20 +882,21 @@ def get_booking_by_id(
         "created_by": booking.created_by,
     }
     
-  
 @router.put("/{room_number}/")
 def guest_checkout(
-    room_number: str,  # Room number is passed as a string
+    room_number: str,
     db: Session = Depends(get_db),
 ):
     """
     Endpoint to check out a guest by room number.
-    Ensures the room exists and the booking is in a valid state before proceeding.
+    Only allows checkout if the booking is active *today* (i.e., current date is within arrival and departure).
     """
     try:
-        # Step 1: Check if the room exists first
+        today = date.today()
+
+        # Step 1: Check if the room exists
         room = db.query(room_models.Room).filter(
-            func.lower(room_models.Room.room_number) == room_number.lower()  # Case-insensitive comparison
+            func.lower(room_models.Room.room_number) == room_number.lower()
         ).first()
 
         if not room:
@@ -898,24 +905,27 @@ def guest_checkout(
                 detail=f"Room number {room_number} not found."
             )
 
-        # Step 2: Retrieve the active booking (checked-in or reserved)
+        # Step 2: Retrieve the booking that is active today
         booking = db.query(booking_models.Booking).filter(
             func.lower(booking_models.Booking.room_number) == room_number.lower(),
-            booking_models.Booking.status.in_(["checked-in", "reserved"])
+            booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+            booking_models.Booking.arrival_date <= today,
+            booking_models.Booking.departure_date >= today
         ).first()
 
         if not booking:
             raise HTTPException(
                 status_code=404,
-                detail=f"Room number {room_number} is not currently booked, so it's not in a valid state for checkout."
+                detail=f"No active booking found for room {room_number} that is valid for today."
             )
 
-        # Step 3: Update booking and room statuses
+        # Step 3: Update statuses
         booking.status = "checked-out"
         room.status = "available"
 
-        # Commit changes to the database
         db.commit()
+        db.refresh(booking)
+        db.refresh(room)
 
         return {
             "message": f"Guest checked out successfully for room number {room_number}.",
@@ -924,13 +934,56 @@ def guest_checkout(
         }
 
     except HTTPException as e:
-        raise e  # Re-raise specific HTTP exceptions
+        raise e
     except Exception as e:
-        db.rollback()  # Rollback on unexpected errors
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred during checkout: {str(e)}"
         )
+
+
+@router.get("/bookings/cancellable")
+def list_cancellable_bookings(
+    db: Session = Depends(get_db),
+    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    """
+    List bookings eligible for cancellation:
+    - Includes 'checked-in', 'reserved', or 'complimentary'
+    - Includes both current and future bookings (arrival_date >= today)
+    """
+    today = date.today()
+
+    bookings = db.query(booking_models.Booking).filter(
+        booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+        booking_models.Booking.arrival_date >= today,
+        booking_models.Booking.deleted == False
+    ).order_by(booking_models.Booking.booking_date.desc()).all()
+
+    formatted = [
+        {
+            "booking_id": b.id,
+            "room_number": b.room_number,
+            "guest_name": b.guest_name,
+            "arrival_date": b.arrival_date,
+            "departure_date": b.departure_date,
+            "number_of_days": b.number_of_days,
+            "booking_date": b.booking_date,
+            "status": b.status,
+            "payment_status": b.payment_status,
+            "booking_cost": b.booking_cost,
+            "created_by": b.created_by,
+            "attachment": b.attachment
+        }
+        for b in bookings
+    ]
+
+    return {
+        "total_bookings": len(formatted),
+        "total_booking_cost": sum(b.booking_cost or 0 for b in bookings),
+        "bookings": formatted
+    }
 
    
     
@@ -1003,3 +1056,5 @@ def cancel_booking(
             status_code=500,
             detail=f"An error occurred while canceling the booking: {str(e)}"
         )
+    
+

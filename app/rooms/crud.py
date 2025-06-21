@@ -19,26 +19,32 @@ def create_room(db: Session, room: schemas.RoomSchema):
 
 
 def get_rooms_with_pagination(skip: int, limit: int, db: Session):
-    """
-    Fetch a list of rooms with basic details using pagination.
-    """
-    return db.query(room_models.Room.room_number, room_models.Room.room_type, room_models.Room.amount) \
-        .offset(skip) \
-        .limit(limit) \
+    return (
+        db.query(room_models.Room)
+        .order_by(room_models.Room.id.asc())  # 🔼 Ensure ascending order by ID
+        .offset(skip)
+        .limit(limit)
         .all()
+    )
 
+
+# crud.py
 def serialize_rooms(rooms):
     """
-    Convert SQLAlchemy rows to dictionaries.
+    Convert Room SQLAlchemy objects to JSON-serializable dicts.
     """
     return [
         {
+            "id": room.id,
             "room_number": room.room_number,
             "room_type": room.room_type,
             "amount": room.amount,
+            "status": room.status
         }
-        for room in rooms
+        for room in rooms if room.id is not None  # skip corrupted entries if any
     ]
+
+    
 
 def get_total_room_count(db: Session):
     """
