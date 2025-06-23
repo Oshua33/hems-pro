@@ -87,7 +87,6 @@ def create_room(
 
 
 
-router = APIRouter()
 
 @router.get("/", response_model=dict)
 def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):

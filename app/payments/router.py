@@ -125,11 +125,11 @@ def create_payment(
 
     # Determine payment status
     if balance_due > 0:
-        status = "payment incomplete"
+        status = "part payment"
     elif balance_due < 0:
-        status = "payment excess"
+        status = "excess payment"
     else:
-        status = "payment completed"
+        status = "fully paid"
 
     try:
         # Create the new payment record
@@ -211,7 +211,8 @@ def list_payments(
         elif end_date:
             query = query.filter(payment_models.Payment.payment_date <= end_datetime)
 
-        payments = query.order_by(payment_models.Payment.payment_date.desc()).all()
+        payments = query.order_by(payment_models.Payment.id.desc()).all()
+
 
         if not payments:
             logger.info("No payments found for the specified criteria.")
@@ -259,9 +260,9 @@ def list_payments(
                 
                 if payment.payment_method.lower() == "cash":
                     total_cash += payment.amount_paid
-                elif payment.payment_method.lower() == "pos card":
+                elif payment.payment_method.lower() == "pos_card":
                     total_pos_card += payment.amount_paid
-                elif payment.payment_method.lower() == "bank transfer":
+                elif payment.payment_method.lower() == "bank_transfer":
                     total_bank_transfer += payment.amount_paid
 
         # Corrected calculation for total due
