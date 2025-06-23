@@ -288,7 +288,7 @@ const ListBooking = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          View
+                          View Image
                         </a>
                       ) : (
                         "None"
@@ -298,22 +298,22 @@ const ListBooking = () => {
                   {visibleColumns.actions && (
                     <td>
                       <button className="view-btn" onClick={() => handleView(b)}>
-                        View Form
+                        View
                       </button>
                       <button className="update-btn" onClick={() => handleUpdate(b)}>
                         Update
                       </button>
                       <button
                         className={`payment-btn ${
-                          b.payment_status === "payment excess"
+                          b.payment_status === "excess payment"
                             ? "excess"
-                            : b.payment_status === "payment completed"
+                            : b.payment_status === "fully paid"
                             ? "completed"
                             : b.payment_status === "complimentary"
                             ? "complimentary"
                             : b.payment_status === "void"
                             ? "void"
-                            : ["payment incomplete", "pending"].includes(b.payment_status)
+                            : ["part payment", "pending"].includes(b.payment_status)
                             ? "incomplete"
                             : ""
                         }`}

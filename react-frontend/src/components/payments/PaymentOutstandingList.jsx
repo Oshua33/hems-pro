@@ -36,12 +36,14 @@ const PaymentOutstandingList = () => {
   }, []);
 
   const handleMakePayment = (booking) => {
-    navigate(`/dashboard/payments/create/${booking.booking_id}`);
+    navigate(`/dashboard/payments/create/${booking.booking_id}`, {
+      state: { booking }, // 👈 this fixes the issue
+    });
   };
 
   return (
     <div className="outstanding-wrapper">
-      <h2 className="no-margin">💰 Outstanding Payments</h2>
+      <h2 className="no-margin">💰 Bookings Schedule for Payments</h2>
 
       <div className="summary-box">
         <span>Total Outstanding: <strong> {totalOutstanding} </strong> </span>

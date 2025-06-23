@@ -21,14 +21,14 @@ const DashboardPage = () => {
 
   const bookingSubmenu = [
     { label: "➕ Create Booking", path: "/dashboard/bookings/create" },
-    { label: "🔍 Search Booking", path: "/dashboard/bookings/list" },
+    { label: "📝 List Booking", path: "/dashboard/bookings/list" },
     { label: "✅ Checkout Guest", path: "/dashboard/bookings/checkout" },
     { label: "❌ Cancel Booking", path: "/dashboard/bookings/cancel" },
   ];
 
   const paymentSubmenu = [
     { label: "➕ Create Payment", path: "/dashboard/payments/create" },
-    { label: "🔍 Search Payment", path: "/dashboard/payments/list" },
+    { label: "📝 List Payment", path: "/dashboard/payments/list" },
     { label: "❌ Void payment", path: "/dashboard/payments/void" },
   ];
 

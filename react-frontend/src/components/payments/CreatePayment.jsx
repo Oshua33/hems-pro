@@ -110,8 +110,8 @@ const CreatePayment = ({ booking: bookingProp, onClose, onSuccess }) => {
             disabled={disableForm}
           >
             <option value="cash">Cash</option>
-            <option value="bank transfer">Bank Transfer</option>
-            <option value="POS">POS</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="pos_card">POS Card</option>
           </select>
 
           <label>Payment Date</label>
@@ -129,12 +129,22 @@ const CreatePayment = ({ booking: bookingProp, onClose, onSuccess }) => {
                 {loading ? "Processing..." : "Submit Payment"}
               </button>
             )}
-            {onClose && (
-              <button type="button" onClick={onClose} className="cancel-btn">
-                {disableForm ? "Close" : "Cancel"}
-              </button>
-            )}
+
+            <button
+              type="button"
+              className="cancel-btn"
+              onClick={() => {
+                if (onClose) {
+                  onClose(); // used in modal popup mode
+                } else {
+                  window.history.back(); // used when opened via routing
+                }
+              }}
+            >
+              {disableForm ? "Close" : "Cancel"}
+            </button>
           </div>
+
         </form>
       </div>
     </div>
