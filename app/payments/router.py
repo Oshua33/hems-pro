@@ -301,7 +301,7 @@ def list_payments(
 
 @router.get("/by-status")
 def list_payments_by_status(
-    status: Optional[str] = Query(None, description="Payment status to filter by (payment completed, payment incomplete, voided)"),
+    status: Optional[str] = Query(None, description="Payment status to filter by (fully paid, part payment, voided)"),
     start_date: Optional[date] = Query(None, description="Filter by payment date (start) in format yyyy-mm-dd"),
     end_date: Optional[date] = Query(None, description="Filter by payment date (end) in format yyyy-mm-dd"),
     db: Session = Depends(get_db),
@@ -324,13 +324,16 @@ def list_payments_by_status(
         # Execute the query
         payments = query.all()
 
-        # If no payments found, return an informative message
         if not payments:
             return {"message": "No payments found for the given criteria."}
 
         # Format the payments response
-        formatted_payments = [
-            {
+        formatted_payments = []
+        total_amount = 0
+
+        for payment in payments:
+            total_amount += payment.amount_paid or 0
+            formatted_payments.append({
                 "payment_id": payment.id,
                 "guest_name": payment.guest_name,
                 "room_number": payment.room_number,
@@ -343,14 +346,13 @@ def list_payments_by_status(
                 "void_date": payment.void_date,
                 "booking_id": payment.booking_id,
                 "created_by": payment.created_by,
-            }
-            for payment in payments
-        ]
+            })
 
-        # Return formatted response
         return {
+            "message": "Payments retrieved successfully.",
             "total_payments": len(formatted_payments),
-            "payments": formatted_payments if formatted_payments else []
+            "total_amount": total_amount,
+            "payments": formatted_payments
         }
 
     except Exception as e:
@@ -387,9 +389,9 @@ def total_payment(
                 "total_payments": 0,
                 "total_amount": 0,
                 "total_by_method": {
-                    "POS Card": 0,
-                    "Bank Transfer": 0,
-                    "Cash": 0
+                    "pos_card": 0,
+                    "bank_transfer": 0,
+                    "cash": 0
                 },
                 "payments": []
             }
@@ -400,9 +402,9 @@ def total_payment(
 
         # Initialize payment method summary
         total_by_method = {
-            "POS Card": 0,
-            "Bank Transfer": 0,
-            "Cash": 0
+            "pos_card": 0,
+            "bank_transfer": 0,
+            "cash": 0
         }
 
         for payment in payments:

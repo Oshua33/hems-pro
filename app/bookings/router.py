@@ -957,6 +957,8 @@ def list_cancellable_bookings(
 
     bookings = db.query(booking_models.Booking).filter(
         booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+        booking_models.Booking.payment_status.notin_(["fully paid", "part payment"]),
+
         or_(
             and_(
                 booking_models.Booking.arrival_date <= today,

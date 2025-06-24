@@ -228,6 +228,8 @@ def list_unavailable_rooms(db: Session = Depends(get_db)):
         booking_models.Booking.arrival_date <= today,
         booking_models.Booking.departure_date >= today,
         booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+        booking_models.Booking.payment_status.notin_(["pending"])
+
     ).all()
 
     unavailable_rooms = []
