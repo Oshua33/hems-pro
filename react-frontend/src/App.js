@@ -24,6 +24,7 @@ import CancelBooking from "./components/bookings/CancelBooking";
 import CreatePayment from "./components/payments/CreatePayment";
 import PaymentOutstandingList from "./components/payments/PaymentOutstandingList";
 import ListPayment from "./components/payments/ListPayment";
+import VoidPayment from "./components/payments/VoidPayment";
 
 // import SearchPayment from "./components/payments/SearchPayment";
 // import VoidPayment from "./components/payments/VoidPayment";
@@ -85,6 +86,7 @@ const App = () => {
             {/* Step 2: After selecting a booking, redirect here */}
             <Route path="/dashboard/payments/create/:booking_id" element={<CreatePayment />} />
             <Route path="/dashboard/payments/list" element={<ListPayment />} />
+            <Route path="/dashboard/payments/void" element={<VoidPayment />} />
           </Route>
 
         </Route>

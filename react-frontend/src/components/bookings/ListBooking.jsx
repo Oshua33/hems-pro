@@ -179,7 +179,7 @@ const ListBooking = () => {
           <div className="filter-row">
             <label>Filter by Status:</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="none">None</option> {/* Means ignore status filter */}
+              <option value="none">Select</option> {/* Means ignore status filter */}
               <option value="All">All</option>   {/* Means get all statuses */}
               <option value="checked-in">Checked-In</option>
               <option value="reserved">Reserved</option>

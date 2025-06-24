@@ -66,7 +66,7 @@
 .filter-controls-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   padding-top: 2px;
   padding-left: 10px;
   margin-bottom: 4px;
@@ -79,8 +79,8 @@
 .filter-row {
   display: flex;
   align-items: center;
-  gap: 12px;               /* spacing between label and input */
-  margin-bottom: 0px;     /* reduce vertical spacing between rows */
+  gap: 10px;               /* spacing between label and input */
+  margin-bottom: 2px;     /* reduce vertical spacing between rows */
 }
 
 .filter-row label {
@@ -93,10 +93,10 @@
 .filter-row input,
 .filter-row select {
   width: 110px;           /* adjust as needed */
-  padding: 4px 6px;
-  font-size: 0.75rem;
+  padding: 2px 4px;
+  font-size: 0.7rem;
   border: 1px solid #cabebe;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* Ensure consistent spacing between date inputs */
@@ -106,7 +106,7 @@
 
 /* Button style */
 .filter-row button {
-  padding: 4px 12px;
+  padding: 4px 10px;
   font-size: 0.9rem;
   margin-left: 2px;
 }

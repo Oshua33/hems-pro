@@ -24,7 +24,7 @@
 .outstanding-table th,
 .outstanding-table td {
   border: 1px solid #ccc;
-  padding: 6px 6px; /* reduced padding */
+  padding: 2px 8px; /* reduced padding */
   text-align: left;
 }
 
