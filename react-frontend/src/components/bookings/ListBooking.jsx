@@ -242,98 +242,98 @@ const ListBooking = () => {
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {hasFiltered && (
-        <div className="booking-table-wrapper">
-          <table className="booking-table">
-            <thead>
-              <tr>
-                {ALL_COLUMNS.map(
-                  (col) =>
-                    visibleColumns[col.key] && <th key={col.key}>{col.label}</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id}>
-                  {visibleColumns.id && <td>{b.id}</td>}
-                  {visibleColumns.room_number && <td>{b.room_number}</td>}
-                  {visibleColumns.guest_name && <td>{b.guest_name}</td>}
-                  {visibleColumns.gender && <td>{b.gender}</td>}
-                  {visibleColumns.arrival_date && <td>{b.arrival_date}</td>}
-                  {visibleColumns.departure_date && <td>{b.departure_date}</td>}
-                  {visibleColumns.number_of_days && <td>{b.number_of_days}</td>}
-                  {visibleColumns.booking_type && <td>{b.booking_type}</td>}
-                  {visibleColumns.phone_number && <td>{b.phone_number}</td>}
-                  {visibleColumns.booking_date && <td>{b.booking_date}</td>}
-                  {visibleColumns.status && <td>{b.status}</td>}
-                  {visibleColumns.payment_status && <td>{b.payment_status}</td>}
-                  {visibleColumns.mode_of_identification && (
-                    <td>{b.mode_of_identification}</td>
-                  )}
-                  {visibleColumns.identification_number && (
-                    <td>{b.identification_number}</td>
-                  )}
-                  {visibleColumns.address && <td>{b.address}</td>}
-                  {visibleColumns.booking_cost && (
-                    <td>₦{b.booking_cost}</td>
-                  )}
-                  {visibleColumns.created_by && <td>{b.created_by}</td>}
-                  {visibleColumns.vehicle_no && <td>{b.vehicle_no}</td>}
-                  {visibleColumns.attachment && (
-                    <td>
-                      {b.attachment ? (
-                        <a
-                          className="attachment-link"
-                          href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          View Image
-                        </a>
-                      ) : (
-                        "None"
-                      )}
-                    </td>
-                  )}
-                  {visibleColumns.actions && (
-                    <td>
-                      <button className="view-btn" onClick={() => handleView(b)}>
-                        View
-                      </button>
-                      <button className="update-btn" onClick={() => handleUpdate(b)}>
-                        Update
-                      </button>
-                      <button
-                        className={`payment-btn ${
-                          b.payment_status === "excess payment"
-                            ? "excess"
-                            : b.payment_status === "fully paid"
-                            ? "completed"
-                            : b.payment_status === "complimentary"
-                            ? "complimentary"
-                            : b.payment_status === "void"
-                            ? "void"
-                            : ["part payment", "pending"].includes(b.payment_status)
-                            ? "incomplete"
-                            : ""
-                        }`}
-                        onClick={() => handlePayment(b)}
-                      >
-                        Payment
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {bookings.length === 0 && !loading && (
+        <>
+          <div className="booking-table-wrapper">
+            <table className="booking-table">
+              <thead>
                 <tr>
-                  <td colSpan={ALL_COLUMNS.length} style={{ textAlign: "center" }}>
-                    No bookings found for the selected filters.
-                  </td>
+                  {ALL_COLUMNS.map(
+                    (col) =>
+                      visibleColumns[col.key] && <th key={col.key}>{col.label}</th>
+                  )}
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {bookings.map((b) => (
+                  <tr key={b.id}>
+                    {visibleColumns.id && <td>{b.id}</td>}
+                    {visibleColumns.room_number && <td>{b.room_number}</td>}
+                    {visibleColumns.guest_name && <td>{b.guest_name}</td>}
+                    {visibleColumns.gender && <td>{b.gender}</td>}
+                    {visibleColumns.arrival_date && <td>{b.arrival_date}</td>}
+                    {visibleColumns.departure_date && <td>{b.departure_date}</td>}
+                    {visibleColumns.number_of_days && <td>{b.number_of_days}</td>}
+                    {visibleColumns.booking_type && <td>{b.booking_type}</td>}
+                    {visibleColumns.phone_number && <td>{b.phone_number}</td>}
+                    {visibleColumns.booking_date && <td>{b.booking_date}</td>}
+                    {visibleColumns.status && <td>{b.status}</td>}
+                    {visibleColumns.payment_status && <td>{b.payment_status}</td>}
+                    {visibleColumns.mode_of_identification && (
+                      <td>{b.mode_of_identification}</td>
+                    )}
+                    {visibleColumns.identification_number && (
+                      <td>{b.identification_number}</td>
+                    )}
+                    {visibleColumns.address && <td>{b.address}</td>}
+                    {visibleColumns.booking_cost && <td>₦{b.booking_cost}</td>}
+                    {visibleColumns.created_by && <td>{b.created_by}</td>}
+                    {visibleColumns.vehicle_no && <td>{b.vehicle_no}</td>}
+                    {visibleColumns.attachment && (
+                      <td>
+                        {b.attachment ? (
+                          <a
+                            className="attachment-link"
+                            href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View Image
+                          </a>
+                        ) : (
+                          "None"
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.actions && (
+                      <td>
+                        <button className="view-btn" onClick={() => handleView(b)}>
+                          View
+                        </button>
+                        <button className="update-btn" onClick={() => handleUpdate(b)}>
+                          Update
+                        </button>
+                        <button
+                          className={`payment-btn ${
+                            b.payment_status === "excess payment"
+                              ? "excess"
+                              : b.payment_status === "fully paid"
+                              ? "completed"
+                              : b.payment_status === "complimentary"
+                              ? "complimentary"
+                              : b.payment_status === "void"
+                              ? "void"
+                              : ["part payment", "pending"].includes(b.payment_status)
+                              ? "incomplete"
+                              : ""
+                          }`}
+                          onClick={() => handlePayment(b)}
+                        >
+                          Make Payment
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {bookings.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={ALL_COLUMNS.length} style={{ textAlign: "center" }}>
+                      No bookings found for the selected filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {bookings.length > 0 && (
             <div className="booking-summary">
@@ -341,8 +341,9 @@ const ListBooking = () => {
               <p><strong>Total Booking Cost:</strong> ₦{totalBookingCost.toLocaleString()}</p>
             </div>
           )}
-        </div>
+        </>
       )}
+
 
       {selectedBooking && (
         <ViewForm booking={selectedBooking} onClose={handleCloseView} />

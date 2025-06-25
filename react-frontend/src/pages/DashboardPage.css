@@ -56,18 +56,19 @@
 
 /* Special colors for reservation button */
 .reservation-button {
-  background-color: #beb6b6; /* red */
+  background-color: #beb6b6;
   color: white;
-  padding: 12px 15px;
+  padding: 8px 12px;          /* reduced padding for compact size */
   margin-bottom: 10px;
   border-radius: 6px;
   cursor: pointer;
-  width: auto; /* shrink to content */
+  width: fit-content;         /* ensure it wraps content perfectly */
   display: inline-block;
   white-space: nowrap;
   text-align: center;
-  /* Remove 100% width for wrapping */
+  font-size: 14px;            /* optional: smaller font for tighter look */
 }
+
 
 /* Adjust reservation button hover */
 .reservation-button:hover {
@@ -211,4 +212,10 @@
   position: relative;
   max-height: 95%;
   overflow-y: auto;
+}
+
+.alert-red {
+  background-color: red;
+  color: white;
+  animation: none; /* Ensure no blinking */
 }

@@ -1,0 +1,49 @@
+/* Add this to DashboardPage.css */
+.blinking-alert {
+  background-color: red !important;
+  animation: blink 1s infinite;
+  color: white;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.no-alert {
+  background-color: gray !important;
+  color: white;
+}
+
+.reservation-alert-container {
+  padding: 20px;
+}
+
+.reservation-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reservation-table th,
+.reservation-table td {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.reservation-table th {
+  background-color: #f0f0f0;
+}
+
+
+
+.reservation-button.alert-active {
+  background-color: #e74c3c; /* red */
+  color: white;
+}
+
+.reservation-button.alert-inactive {
+  background-color: #7f8c8d; /* gray */
+  color: white;
+}

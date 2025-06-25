@@ -25,6 +25,8 @@ import CreatePayment from "./components/payments/CreatePayment";
 import PaymentOutstandingList from "./components/payments/PaymentOutstandingList";
 import ListPayment from "./components/payments/ListPayment";
 import VoidPayment from "./components/payments/VoidPayment";
+import ReservationAlert from "./components/bookings/ReservationAlert";
+
 
 // import SearchPayment from "./components/payments/SearchPayment";
 // import VoidPayment from "./components/payments/VoidPayment";
@@ -68,6 +70,8 @@ const App = () => {
         >
           <Route path="users" element={<UsersPage />} />
           <Route path="rooms" element={<RoomsPage />} />
+          
+          
 
           {/* Bookings */}
           <Route path="bookings" element={<BookingsPage />}>
@@ -88,6 +92,10 @@ const App = () => {
             <Route path="/dashboard/payments/list" element={<ListPayment />} />
             <Route path="/dashboard/payments/void" element={<VoidPayment />} />
           </Route>
+
+          {/* ✅ Add this line below to link the Reservation Alert */}
+            <Route path="reservation-alert" element={<ReservationAlert />} />
+
 
         </Route>
 

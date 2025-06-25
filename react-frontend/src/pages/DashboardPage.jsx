@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
+import axios from "axios";
 import "./DashboardPage.css";
 import { FaHotel } from "react-icons/fa";
 
@@ -8,8 +9,36 @@ const DashboardPage = () => {
   const location = useLocation();
   const userRole = "admin";
 
+  const [hasReservationAlert, setHasReservationAlert] = useState(false);
   const [isBookingsHovered, setBookingsHovered] = useState(false);
   const [isPaymentsHovered, setPaymentsHovered] = useState(false);
+
+
+  const [reservationCount, setReservationCount] = useState(0);
+
+    useEffect(() => {
+      const checkReservationAlerts = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+          const res = await axios.get("http://localhost:8000/bookings/reservations/alerts", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const count = res.data.count || 0;
+          setReservationCount(count);
+        } catch (err) {
+          console.error("Failed to check reservation alert status:", err.message);
+        }
+      };
+
+      checkReservationAlerts();
+      const interval = setInterval(checkReservationAlerts, 5000); // every 30s
+      return () => clearInterval(interval);
+    }, []);
 
   const menu = [
     { name: "🙎 Users", path: "/dashboard/users", adminOnly: true },
@@ -34,7 +63,6 @@ const DashboardPage = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Sidebar */}
       <aside className="sidebar">
         <h2 className="sidebar-title">MENU</h2>
 
@@ -42,10 +70,6 @@ const DashboardPage = () => {
           {menu.map((item) => {
             const isBookings = item.name.includes("Bookings");
             const isPayments = item.name.includes("Payments");
-
-            const isSubRoute =
-              location.pathname.startsWith("/dashboard/bookings") ||
-              location.pathname.startsWith("/dashboard/payments");
 
             return (!item.adminOnly || userRole === "admin") ? (
               <div
@@ -78,7 +102,6 @@ const DashboardPage = () => {
                   {item.name.slice(2).trim()}
                 </button>
 
-                {/* Bookings Submenu */}
                 {isBookings && isBookingsHovered && (
                   <div className="submenu">
                     {bookingSubmenu.map((sub) => (
@@ -96,7 +119,6 @@ const DashboardPage = () => {
                   </div>
                 )}
 
-                {/* Payments Submenu */}
                 {isPayments && isPaymentsHovered && (
                   <div className="submenu">
                     {paymentSubmenu.map((sub) => (
@@ -118,20 +140,22 @@ const DashboardPage = () => {
           })}
 
           <button
-            onClick={() => navigate("/reservation-alert")}
-            className="sidebar-button reservation-button"
+            onClick={() => navigate("/dashboard/reservation-alert")}
+            className={`sidebar-button reservation-button ${
+              reservationCount > 0 ? "alert-active" : "alert-inactive"
+            }`}
           >
-            🔔 Reservation Alert
+            🔔 Reservation Alert{reservationCount > 0 ? ` (${reservationCount})` : ""}
           </button>
+
+
         </nav>
       </aside>
 
-      {/* Logout button */}
       <button onClick={() => navigate("/logout")} className="logout-button">
         🚪 Logout
       </button>
 
-      {/* Main content */}
       <main className="main-content">
         <header className="header">
           <h1 className="header-title">🏠 Hotel Management Dashboard</h1>

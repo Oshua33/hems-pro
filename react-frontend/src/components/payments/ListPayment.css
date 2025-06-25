@@ -1,9 +1,8 @@
 /* ───────────── Container ───────────── */
-/* ───────────── Container ───────────── */
 .list-payment-container {
   padding: 0.3rem;
   background-color: #f7f9fc;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 0.6rem;
 }
 
@@ -153,7 +152,7 @@
 .payment-table th {
   background-color: #003366;
   color: white;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .payment-table tr:nth-child(even) {
@@ -178,7 +177,7 @@
 }
 
 .view-btn {
-  background-color:#a6acb6;
+  background-color:#3a8ce4;
   color: white;
 }
 
@@ -245,4 +244,137 @@
   max-width: 500px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.all-summary-wrapper {
+  margin-top: 30px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.summary-left,
+.summary-right {
+  width: 50%;
+  display: flex;
+  align-items: center;
+}
+
+.summary-left span,
+.summary-right span {
+  margin-left: 4px;
+}
+
+.debtor-summary-wrapper {
+  margin-top: 20px;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.summary-left {
+  display: flex;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background: rgb(235, 232, 232);
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.large-popup {
+  width: 700px;
+  max-width: 95%;
+}
+
+.popup-title {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 25px;
+}
+
+.popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.large-font {
+  font-size: 18px;
+}
+
+.popup-buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.print-btn,
+.close-popup-btn {
+  padding: 10px 24px;
+  border: none;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #5c6980;
+  color: white;
+}
+
+.print-btn:hover,
+.close-popup-btn:hover {
+  background-color: #3f475b;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .popup-content, .popup-content * {
+    visibility: visible;
+  }
+
+  .popup-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .print-btn,
+  .close-popup-btn {
+    display: none;
+  }
 }

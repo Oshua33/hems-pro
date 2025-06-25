@@ -130,19 +130,26 @@ const CreateBooking = () => {
 
 
   return (
-    <div className="booking-form-container">
-      <button className="close-button" onClick={handleClose} title="Close">×</button>
+  <div className="booking-form-container">
+    <button className="close-button" onClick={handleClose} title="Close">×</button>
 
-      <h2 className="form-title">Create Booking</h2>
-      {message && <p className="form-message">{message}</p>}
+    <h2 className="form-title">Create Booking</h2>
+    {message && <p className="form-message">{message}</p>}
 
-      <form className="booking-form" onSubmit={handleSubmit} encType="multipart/form-data">
+    <form className="booking-form" onSubmit={handleSubmit} encType="multipart/form-data">
+      {/* Section: Room and Guest Info */}
+      <div className="form-section">
+        <label className="section-label">Room & Guest</label>
         <div className="form-row">
           <input type="text" name="room_number" placeholder="Room No" onChange={handleChange} value={formData.room_number} required />
           <input type="text" name="guest_name" placeholder="Guest Name" onChange={handleChange} value={formData.guest_name} required />
-          <button type="button" className="search-btn" onClick={handleSearchGuest}>🔍Search</button>
+          <button type="button" className="search-btn" onClick={handleSearchGuest}>🔍 Search</button>
         </div>
+      </div>
 
+      {/* Section: Gender and ID Type */}
+      <div className="form-section">
+        <label className="section-label">Identification</label>
         <div className="form-row">
           <select name="gender" value={formData.gender} onChange={handleChange} required>
             <option value="">Gender</option>
@@ -178,7 +185,11 @@ const CreateBooking = () => {
             required
           />
         </div>
+      </div>
 
+      {/* Section: Dates */}
+      <div className="form-section">
+        <label className="section-label">Dates</label>
         <div className="form-row">
           <div className="date-group">
             <label>Arrival Date</label>
@@ -189,7 +200,11 @@ const CreateBooking = () => {
             <input type="date" name="departure_date" value={formData.departure_date} onChange={handleChange} required />
           </div>
         </div>
+      </div>
 
+      {/* Section: Booking & Contact */}
+      <div className="form-section">
+        <label className="section-label">Booking & Contact</label>
         <div className="form-row">
           <select name="booking_type" value={formData.booking_type} onChange={handleChange} required>
             <option value="">Booking Type</option>
@@ -206,7 +221,11 @@ const CreateBooking = () => {
             required
           />
         </div>
+      </div>
 
+      {/* Section: Vehicle & Attachment */}
+      <div className="form-section">
+        <label className="section-label">Vehicle & Attachment</label>
         <div className="form-row">
           <input
             type="text"
@@ -220,7 +239,6 @@ const CreateBooking = () => {
             name="attachment_file"
             accept="image/*"
             onChange={handleChange}
-            
           />
         </div>
 
@@ -231,13 +249,15 @@ const CreateBooking = () => {
             </label>
           </div>
         )}
+      </div>
 
-        <div className="form-row full-width">
-          <button type="submit" className="submit-btn">Submit Booking</button>
-        </div>
-      </form>
-    </div>
-  );
+      {/* Submit */}
+      <div className="form-row full-width">
+        <button type="submit" className="submit-btn">✅ Submit Booking</button>
+      </div>
+    </form>
+  </div>
+);
 };
 
 export default CreateBooking;

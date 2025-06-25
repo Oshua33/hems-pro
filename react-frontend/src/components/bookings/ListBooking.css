@@ -153,7 +153,7 @@ button {
   padding: 4px 8px;
   font-size: 0.75rem;
   margin: 0 2px;
-  background-color: #4a5568;
+  background-color: #3a8ce4;
   color: white;
   border: none;
   border-radius: 3px;
@@ -163,12 +163,26 @@ button {
 /* ───────────── Summary Row ───────────── */
 
 .booking-summary {
-  text-align: right;
+  text-align: left;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #003366;
-  line-height: 1;
+  margin-top: 4px;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3;
+  line-height: 1.1;
 }
+
+/* Remove default spacing in p tags */
+.booking-summary p {
+  margin: 0;
+  padding: 0;
+}
+
+
+
 
 
 /* ───────────── Attachments ───────────── */
@@ -198,7 +212,7 @@ button {
 /* ───────────── Action Buttons ───────────── */
 .view-btn,
 .update-btn {
-  background-color: #a6a3af;
+  background-color: #3a8ce4;
   color: white;
   border: none;
   padding: 5px 10px;
@@ -267,4 +281,6 @@ button {
   background-color: #2563eb;
   transform: translateY(-1px);
 }
+
+
 
