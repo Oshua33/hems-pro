@@ -46,6 +46,7 @@ const DashboardPage = () => {
     { name: "📅 Bookings", path: "/dashboard/bookings" },
     { name: "💳 Payments", path: "/dashboard/payments" },
     { name: "🎉 Events", path: "/dashboard/events" },
+    { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, // ⬅️ add this
   ];
 
   const bookingSubmenu = [

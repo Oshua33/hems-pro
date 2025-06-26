@@ -3,7 +3,7 @@
   display: flex;
   height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f0f2f5;
+  background-color: #3e66a3;
   position: relative;
   overflow: hidden; /* prevent scroll */
 }
@@ -56,7 +56,7 @@
 
 /* Special colors for reservation button */
 .reservation-button {
-  background-color: #beb6b6;
+  background-color: #e0dbdb;
   color: white;
   padding: 8px 12px;          /* reduced padding for compact size */
   margin-bottom: 10px;
@@ -106,7 +106,7 @@
   display: flex;
   flex-direction: column;
   padding: 10px 20px; /* tighter layout */
-  background-color: #c5c9cf;
+  background-color: #c5ccd8;
   overflow: hidden;
   height: 100vh;
   box-sizing: border-box;
@@ -143,7 +143,7 @@
 
 
 .content-area {
-  background-color: #ddd8d8;
+  background-color:#e2d8d8f8;
   padding: 20px 30px;  /* smaller padding */
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);

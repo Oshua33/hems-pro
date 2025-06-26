@@ -19,7 +19,8 @@ const LoginPage = () => {
       const token = await loginUser(username, password);
       localStorage.setItem("token", token);
       localStorage.setItem("username", username);
-      navigate("/dashboard");
+      navigate("/dashboard/rooms/status");
+
     } catch (err) {
       setError("Invalid username or password.");
     }
