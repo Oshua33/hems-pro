@@ -2,7 +2,7 @@
 
 .rooms-container {
   padding: 30px;
-  background-color: #d4cdcd;
+  background-color: #f3eeee;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -95,7 +95,6 @@
 .rooms-table tbody tr:nth-child(even) {
   background-color: #f2f6fa; /* light grid color for even rows */
 }
-
 
 .action-btn {
   margin-right: 5px;

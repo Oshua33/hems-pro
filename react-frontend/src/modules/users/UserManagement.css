@@ -1,5 +1,5 @@
 .user-container {
-  background: rgba(252, 251, 251, 0.74);
+  background: white;
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -40,7 +40,7 @@
 }
 
 .table-header {
-  background-color: #e0e0e0;
+  background-color: #d4c0c0;
   font-weight: bold;
   font-size: 14px;
 }
@@ -52,7 +52,7 @@
 
 /* Add striped effect to even rows */
 .table-row:nth-child(even) {
-  background-color: #d3d0d0;
+  background-color:  #f2f6fa;
   
 }
 
@@ -363,3 +363,7 @@
   color: #888;
   cursor: pointer;
 }
+
+
+
+

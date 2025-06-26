@@ -236,6 +236,8 @@ button {
   font-size: 0.75rem;
   cursor: pointer;
   margin-left: 4px;
+  min-width: 65px;  /* ✅ Ensures consistent width */
+  text-align: center; /* optional, to center "Paid" nicely */
 }
 
 .payment-btn.incomplete,

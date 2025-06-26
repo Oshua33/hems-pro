@@ -35,10 +35,7 @@ const VoidPayment = () => {
       });
 
       const data = await res.json();
-      const nonVoided = (data.payments || []).filter(
-        (p) => p.status !== "voided"
-      );
-      setPayments(nonVoided);
+      setPayments(data.payments || []);
       setHasFetched(true);
     } catch (err) {
       setError("Failed to fetch payments.");
@@ -71,7 +68,11 @@ const VoidPayment = () => {
       }
 
       alert(data.message);
-      setPayments((prev) => prev.filter((p) => p.payment_id !== selectedPayment.payment_id));
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.payment_id === selectedPayment.payment_id ? { ...p, status: "voided" } : p
+        )
+      );
       setShowDialog(false);
       setSelectedPayment(null);
     } catch (error) {
@@ -130,12 +131,15 @@ const VoidPayment = () => {
               {payments.length === 0 ? (
                 <tr>
                   <td colSpan="8" style={{ textAlign: "center" }}>
-                    No payments to void.
+                    No payments found.
                   </td>
                 </tr>
               ) : (
                 payments.map((p) => (
-                  <tr key={p.payment_id}>
+                  <tr
+                    key={p.payment_id}
+                    className={p.status === "voided" ? "voided-payment" : ""}
+                  >
                     <td>{p.payment_id}</td>
                     <td>{p.booking_id}</td>
                     <td>{p.guest_name}</td>
@@ -144,9 +148,11 @@ const VoidPayment = () => {
                     <td>{p.payment_method}</td>
                     <td>{new Date(p.payment_date).toLocaleString()}</td>
                     <td>
-                      <button className="void-btn" onClick={() => openVoidDialog(p)}>
-                        ❌Void
-                      </button>
+                      {p.status !== "voided" && (
+                        <button className="void-btn" onClick={() => openVoidDialog(p)}>
+                          ❌Void
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -135,13 +135,7 @@ body {
 .license-message {
   margin-top: 16px;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 16px;
 }
 
-.license-message.success {
-  color: #c93b4e;
-}
 
-.license-message.error {
-  color: #c93b4e;
-}

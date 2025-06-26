@@ -196,16 +196,17 @@ const UserManagement = ({ token }) => {
               <div>{user.role}</div>
               <div className="action-buttons">
                 <button className="btn edit" onClick={() => handleEditClick(user)}>
-                  Edit
+                  ✏️ Edit
                 </button>
                 <button
                   className="btn delete"
                   onClick={() => confirmDeleteUser(user.username)}
                   disabled={user.username === localStorage.getItem("username")}
                 >
-                  Delete
+                  🗑️ Delete
                 </button>
               </div>
+
             </div>
           ))}
         </div>
@@ -219,9 +220,14 @@ const UserManagement = ({ token }) => {
               <h3>Confirm Delete</h3>
               <p>Are you sure you want to delete user <strong>{userToDelete}</strong>?</p>
               <div className="modal-actions">
-                <button className="action-btn delete" onClick={handleConfirmDelete}>Yes, Delete</button>
-                <button className="action-btn cancel" onClick={handleCancelDelete}>Cancel</button>
+                <button className="action-btn delete" onClick={handleConfirmDelete}>
+                  🗑️ Yes, Delete
+                </button>
+                <button className="action-btn cancel" onClick={handleCancelDelete}>
+                  ❌ Cancel
+                </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -275,9 +281,10 @@ const UserManagement = ({ token }) => {
             <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
           </label>
           <div className="form-buttons">
-            <button type="submit">Save</button>
-            <button type="button" onClick={cancelEdit}>Cancel</button>
+            <button type="submit">💾 Save</button>
+            <button type="button" onClick={cancelEdit}>❌ Cancel</button>
           </div>
+
         </form>
       )}
     </div>

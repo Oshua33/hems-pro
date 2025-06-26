@@ -261,7 +261,7 @@ const ListPayment = () => {
             </thead>
             <tbody>
               {payments.map((p, i) => (
-                <tr key={i}>
+                <tr key={i} className={p.status === "voided" ? "voided-row" : ""}>
                   {viewMode === "debtor" ? (
                     <>
                       <td>{p.guest_name}</td>
@@ -270,13 +270,11 @@ const ListPayment = () => {
                       <td>₦{p.room_price?.toLocaleString()}</td>
                       <td>{p.number_of_days}</td>
                       <td>₦{p.booking_cost?.toLocaleString()}</td>
-                      
                       <td>₦{p.total_paid?.toLocaleString()}</td>
                       <td>₦{p.discount_allowed?.toLocaleString()}</td>
                       <td>₦{p.amount_due?.toLocaleString()}</td>
                       <td>{new Date(p.booking_date).toLocaleString()}</td>
                       <td>{p.last_payment_date ? new Date(p.last_payment_date).toLocaleString() : "-"}</td>
-                      
                     </>
                   ) : (
                     <>
@@ -299,6 +297,7 @@ const ListPayment = () => {
                 </tr>
               ))}
             </tbody>
+
           </table>
 
           {viewMode === "debtor" && (
