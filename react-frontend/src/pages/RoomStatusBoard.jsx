@@ -88,9 +88,9 @@ const formatNaira = (amount) => {
         {/* ✅ Horizontal summary footer */}
         <div className="room-summary-footer">
             <span>🔘 Available: {statusCounts["available"] || 0}</span>
-            <span>✅ Checked-in: {statusCounts["checked-in"] || 0}</span>
-            <span>🟡 Reserved: {statusCounts["reserved"] || 0}</span>
-            <span>🔴 Maintenance: {statusCounts["maintenance"] || 0}</span>
+            <span>🟢 Checked-in🧍‍♂️: {statusCounts["checked-in"] || 0}</span>
+            <span>🟡 Reserved🕒: {statusCounts["reserved"] || 0}</span>
+            <span>🔴 Maintenance⚠️: {statusCounts["maintenance"] || 0}</span>
             </div>
 
     </div>

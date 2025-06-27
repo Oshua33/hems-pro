@@ -73,6 +73,12 @@ const CreateBooking = () => {
   };
 
   const loadGuestData = (guest) => {
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const formatDate = (date) => date.toISOString().split("T")[0];
+
     setFormData((prev) => ({
       ...prev,
       gender: guest.gender,
@@ -81,10 +87,15 @@ const CreateBooking = () => {
       mode_of_identification: guest.mode_of_identification,
       identification_number: guest.identification_number,
       vehicle_no: guest.vehicle_no,
+      booking_type: guest.booking_type,
+      arrival_date: formatDate(today),       // ✅ Override to today's date
+      departure_date: formatDate(tomorrow),  // ✅ Override to tomorrow's date
       attachment: guest.attachment || "",
     }));
+
     setAttachmentFile(null); // Clear file if loading existing guest
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

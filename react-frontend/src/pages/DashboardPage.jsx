@@ -17,11 +17,12 @@ const DashboardPage = () => {
   const [reservationCount, setReservationCount] = useState(0);
 
     useEffect(() => {
-      const checkReservationAlerts = async () => {
+      const checkDashboardStatus = async () => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
         try {
+          // ✅ 1. Check reservation alerts
           const res = await axios.get("http://localhost:8000/bookings/reservations/alerts", {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -30,14 +31,20 @@ const DashboardPage = () => {
 
           const count = res.data.count || 0;
           setReservationCount(count);
+
+          // ✅ 2. Trigger backend to auto-update room statuses after checkout time
+          await axios.post("http://localhost:8000/rooms/update_status_after_checkout", {}, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
         } catch (err) {
-          console.error("Failed to check reservation alert status:", err.message);
+          console.error("Dashboard check failed:", err.message);
         }
       };
 
-      checkReservationAlerts();
-      const interval = setInterval(checkReservationAlerts, 5000); // every 30s
-      return () => clearInterval(interval);
+      checkDashboardStatus();
     }, []);
 
   const menu = [
