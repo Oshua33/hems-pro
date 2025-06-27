@@ -13,7 +13,7 @@ from app.bookings import schemas, models as  booking_models
 from app.payments import models as payment_models
 from app.bookings.schemas import BookingOut
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, time
 import os
 import shutil
 from fastapi import UploadFile, File, Form
@@ -62,6 +62,25 @@ def create_booking(
 
     if room.status == "maintenance":
         raise HTTPException(status_code=400, detail="Room is under maintenance.")
+    
+    # Prevent booking before 12 noon on the departure date of an existing booking
+    if arrival_date == date.today():
+        now = datetime.now().time()
+        overlapping_departure = (
+            db.query(booking_models.Booking)
+            .filter(
+                func.lower(booking_models.Booking.room_number) == normalized_room_number,
+                booking_models.Booking.status.notin_(["checked-out", "cancelled"]),
+                booking_models.Booking.departure_date == arrival_date
+            )
+            .first()
+        )
+        if overlapping_departure and now < time(12, 0):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Room {room.room_number} cannot be booked until after 12:00 PM today (departure date of a previous guest)."
+            )
+
 
 
 
@@ -366,7 +385,10 @@ def search_guest(guest_name: str = Query(...), db: Session = Depends(get_db)):
             "address": guest.address,
             "mode_of_identification": guest.mode_of_identification,
             "identification_number": guest.identification_number,
+            "booking_type": guest.booking_type,
             "vehicle_no": guest.vehicle_no,
+            "arrival_date": guest.arrival_date,
+            "departure_date": guest.departure_date,
             "attachment": guest.attachment,
         })
 

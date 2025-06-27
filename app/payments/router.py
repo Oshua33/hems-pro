@@ -234,9 +234,10 @@ def list_payments(
                 booking_models.Booking.id == payment.booking_id
             ).first()
             
-            if booking:
-                total_booking_cost += booking.booking_cost  # Include all bookings tied to payments
+            if booking and payment.booking_id not in total_bookings:
+                total_booking_cost += booking.booking_cost
                 total_bookings.add(payment.booking_id)
+
             
             payment_list.append({
                 "payment_id": payment.id,
@@ -370,13 +371,11 @@ def total_payment(
 ):
     """
     Retrieve total daily sales with a breakdown of payment methods (POS Card, Bank Transfer, Cash),
-    and a list of payments for the current day, excluding void payments.
+    and a list of payments for the current day, excluding void payments. Also includes booking cost.
     """
     try:
-        # Get the current date
         today = datetime.now().date()
 
-        # Query payments made on the current day, excluding void payments
         payments = db.query(payment_models.Payment).filter(
             payment_models.Payment.payment_date >= today,
             payment_models.Payment.payment_date < today + timedelta(days=1),
@@ -396,11 +395,8 @@ def total_payment(
                 "payments": []
             }
 
-        # Prepare the list of payment details
         payment_list = []
         total_amount = 0
-
-        # Initialize payment method summary
         total_by_method = {
             "pos_card": 0,
             "bank_transfer": 0,
@@ -410,14 +406,19 @@ def total_payment(
         for payment in payments:
             total_amount += payment.amount_paid
 
-            # Sum payments by method
             if payment.payment_method in total_by_method:
                 total_by_method[payment.payment_method] += payment.amount_paid
+
+            # Safely access booking_cost from related booking
+            booking_cost = (
+                payment.booking.booking_cost if hasattr(payment, "booking") and payment.booking else None
+            )
 
             payment_list.append({
                 "payment_id": payment.id,
                 "room_number": payment.room_number,
                 "guest_name": payment.guest_name,
+                "booking_cost": booking_cost,  # ✅ Add booking_cost here
                 "amount_paid": payment.amount_paid,
                 "discount_allowed": payment.discount_allowed,
                 "balance_due": payment.balance_due,
@@ -426,6 +427,7 @@ def total_payment(
                 "status": payment.status,
                 "booking_id": payment.booking_id,
                 "created_by": payment.created_by,
+                
             })
 
         return {
@@ -532,7 +534,7 @@ def get_debtor_list(
                     "booking_id": booking.id,
                     "room_price": room.amount,
                     "number_of_days": booking.number_of_days,
-                    "total_due": total_due,
+                    "booking_cost": total_due,
                     "total_paid": total_paid,
                     "discount_allowed": total_discount,
                     "amount_due": balance_due,

@@ -8,7 +8,7 @@ from app.rooms import schemas as room_schemas, models as room_models, crud
 from app.bookings import models as booking_models  # Adjust path if needed
 from app.users import schemas
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, time, date
 from sqlalchemy import desc
 
 
@@ -142,6 +142,38 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
         "rooms": serialized_rooms,
     }
 
+
+from datetime import datetime, time, date
+
+@router.post("/rooms/update_status_after_checkout")
+def update_rooms_after_checkout(db: Session = Depends(get_db)):
+    now = datetime.now()
+    today = date.today()
+
+    # Get bookings where today is their departure and still active
+    bookings = (
+        db.query(booking_models.Booking)
+        .filter(
+            booking_models.Booking.departure_date == today,
+            booking_models.Booking.status.notin_(["checked-out", "cancelled"])
+        )
+        .all()
+    )
+
+    updated_rooms = []
+
+    for booking in bookings:
+        if now.time() >= time(12, 0):  # It's past 12 noon
+            room = db.query(room_models.Room).filter_by(room_number=booking.room_number).first()
+            if room and room.status != "available":
+                room.status = "available"
+                db.commit()
+                updated_rooms.append(room.room_number)
+
+    return {
+        "message": "Room statuses updated after checkout",
+        "rooms_updated": updated_rooms,
+    }
 
 
 
