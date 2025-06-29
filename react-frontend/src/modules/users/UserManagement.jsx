@@ -172,9 +172,17 @@ const UserManagement = ({ token }) => {
               Edit User
             </option>
           </select>
-          <button className="close-main-button" onClick={() => navigate("/dashboard")}>
+          {selectedAction === "list" && (
+          <button
+            className="close-main-button"
+            onClick={() => navigate("/dashboard/rooms/status")}
+          >
             ❌
           </button>
+        )}
+
+
+
         </div>
       </div>
 
@@ -237,9 +245,11 @@ const UserManagement = ({ token }) => {
         <form onSubmit={submitAddUser} className="edit-form compact-form">
           <div className="edit-header">
             <h4>Add New User</h4>
-            <button type="button" className="close-button" onClick={() => setSelectedAction("list")}>
-              ❌
-            </button>
+            <div className="edit-header">
+              <h4>Add New User</h4>
+            </div>
+
+
           </div>
 
           <label>Username:
@@ -268,8 +278,8 @@ const UserManagement = ({ token }) => {
         <form onSubmit={submitUpdate} className="edit-form compact-form">
           <div className="edit-header">
             <h4>Edit: {editingUser.username}</h4>
-            <button type="button" className="close-button" onClick={cancelEdit}>❌</button>
           </div>
+
 
           <label>Role:
             <select value={editRole} onChange={(e) => setEditRole(e.target.value)} required>

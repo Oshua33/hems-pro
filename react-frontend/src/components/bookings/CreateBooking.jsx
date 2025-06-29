@@ -134,9 +134,9 @@ const CreateBooking = () => {
   };
 
   const handleClose = () => {
-  // Only navigate if you're sure it's opened via /dashboard/bookings/create
-  navigate(-1); // Go back one step in history
- };
+  navigate("/dashboard/rooms/status");
+};
+
 
 
 

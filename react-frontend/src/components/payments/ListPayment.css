@@ -109,7 +109,7 @@
 }
 
 .fetch-button {
-  padding: 6px 14px;               /* Better vertical size */
+  padding: 8px 14px;               /* Better vertical size */
   background-color: #646e80;
   color: white;
   font-size: 0.82rem;
@@ -140,7 +140,7 @@
   font-size: 0.65rem;
   background-color: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  border-radius: 5px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -423,4 +423,23 @@
   background-color: #80be80;
   color: #14532d;
   font-weight: bold;
+}
+
+
+.status-summary-wrapper {
+  margin-top: 20px;
+  padding: 0;
+  max-width: 100%; /* let it span normally */
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.status-summary-wrapper h4 {
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+  font-weight: bold;
+}
+
+.status-summary-wrapper p {
+  margin: 4px 0;
 }

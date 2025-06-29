@@ -365,5 +365,11 @@
 }
 
 
+.table-header > div,
+.table-row > div {
+  border: 1px solid #ccc; /* Grid lines around each cell */
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
 
 

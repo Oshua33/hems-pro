@@ -1,6 +1,6 @@
 /* Outer Frame (first border layer) */
 .outer-frame {
-  background: #af9b9b;
+  background-color: #f9f9ff;
   padding: 10px;
   border: 2px solid #ccbaba;
   border-radius: 12px;
@@ -11,7 +11,7 @@
 
 /* Inner Frame (second border layer) */
 .booking-form-container {
-  background: #f3f1f1;
+  background-color: #f9f9ff;
   padding: 1rem 1.2rem;
   border-radius: 8px;
   border: 2px solid #cfc2c2;

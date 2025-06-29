@@ -162,7 +162,7 @@ const ListPayment = () => {
             value={debtorName}
             onChange={(e) => setDebtorName(e.target.value)}
           />
-          <button className="fetch-button" onClick={fetchDebtors}>Fetch Debtors</button>
+          <button className="fetch-button" onClick={fetchDebtors}>Fetch</button>
         </div>
 
         <div className="filter-item date-range-wrapper">
@@ -222,6 +222,8 @@ const ListPayment = () => {
 
       {payments.length > 0 && (
         <div className="payment-table-wrapper">
+          
+
           <table className="payment-table">
             <thead>
               <tr>
@@ -297,8 +299,19 @@ const ListPayment = () => {
                 </tr>
               ))}
             </tbody>
+            
+            
 
           </table>
+          
+          {viewMode === "status" && (
+            <div className="status-summary-wrapper">
+              <h4>Summary</h4>
+              <p><strong>Total Entries:</strong> {summary.total_payments || 0}</p>
+              <p><strong>Total Amount Paid:</strong> ₦{(summary.total_amount || 0).toLocaleString()}</p>
+            </div>
+          )}
+
 
           {viewMode === "debtor" && (
             <div className="debtor-summary-wrapper">

@@ -219,3 +219,24 @@
   color: white;
   animation: none; /* Ensure no blinking */
 }
+
+
+.action-button {
+  background-color: transparent;
+  color: #333;
+  border: 1px solid #c2bfda;   /* Light border */
+  border-radius: 6px;
+  padding: 6px 4px;         /* Increased padding */
+  font-size: 14px;           /* Slightly larger text */
+  transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  cursor: pointer;
+  
+}
+
+.action-button:hover {
+  color: #3301fa;            /* Change text color on hover */
+ border-color: #5537c4;
+}
+
+
+

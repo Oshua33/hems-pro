@@ -24,21 +24,32 @@ const LicensePage = () => {
   const handleVerify = async () => {
     setMessage("");
     setError("");
+
     if (!licenseKey) {
       setError("Please enter a license key.");
       return;
     }
+
     try {
-      const data = await verifyLicense(licenseKey);
-      setMessage(data.message || "License verified successfully.");
-      localStorage.setItem("license_verified", "true");
+      const data = await verifyLicense(licenseKey); // Expects { valid: true, expires_on }
 
-      setLicenseKey("");
-      setPassword("");
+      if (data.valid) {
+        setMessage("License verified successfully.");
+        localStorage.setItem("license_verified", "true");
 
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+        if (data.expires_on) {
+          localStorage.setItem("license_valid_until", data.expires_on);
+        }
+
+        setLicenseKey("");
+        setPassword("");
+
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+      } else {
+        setError(data.message || "Verification failed.");
+      }
     } catch (err) {
       setError(err.message || "Verification failed.");
     }

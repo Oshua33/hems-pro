@@ -38,10 +38,23 @@
   font-size: 1rem;
   font-weight: 600;
   color: #333;
-  background-color: #f4f4f4f8;
+  background-color: #fffffff8;
   padding: 12px;
   border-radius: 8px;
   flex-wrap: wrap; /* optional for mobile */
 
 }
 
+
+.room-divider {
+  margin: 20px 0;
+  border: none;
+  border-top: 2px solid #ccc;
+}
+
+.chart-container {
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}

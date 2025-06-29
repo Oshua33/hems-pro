@@ -27,6 +27,13 @@ import ListPayment from "./components/payments/ListPayment";
 import VoidPayment from "./components/payments/VoidPayment";
 import ReservationAlert from "./components/bookings/ReservationAlert";
 import RoomStatusBoard from "./pages/RoomStatusBoard";
+import CreateEvent from "./components/events/CreateEvent";
+import ListEvent from "./components/events/ListEvent";
+import EventPayment from "./components/events/EventPayment";
+import ListEventPayment from "./components/events/ListEventPayment";
+import VoidEventPayment from "./components/events/VoidEventPayment";
+import ViewEventForm from "./components/events/ViewEventForm"; // ✅ add this
+import EventUpdate from "./components/events/EventUpdate";
 
 
 // import SearchPayment from "./components/payments/SearchPayment";
@@ -71,7 +78,8 @@ const App = () => {
         >
           <Route path="users" element={<UsersPage />} />
           <Route path="rooms" element={<RoomsPage />} />
-          <Route path="/dashboard/rooms/status" element={<RoomStatusBoard />} />
+          <Route path="rooms/status" element={<RoomStatusBoard />} />
+
           
 
           {/* Bookings */}
@@ -93,9 +101,23 @@ const App = () => {
             <Route path="/dashboard/payments/list" element={<ListPayment />} />
             <Route path="/dashboard/payments/void" element={<VoidPayment />} />
             
-            
+          </Route>
+
+          {/* Events */}
+          <Route path="events">
+            <Route path="create" element={<CreateEvent />} />
+            <Route path="list" element={<ListEvent />} />
+            <Route path="payment" element={<EventPayment />} />
+            <Route path="payments/list" element={<ListEventPayment />} />
+            <Route path="payments/void" element={<VoidEventPayment />} />
+            <Route path="/dashboard/events/view" element={<ViewEventForm />} />
+            <Route path="/dashboard/events/update" element={<EventUpdate />} />
 
           </Route>
+
+
+
+
 
           {/* ✅ Add this line below to link the Reservation Alert */}
             <Route path="reservation-alert" element={<ReservationAlert />} />

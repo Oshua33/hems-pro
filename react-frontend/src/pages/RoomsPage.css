@@ -147,3 +147,9 @@
 }
 
 
+.rooms-table,
+.rooms-table th,
+.rooms-table td {
+  border: 1px solid #ccc; /* Add vertical & horizontal grid lines */
+  border-collapse: collapse;
+}

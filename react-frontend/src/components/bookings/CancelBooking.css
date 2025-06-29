@@ -220,3 +220,10 @@
 .close-btn:hover {
   background-color: #c53030;
 }
+
+.cancel-table,
+.cancel-table th,
+.cancel-table td {
+  border: 1px solid #ccc;        /* 🔲 Adds full grid lines */
+  border-collapse: collapse;
+}

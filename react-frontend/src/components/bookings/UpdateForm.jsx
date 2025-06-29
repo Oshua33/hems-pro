@@ -77,7 +77,7 @@ const UpdateForm = ({ booking, onClose }) => {
     }, 1200);
   } catch (err) {
     console.error(err);
-    setMessage("❌ Failed to update booking.");
+    setMessage("❌ Failed to update booking. Booking date is past ");
   } finally {
     setLoading(false);
   }
