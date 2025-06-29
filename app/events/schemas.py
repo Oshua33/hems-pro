@@ -1,9 +1,9 @@
+# event_schemas.py
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, date
 
 
-# Base Event Schema
 class EventBase(BaseModel):
     organizer: str
     title: str
@@ -16,16 +16,18 @@ class EventBase(BaseModel):
     phone_number: str
     address: str
     payment_status: Optional[str] = "active"
+    balance_due: float
     created_by: Optional[str] = None
+    cancellation_reason: Optional[str] = None
 
     class Config:
-        from_attributes = True  # Replaces `orm_mode = True` for newer Pydantic versions
+        from_attributes = True
 
-# Schema for Creating an Event
+
 class EventCreate(EventBase):
     pass
 
-# Schema for Response when Retrieving an Event
+
 class EventResponse(EventBase):
     id: int
     created_at: datetime

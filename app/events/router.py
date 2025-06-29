@@ -12,6 +12,9 @@ from app.users import schemas as user_schemas
 from app.users.auth import get_current_user
 from datetime import datetime, date
 import pytz
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
 
 
 router = APIRouter()
@@ -70,7 +73,9 @@ def create_event(
 
 
 
-@router.get("/", response_model=List[event_schemas.EventResponse])
+from fastapi.responses import JSONResponse
+
+@router.get("/")
 def list_events(
     start_date: str = Query(None, description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(None, description="End date in YYYY-MM-DD format"),
@@ -79,12 +84,10 @@ def list_events(
 ):
     query = db.query(event_models.Event).options(joinedload(event_models.Event.payments))
 
-    # Optional date filtering
     if start_date and end_date:
         try:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(microseconds=1)
-
             query = query.filter(
                 and_(
                     event_models.Event.created_at >= start_dt,
@@ -96,24 +99,30 @@ def list_events(
 
     events = query.order_by(event_models.Event.created_at).all()
 
-    # Update payment_status for each event based on EventPayment status
     for event in events:
-        # If the event was manually cancelled, respect that
         if event.payment_status == "cancelled":
-            continue  # Do not overwrite it
-
-        # Otherwise, calculate from EventPayment statuses
+            continue
         payment_statuses = [p.payment_status.lower() for p in event.payments if p.payment_status]
-
         if "complete" in payment_statuses:
             event.payment_status = "complete"
         elif "incomplete" in payment_statuses:
             event.payment_status = "incomplete"
         else:
-            event.payment_status = "active"  # Default if no payments
+            event.payment_status = "active"
 
-    return events
+    # Compute summary
+    filtered_events = [e for e in events if e.payment_status != "cancelled"]
+    total_amount = sum(e.event_amount or 0 for e in filtered_events)
 
+    summary = {
+        "total_entries": len(events),
+        "total_booking_amount": total_amount
+    }
+
+    return JSONResponse(content={
+        "events": jsonable_encoder(events),
+        "summary": summary
+    })
 
 
 

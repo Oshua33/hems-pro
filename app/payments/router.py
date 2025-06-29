@@ -309,30 +309,31 @@ def list_payments_by_status(
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     try:
-        # Build the base query
-        query = db.query(payment_models.Payment)
+        # Build the base query and join with booking
+        query = (
+            db.query(payment_models.Payment, booking_models.Booking.booking_cost)
+            .join(booking_models.Booking, payment_models.Payment.booking_id == booking_models.Booking.id, isouter=True)
+        )
 
         # Filter by status
         if status:
             query = query.filter(payment_models.Payment.status == status.lower())
 
-        # Apply date filters based on payment_date
+        # Filter by payment date
         if start_date:
             query = query.filter(payment_models.Payment.payment_date >= start_date)
         if end_date:
             query = query.filter(payment_models.Payment.payment_date < (end_date + timedelta(days=1)))
 
-        # Execute the query
-        payments = query.all()
+        results = query.all()
 
-        if not payments:
+        if not results:
             return {"message": "No payments found for the given criteria."}
 
-        # Format the payments response
         formatted_payments = []
         total_amount = 0
 
-        for payment in payments:
+        for payment, booking_cost in results:
             total_amount += payment.amount_paid or 0
             formatted_payments.append({
                 "payment_id": payment.id,
@@ -347,6 +348,7 @@ def list_payments_by_status(
                 "void_date": payment.void_date,
                 "booking_id": payment.booking_id,
                 "created_by": payment.created_by,
+                "booking_cost": booking_cost or 0
             })
 
         return {
