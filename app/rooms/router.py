@@ -109,6 +109,18 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
         booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
     ).all()
 
+    future_reservations = db.query(
+        booking_models.Booking.room_number
+    ).filter(
+        booking_models.Booking.room_number.in_(room_numbers),
+        booking_models.Booking.status == "reserved",
+        booking_models.Booking.arrival_date > today  # ⬅️ future only
+    ).all()
+
+    # Convert to set for quick lookup
+    future_reserved_rooms = set([res.room_number for res in future_reservations])
+
+
     # Create a map from room_number to the latest departure_date
     booking_map = {}
     for booking in active_bookings:
@@ -126,13 +138,19 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
             booking_map[room.room_number] < today and
             room.status in ["checked-in", "reserved", "complimentary"]
         ):
-            effective_status = "available"  # Override if booking is past
+            effective_status = "available"
+
+        count = sum(
+            1 for r in future_reservations if r.room_number == room.room_number
+        )
+
         serialized_rooms.append({
             "id": room.id,
             "room_number": room.room_number,
             "room_type": room.room_type,
             "amount": room.amount,
             "status": effective_status,
+            "future_reservation_count": count  # ✅ new key
         })
 
     total_rooms = crud.get_total_room_count(db=db)
@@ -143,36 +161,45 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     }
 
 
-from datetime import datetime, time, date
 
 @router.post("/rooms/update_status_after_checkout")
 def update_rooms_after_checkout(db: Session = Depends(get_db)):
     now = datetime.now()
     today = date.today()
+    noon = time(12, 0)
 
-    # Get bookings where today is their departure and still active
+    # Get bookings departing today that are still active (not checked out or cancelled)
     bookings = (
         db.query(booking_models.Booking)
         .filter(
             booking_models.Booking.departure_date == today,
-            booking_models.Booking.status.notin_(["checked-out", "cancelled"])
+            booking_models.Booking.status.in_(["checked-in", "reserved"])
         )
         .all()
     )
 
     updated_rooms = []
+    updated_bookings = []
 
-    for booking in bookings:
-        if now.time() >= time(12, 0):  # It's past 12 noon
+    if now.time() >= noon:
+        for booking in bookings:
+            # Find room linked to booking
             room = db.query(room_models.Room).filter_by(room_number=booking.room_number).first()
             if room and room.status != "available":
                 room.status = "available"
-                db.commit()
                 updated_rooms.append(room.room_number)
 
+            # Optional: auto-checkout the booking
+            booking.status = "checked-out"
+            updated_bookings.append(booking.id)
+
+        # Commit all changes at once
+        db.commit()
+
     return {
-        "message": "Room statuses updated after checkout",
+        "message": "Room and booking statuses updated after 12 noon checkout time",
         "rooms_updated": updated_rooms,
+        "bookings_updated": updated_bookings,
     }
 
 
