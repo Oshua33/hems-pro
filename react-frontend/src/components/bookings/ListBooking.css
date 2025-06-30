@@ -1,8 +1,13 @@
 /* ───────────── Main Container ───────────── */
 .list-booking-container {
-  padding: 0px;
   font-family: Arial, sans-serif;
+  padding: 0.3rem;
+  background-color: #f7f9fc;
+  font-size: 0.6rem;
+  border-radius: 12px;
 }
+
+
 
 /* ───────────── Header Row (Line 1) ───────────── */
 .list-booking-header-row {
@@ -124,10 +129,10 @@
 
 .booking-table thead th,
 .booking-table td {
-  padding: 4px 4px; /* reduced from 6px 8px */
+  padding: 4px 2px; /* reduced from 6px 8px */
   text-align: left;
   white-space: nowrap;
-  font-size: 0.72rem; /* optional: slightly smaller text */
+  font-size: 0.68rem; /* optional: slightly smaller text */
   border-bottom: 1px solid #ddd;
 }
 
@@ -150,13 +155,13 @@
 
 /* ───────────── Action Buttons ───────────── */
 button {
-  padding: 4px 8px;
-  font-size: 0.75rem;
+  padding: 2px 4px;
+  font-size: 0.65rem;
   margin: 0 2px;
   background-color: #3a8ce4;
   color: white;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -210,12 +215,12 @@ button {
 
 
 /* ───────────── Action Buttons ───────────── */
-.view-btn,
-.update-btn {
+.viewb-btn,
+.updateb-btn {
   background-color: #3a8ce4;
   color: white;
   border: none;
-  padding: 5px 10px;
+  padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
   margin-right: 5px;
@@ -229,11 +234,11 @@ button {
 
 /* ───────────── Payment Buttons ───────────── */
 .payment-btn {
-  padding: 4px 8px;
+  padding: 4px 4px;
   border: none;
   border-radius: 4px;
   color: white;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   cursor: pointer;
   margin-left: 4px;
   min-width: 65px;  /* ✅ Ensures consistent width */
@@ -294,6 +299,6 @@ button {
 
 .booking-table th,
 .booking-table td {
-  padding: 8px;
+  padding: 6px;
 }
 

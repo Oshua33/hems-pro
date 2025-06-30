@@ -199,10 +199,10 @@ const printContent = () => {
   const [reservationCount, setReservationCount] = useState(0);
 
     useEffect(() => {
-      const checkDashboardStatus = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
+      const checkDashboardStatus = async () => {
         try {
           // ✅ 1. Check reservation alerts
           const res = await axios.get("http://localhost:8000/bookings/reservations/alerts", {
@@ -226,7 +226,14 @@ const printContent = () => {
         }
       };
 
+      // Initial run
       checkDashboardStatus();
+
+      // 🔁 Repeat every 30 seconds
+      const intervalId = setInterval(checkDashboardStatus, 5000);
+
+      // Cleanup
+      return () => clearInterval(intervalId);
     }, []);
 
   const menu = [

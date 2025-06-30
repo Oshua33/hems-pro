@@ -296,12 +296,6 @@ const ListBooking = () => {
                     )}
                     {visibleColumns.actions && (
                       <td>
-                        <button className="view-btn" onClick={() => handleView(b)}>
-                          View
-                        </button>
-                        <button className="update-btn" onClick={() => handleUpdate(b)}>
-                          Update
-                        </button>
                         <button
                           className={`payment-btn ${
                             b.payment_status === "excess payment"
@@ -321,6 +315,13 @@ const ListBooking = () => {
                         >
                           {["fully paid", "excess payment"].includes(b.payment_status) ? "Paid" : "Pay>"}
                         </button>
+                        <button className="viewb-btn" onClick={() => handleView(b)}>
+                          View
+                        </button>
+                        <button className="updateb-btn" onClick={() => handleUpdate(b)}>
+                          Update
+                        </button>
+                        
 
                       </td>
                     )}

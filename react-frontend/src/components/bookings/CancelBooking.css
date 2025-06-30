@@ -118,7 +118,7 @@
 .cancel-frame {
   border: 1px solid #ccc;
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   width: 100%;         /* Ensure it stretches full width */

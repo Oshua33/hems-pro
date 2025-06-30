@@ -141,27 +141,51 @@ const CreateBooking = () => {
 
 
   return (
-  <div className="booking-form-container">
+  <div className="bookings-form-container">
     <button className="close-button" onClick={handleClose} title="Close">×</button>
 
-    <h2 className="form-title">Create Booking</h2>
+    <h2 className="forms-title">Create Booking</h2>
     {message && <p className="form-message">{message}</p>}
 
-    <form className="booking-form" onSubmit={handleSubmit} encType="multipart/form-data">
-      {/* Section: Room and Guest Info */}
-      <div className="form-section">
-        <label className="section-label">Room & Guest</label>
-        <div className="form-row">
-          <input type="text" name="room_number" placeholder="Room No" onChange={handleChange} value={formData.room_number} required />
-          <input type="text" name="guest_name" placeholder="Guest Name" onChange={handleChange} value={formData.guest_name} required />
-          <button type="button" className="search-btn" onClick={handleSearchGuest}>🔍 Search</button>
+    <form className="bookings-form" onSubmit={handleSubmit} encType="multipart/form-data">
+      {/* Section: Room & Guest (Merged into one row) */}
+        <div className="forms-section">
+          <label className="sections-label">Room & Guest</label>
+          <div className="forms-row" style={{ alignItems: "center" }}>
+            <input
+              type="text"
+              name="room_number"
+              placeholder="Room No"
+              value={formData.room_number}
+              onChange={handleChange}
+              required
+              style={{ flex: "1 1 30%" }}
+            />
+            <input
+              type="text"
+              name="guest_name"
+              placeholder="Guest Name"
+              value={formData.guest_name}
+              onChange={handleChange}
+              required
+              style={{ flex: "1 1 50%" }}
+            />
+            <button
+              type="button"
+              className="search-btn"
+              onClick={handleSearchGuest}
+              style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
+            >
+              🔍 Search
+            </button>
+          </div>
         </div>
-      </div>
+
 
       {/* Section: Gender and ID Type */}
-      <div className="form-section">
-        <label className="section-label">Identification</label>
-        <div className="form-row">
+      <div className="forms-section">
+        <label className="sections-label">Identification</label>
+        <div className="forms-row">
           <select name="gender" value={formData.gender} onChange={handleChange} required>
             <option value="">Gender</option>
             <option value="Male">Male</option>
@@ -178,7 +202,8 @@ const CreateBooking = () => {
           </select>
         </div>
 
-        <div className="form-row">
+         
+        <div className="forms-row">
           <input
             type="text"
             name="identification_number"
@@ -187,6 +212,7 @@ const CreateBooking = () => {
             onChange={handleChange}
             required
           />
+          
           <input
             type="text"
             name="address"
@@ -199,14 +225,14 @@ const CreateBooking = () => {
       </div>
 
       {/* Section: Dates */}
-      <div className="form-section">
-        <label className="section-label">Dates</label>
-        <div className="form-row">
-          <div className="date-group">
+      <div className="forms-section">
+        <label className="sections-label">Dates</label>
+        <div className="forms-row">
+          <div className="dates-group">
             <label>Arrival Date</label>
             <input type="date" name="arrival_date" value={formData.arrival_date} onChange={handleChange} required />
           </div>
-          <div className="date-group">
+          <div className="dates-group">
             <label>Departure Date</label>
             <input type="date" name="departure_date" value={formData.departure_date} onChange={handleChange} required />
           </div>
@@ -214,9 +240,9 @@ const CreateBooking = () => {
       </div>
 
       {/* Section: Booking & Contact */}
-      <div className="form-section">
-        <label className="section-label">Booking & Contact</label>
-        <div className="form-row">
+      <div className="forms-section">
+        <label className="sections-label">Booking & Contact</label>
+        <div className="forms-row">
           <select name="booking_type" value={formData.booking_type} onChange={handleChange} required>
             <option value="">Booking Type</option>
             <option value="checked-in">Checked-in</option>
@@ -235,9 +261,9 @@ const CreateBooking = () => {
       </div>
 
       {/* Section: Vehicle & Attachment */}
-      <div className="form-section">
-        <label className="section-label">Vehicle & Attachment</label>
-        <div className="form-row">
+      <div className="forms-section">
+        <label className="sections-label">Vehicle & Attachment</label>
+        <div className="forms-row">
           <input
             type="text"
             name="vehicle_no"
@@ -254,7 +280,7 @@ const CreateBooking = () => {
         </div>
 
         {formData.attachment && (
-          <div className="form-row">
+          <div className="forms-row">
             <label style={{ fontStyle: "italic", color: "#555" }}>
               Using previous attachment: <b>{formData.attachment}</b>
             </label>
@@ -264,7 +290,7 @@ const CreateBooking = () => {
 
       {/* Submit */}
       <div className="form-row full-width">
-        <button type="submit" className="submit-btn">✅ Submit Booking</button>
+        <button type="submit" className="submits-btn">✅ Submit Booking</button>
       </div>
     </form>
   </div>

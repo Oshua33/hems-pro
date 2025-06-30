@@ -87,7 +87,7 @@ const CreateEvent = () => {
   return (
     <div className="event-form-container">
       <button className="close-button" onClick={handleClose} title="Close">×</button>
-      <h2 className="form-title">Create Event</h2>
+      <h2 className="forme-title">Create Event</h2>
       {message && (
         <div className="form-message">
           {Array.isArray(message) ? (
@@ -142,9 +142,9 @@ const CreateEvent = () => {
           />
         </div>
 
-        <div className="form-rows full-width">
+        
           <button type="submit" className="submit-btn">✅ Create Event</button>
-        </div>
+        
       </form>
     </div>
   );

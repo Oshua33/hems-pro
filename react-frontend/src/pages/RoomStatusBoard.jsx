@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, CartesianGrid } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend, Cell, CartesianGrid
+} from "recharts";
 import "./RoomStatusBoard.css";
 
 const RoomStatusBoard = () => {
@@ -60,10 +63,16 @@ const RoomStatusBoard = () => {
     return acc;
   }, {});
 
+  // ✅ Count rooms with any future reservations
+  const futureReservationCount = rooms.reduce((total, room) => {
+    return total + (room.future_reservation_count || 0);
+  }, 0);
+
+
   const chartData = [
     { name: "Available", value: statusCounts["available"] || 0, color: "#cabebef8" },
     { name: "Checked-in", value: statusCounts["checked-in"] || 0, color: "#4CAF50" },
-    { name: "Reserved", value: statusCounts["reserved"] || 0, color: "#FFD700" },
+    { name: "Reserved", value: futureReservationCount, color: "#FFD700" },  // ✅ fixed count
     { name: "Maintenance", value: statusCounts["maintenance"] || 0, color: "#e60606" },
   ];
 
@@ -79,9 +88,24 @@ const RoomStatusBoard = () => {
             <div
               key={room.id}
               className={`room-card ${isClickable ? "clickable" : "disabled"}`}
-              style={{ backgroundColor: getStatusColor(room.status), fontSize: "0.7rem", padding: "4px" }}
+              style={{
+                backgroundColor: getStatusColor(room.status),
+                fontSize: "0.7rem",
+                padding: "4px",
+                position: "relative",
+              }}
               onClick={() => handleRoomClick(room)}
             >
+              {/* ✅ Show reservation count badge */}
+              {room.future_reservation_count > 0 && (
+                <div
+                  className="reservation-badge"
+                  title={`${room.future_reservation_count} upcoming reservation(s)`}
+                >
+                  {room.future_reservation_count}
+                </div>
+              )}
+
               <h3 style={{ margin: "2px 0" }}>{room.room_number}</h3>
               <p style={{ margin: "1px 0" }}>{room.room_type}</p>
               <p style={{ margin: "1px 0" }}>{formatNaira(room.amount)}</p>
@@ -90,10 +114,11 @@ const RoomStatusBoard = () => {
         })}
       </div>
 
+      {/* ✅ Updated footer reserved count */}
       <div className="room-summary-footer" style={{ fontSize: "0.8rem", padding: "6px" }}>
         <span>🔘 Available: {statusCounts["available"] || 0}</span>
         <span>🟢 Checked-in🧍‍♂️: {statusCounts["checked-in"] || 0}</span>
-        <span>🟡 Reserved🕒: {statusCounts["reserved"] || 0}</span>
+        <span>🟡 Reserved🕒: {futureReservationCount}</span>
         <span>🔴 Maintenance🛠️: {statusCounts["maintenance"] || 0}</span>
       </div>
 

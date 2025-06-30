@@ -155,7 +155,7 @@ const ListPayment = () => {
         </div>
 
         <div className="filter-item">
-          <label>Debtor Name:</label>
+          <label>Debtor:</label>
           <input
             type="text"
             placeholder="Enter name..."
