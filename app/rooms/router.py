@@ -162,7 +162,8 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 
 
 
-@router.post("/rooms/update_status_after_checkout")
+@router.post("/update_status_after_checkout")
+
 def update_rooms_after_checkout(db: Session = Depends(get_db)):
     now = datetime.now()
     today = date.today()

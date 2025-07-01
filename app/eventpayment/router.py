@@ -15,6 +15,9 @@ from typing import Optional
 from loguru import logger
 import pytz
 from datetime import datetime, timedelta, date, time
+from app.events import models as event_models # or wherever Event is
+
+
 
 
 
@@ -88,6 +91,69 @@ def create_event_payment(
     return new_payment
 
 
+@router.get("/outstanding")
+def list_outstanding_events(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    try:
+        # ✅ Step 1: Get all relevant events
+        events = db.query(event_models.Event).filter(
+            event_models.Event.payment_status != "payment completed",
+            event_models.Event.payment_status != "cancelled"
+        ).all()
+
+        if not events:
+            raise HTTPException(status_code=404, detail="No outstanding events found.")
+
+        outstanding = []
+
+        for event in events:
+            total_due = (event.event_amount or 0) + (event.caution_fee or 0)
+
+            # ✅ Step 2: Get all payments for this event
+            payments = db.query(eventpayment_models.EventPayment).filter(
+                eventpayment_models.EventPayment.event_id == event.id,
+                eventpayment_models.EventPayment.payment_status != "voided"  # or EventPayment.status if you use that
+            ).all()
+
+            total_paid = sum(p.amount_paid for p in payments)
+            total_discount = sum(p.discount_allowed or 0 for p in payments)
+            balance_due = total_due - (total_paid + total_discount)
+
+            if balance_due > 0:
+                outstanding.append({
+                    "event_id": event.id,
+                    "organizer": event.organizer,
+                    "title": event.title,
+                    "location": event.location,
+                    "start_date": event.start_datetime,
+                    "end_date": event.end_datetime,
+                    "total_due": total_due,
+                    "total_paid": total_paid,
+                    "discount_allowed": total_discount,
+                    "amount_due": balance_due,
+                    "payment_status": event.payment_status,
+                })
+
+        if not outstanding:
+            raise HTTPException(status_code=404, detail="No outstanding event balances found.")
+
+        # Sort the results
+        outstanding.sort(key=lambda x: x["start_date"], reverse=True)
+
+        total_outstanding_balance = sum(item["amount_due"] for item in outstanding)
+
+        return {
+            "total_outstanding": len(outstanding),
+            "total_outstanding_balance": total_outstanding_balance,
+            "outstanding_events": outstanding
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @router.get("/")
 def list_event_payments(
@@ -197,6 +263,10 @@ def list_event_payments(
         "payments": formatted_payments,
         "summary": summary
     }
+
+
+
+
 
 
 @router.get("/event_debtor_list")
