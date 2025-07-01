@@ -1,6 +1,10 @@
 .list-event-container {
-  padding: 6px 8px;
-  font-size: 13px;
+  font-family: Arial, sans-serif;
+  padding: 0.2rem;
+  background-color: #f7f9fc;
+  font-size: 0.7rem;
+  border-radius: 12px;
+
 }
 
 .list-event-header-row {
@@ -54,7 +58,9 @@
 }
 
 .event-table th {
-  background-color: #f5f5f5;
+  background-color: #003366;
+  color: #ffffff;
+
   font-weight: bold;
 }
 

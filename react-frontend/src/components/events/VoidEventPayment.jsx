@@ -1,12 +1,198 @@
-import React from "react";
+import React, { useState } from "react";
+import "./VoidEventPayment.css"; // Reuse the same style
 
-const ListEvent = () => {
+const VoidEventPayment = () => {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [hasFetched, setHasFetched] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [voiding, setVoiding] = useState(false);
+
+  const fetchPayments = async () => {
+    if (!startDate || !endDate) {
+      setError("Please select both start and end dates.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.append("start_date", startDate);
+      params.append("end_date", endDate);
+
+      const url = `http://localhost:8000/eventpayment/?${params.toString()}`;
+
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const data = await res.json();
+      setPayments(data.payments || []);
+      setHasFetched(true);
+    } catch (err) {
+      setError("Failed to fetch event payments.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openVoidDialog = (payment) => {
+    setSelectedPayment(payment);
+    setShowDialog(true);
+  };
+
+  const handleConfirmVoid = async () => {
+    setVoiding(true);
+    try {
+      const res = await fetch(
+        `http://localhost:8000/eventpayment/void/${selectedPayment.id}/`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.detail || "Failed to void event payment.");
+        return;
+      }
+
+      alert(data.message);
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.id === selectedPayment.id
+            ? { ...p, payment_status: "voided" }
+            : p
+        )
+      );
+      setShowDialog(false);
+      setSelectedPayment(null);
+    } catch (error) {
+      console.error("Void error:", error);
+      alert("An error occurred while trying to void the payment.");
+    } finally {
+      setVoiding(false);
+    }
+  };
+
   return (
-    <div>
-      <h2>List of Events</h2>
-      <p>This is a placeholder for the ListEvent component.</p>
+    <div className="void-payment-container">
+      <h2 className="void-title">❌ Void Event Payment</h2>
+
+      <div className="filter-row">
+        <label htmlFor="start-date">Start Date:</label>
+        <input
+          type="date"
+          id="start-date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+
+        <label htmlFor="end-date">End Date:</label>
+        <input
+          type="date"
+          id="end-date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+
+        <button className="fetch-button" onClick={fetchPayments}>
+          Fetch
+        </button>
+      </div>
+
+      {loading && <p>Loading...</p>}
+      {error && <p className="error">{error}</p>}
+
+      {hasFetched && (
+        <div className="payment-table-wrapper">
+          <table className="payment-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Organiser</th>
+                <th>Event Amount</th>
+                <th>Amount Paid</th>
+                <th>Discount</th>
+                <th>Balance</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th>Payment Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.length === 0 ? (
+                <tr>
+                  <td colSpan="10" style={{ textAlign: "center" }}>
+                    No payments found.
+                  </td>
+                </tr>
+              ) : (
+                payments.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={p.payment_status === "voided" ? "voided-payment" : ""}
+                  >
+                    <td>{p.id}</td>
+                    <td>{p.organiser}</td>
+                    <td>₦{p.event_amount?.toLocaleString()}</td>
+                    <td>₦{p.amount_paid?.toLocaleString()}</td>
+                    <td>₦{p.discount_allowed?.toLocaleString()}</td>
+                    <td>₦{p.balance_due?.toLocaleString()}</td>
+                    <td>{p.payment_method}</td>
+                    <td>{p.payment_status}</td>
+                    <td>{new Date(p.payment_date).toLocaleString()}</td>
+                    <td>
+                      {p.payment_status !== "voided" && (
+                        <button className="void-btn" onClick={() => openVoidDialog(p)}>
+                          ❌Void
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal for Confirming Void */}
+      {showDialog && selectedPayment && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <p>
+              Are you sure you want to void event payment{" "}
+              <strong>#{selectedPayment.id}</strong> (₦
+              {selectedPayment.amount_paid?.toLocaleString()})?
+            </p>
+            <div className="modal-buttons">
+              <button onClick={handleConfirmVoid} disabled={voiding}>
+                {voiding ? "Voiding..." : "Yes, Void"}
+              </button>
+              <button onClick={() => setShowDialog(false)} disabled={voiding}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ListEvent;
+export default VoidEventPayment;

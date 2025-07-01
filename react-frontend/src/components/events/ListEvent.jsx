@@ -103,6 +103,7 @@ const ListEvent = () => {
               <th>Phone</th>
               <th>Start</th>
               <th>End</th>
+              <th>Location</th>
               <th>Event Amount</th>
               <th>Caution Fee</th>
               <th>Status</th>
@@ -125,6 +126,7 @@ const ListEvent = () => {
                   <td>{event.phone_number}</td>
                   <td>{event.start_datetime}</td>
                   <td>{event.end_datetime}</td>
+                  <td>{event.location}</td>
                   <td>₦{event.event_amount?.toLocaleString()}</td>
                   <td>₦{event.caution_fee?.toLocaleString()}</td>
                   <td>{event.payment_status}</td>

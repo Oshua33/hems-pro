@@ -31,6 +31,7 @@ const exportToExcel = async () => {
   else if (path.includes("debtor")) title = "Debtor Report";
   else if (path.includes("events")) title = "Event Report";
   else if (path.includes("daily")) title = "Daily Payment Summary";
+  else if (path.includes("eventpayment")) title = "Event Payment Report";
 
   const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
     th.innerText.trim()
@@ -56,7 +57,7 @@ const exportToExcel = async () => {
   // ✅ Blank row
   sheet.addRow([]);
 
-  // === 🟨 Add summaries dynamically ===
+  // === 🔽 Summary Sections ===
 
   // 1. Booking Summary
   const bookingSummary = document.querySelector(".booking-summary");
@@ -71,7 +72,7 @@ const exportToExcel = async () => {
     }
   }
 
-  // 2. All Summary Wrapper (Payments)
+  // 2. Payment Summary
   const allSummary = document.querySelector(".all-summary-wrapper");
   if (allSummary) {
     sheet.addRow(["Payment Summary"]).font = { bold: true, italic: true };
@@ -116,7 +117,7 @@ const exportToExcel = async () => {
     sheet.addRow([]);
   }
 
-  // 5. Status Summary (for "fully paid" or "part payment" modes)
+  // 5. Status Summary
   const statusSummary = document.querySelector(".status-summary-wrapper");
   if (statusSummary) {
     sheet.addRow(["Status Summary"]).font = { bold: true, italic: true };
@@ -130,23 +131,59 @@ const exportToExcel = async () => {
   }
 
   // 6. Event Summary
-const eventSummary = document.querySelector(".event-summary-wrapper");
-if (eventSummary) {
-  sheet.addRow(["Event Summary"]).font = { bold: true, italic: true };
+  const eventSummary = document.querySelector(".event-summary-wrapper");
+  if (eventSummary) {
+    sheet.addRow(["Event Summary"]).font = { bold: true, italic: true };
 
-  const lines = Array.from(eventSummary.querySelectorAll("div")).map((div) =>
-    div.innerText.trim()
-  );
+    const lines = Array.from(eventSummary.querySelectorAll("div")).map((div) =>
+      div.innerText.trim()
+    );
 
-  lines.forEach((line) => {
-    sheet.addRow([line]);
-  });
+    lines.forEach((line) => {
+      sheet.addRow([line]);
+    });
 
-  sheet.addRow([]);
-}
+    sheet.addRow([]);
+  }
 
+  // 7. ✅ Event Payment Breakdown
+  const eventPaymentBreakdown = document.querySelector(".all-summary-wrappers");
+  if (eventPaymentBreakdown) {
+    sheet.addRow(["Event Payment Breakdown"]).font = { bold: true, italic: true };
+    const rows = eventPaymentBreakdown.querySelectorAll(".summary-rows");
+    rows.forEach((rowEl) => {
+      const left = rowEl.querySelector(".summary-lefts");
+      const right = rowEl.querySelector(".summary-rights");
 
-  // === ✅ Style all cells
+      const leftText = left ? left.innerText.trim() : "";
+      const rightText = right ? right.innerText.trim() : "";
+
+      if (leftText && rightText) {
+        sheet.addRow([leftText, rightText]);
+      } else if (leftText) {
+        sheet.addRow([leftText]);
+      }
+    });
+    sheet.addRow([]);
+  }
+
+  // 8. ✅ Event Payment Summary (Outstanding Events + Balance)
+  const eventOutstandingSummary = document.querySelector(".event-payment-summary");
+  if (eventOutstandingSummary) {
+    sheet.addRow(["Outstanding Event Summary"]).font = { bold: true, italic: true };
+
+    const lines = Array.from(
+      eventOutstandingSummary.querySelectorAll(".summary-line")
+    ).map((el) => el.innerText.trim());
+
+    lines.forEach((line) => {
+      sheet.addRow([line]);
+    });
+
+    sheet.addRow([]);
+  }
+
+  // ✅ Style all cells
   sheet.eachRow((row) => {
     row.eachCell((cell) => {
       cell.border = {
@@ -259,11 +296,13 @@ const printContent = () => {
   ];
 
   const eventSubmenu = [
-    { label: "➕ Create", path: "/dashboard/events/create" },
+    { label: "➕ Create Event", path: "/dashboard/events/create" },
     { label: "📝 List Event", path: "/dashboard/events/list" },
-    { label: "💳 Payment", path: "/dashboard/events/payment" },
+    { label: "💳 Make Payment", path: "/dashboard/events/payment" },
     { label: "📄 List Payment", path: "/dashboard/events/payments/list" },
-    { label: "❌ Void", path: "/dashboard/events/payments/void" },
+    { label: "❌ Void Payment", path: "/dashboard/events/payments/void" },
+    
+
   ];
 
 

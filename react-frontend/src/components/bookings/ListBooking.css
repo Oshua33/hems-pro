@@ -138,11 +138,12 @@
 
 
 .booking-table thead th {
-  background-color: #f2f2f2;
+  background-color: #e7e1e1;
   position: sticky;
   top: 0;
   z-index: 15;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.8rem; /* optional: slightly smaller text */
 }
 
 .booking-table tbody tr:nth-child(even) {

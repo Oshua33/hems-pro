@@ -34,6 +34,8 @@ import ListEventPayment from "./components/events/ListEventPayment";
 import VoidEventPayment from "./components/events/VoidEventPayment";
 import ViewEventForm from "./components/events/ViewEventForm"; // ✅ add this
 import EventUpdate from "./components/events/EventUpdate";
+import ViewEventPayment from "./components/events/ViewEventPayment";
+
 
 
 // import SearchPayment from "./components/payments/SearchPayment";
@@ -93,27 +95,29 @@ const App = () => {
 
           {/* ✅ Payments - now correctly placed */}
           <Route path="payments">
-            {/* Step 1: Show list of all bookings with payment incomplete */}
             <Route path="create" element={<PaymentOutstandingList />} />
-            
-            {/* Step 2: After selecting a booking, redirect here */}
-            <Route path="/dashboard/payments/create/:booking_id" element={<CreatePayment />} />
-            <Route path="/dashboard/payments/list" element={<ListPayment />} />
-            <Route path="/dashboard/payments/void" element={<VoidPayment />} />
-            
+            <Route path="create/:booking_id" element={<CreatePayment />} />
+            <Route path="list" element={<ListPayment />} />
+            <Route path="void" element={<VoidPayment />} />
           </Route>
+
 
           {/* Events */}
           <Route path="events">
+            <Route index element={<ListEvent />} />
             <Route path="create" element={<CreateEvent />} />
             <Route path="list" element={<ListEvent />} />
             <Route path="payment" element={<EventPayment />} />
             <Route path="payments/list" element={<ListEventPayment />} />
             <Route path="payments/void" element={<VoidEventPayment />} />
-            <Route path="/dashboard/events/view" element={<ViewEventForm />} />
-            <Route path="/dashboard/events/update" element={<EventUpdate />} />
+            <Route path="view" element={<ViewEventForm />} />
+            <Route path="update" element={<EventUpdate />} />
+            <Route path="view/:id" element={<ViewEventPayment />} />
+            
 
           </Route>
+
+
 
 
 

@@ -85,26 +85,26 @@ const UpdateForm = ({ booking, onClose }) => {
 
 
   return (
-    <div className="update-form-overlay">
-      <div className="update-form-container">
+    <div className="supdate-forms-overlay">
+      <div className="supdate-form-container">
         <h2>✏️ Update Guest Booking</h2>
 
-        <form onSubmit={handleSubmit} className="form-grid">
-          <div className="form-row" style={{ gridColumn: "1 / -1" }}>
+        <form onSubmit={handleSubmit} className="sforms-grid">
+          <div className="sform-row" style={{ gridColumn: "1 / -1" }}>
             <label>Guest Name</label>
             <input name="guest_name" value={formData.guest_name || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Arrival Date</label>
             <input type="date" name="arrival_date" value={formData.arrival_date || ""} onChange={handleChange} />
           </div>
-          <div className="form-row">
+          <div className="sform-row">
             <label>Departure Date</label>
             <input type="date" name="departure_date" value={formData.departure_date || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Gender</label>
             <select name="gender" value={formData.gender || ""} onChange={handleChange} required>
               <option value="">Select</option>
@@ -113,12 +113,12 @@ const UpdateForm = ({ booking, onClose }) => {
             </select>
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Phone Number</label>
             <input name="phone_number" value={formData.phone_number || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Booking Type</label>
             <select name="booking_type" value={formData.booking_type || ""} onChange={handleChange}>
               <option value="">Select</option>
@@ -128,7 +128,7 @@ const UpdateForm = ({ booking, onClose }) => {
             </select>
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Mode of ID</label>
             <select
                 name="mode_of_identification"
@@ -147,22 +147,22 @@ const UpdateForm = ({ booking, onClose }) => {
           </div>
 
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>ID Number</label>
             <input name="identification_number" value={formData.identification_number || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Address</label>
             <input name="address" value={formData.address || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Vehicle No</label>
             <input name="vehicle_no" value={formData.vehicle_no || ""} onChange={handleChange} />
           </div>
 
-          <div className="form-row">
+          <div className="sform-row">
             <label>Status</label>
             <select name="status" value={formData.status || ""} onChange={handleChange}>
               <option value="">Select</option>
@@ -173,7 +173,7 @@ const UpdateForm = ({ booking, onClose }) => {
             </select>
           </div>
 
-          <div className="form-row attachment-preview-row" style={{ gridColumn: "1 / span 2" }}>
+          <div className="sform-row attachment-preview-row" style={{ gridColumn: "1 / span 2" }}>
             <label>Current Attachment Preview</label>
             {formData.attachment ? (
               <img
@@ -187,8 +187,8 @@ const UpdateForm = ({ booking, onClose }) => {
             <input type="file" onChange={handleFileChange} />
           </div>
 
-          <div className="form-actions" style={{ gridColumn: "1 / span 2", marginTop: "10px" }}>
-            <button type="submit" disabled={loading}>
+          <div className="sform-actions">
+            <button type="submit" disabled={loading} className="update-btn">
               {loading ? "Updating..." : "Update"}
             </button>
             <button type="button" onClick={onClose} className="cancel-btn">
@@ -196,8 +196,9 @@ const UpdateForm = ({ booking, onClose }) => {
             </button>
           </div>
 
+
           {message && (
-            <p className="update-message" style={{ gridColumn: "1 / span 2", marginTop: "8px" }}>{message}</p>
+            <p className="supdate-message" style={{ gridColumn: "1 / span 2", marginTop: "8px" }}>{message}</p>
           )}
         </form>
       </div>
