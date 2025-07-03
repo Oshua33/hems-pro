@@ -14,7 +14,7 @@ def create_license_key(db: Session, key: str):
         raise HTTPException(status_code=400, detail="License key already exists and is in use.")
 
     # Create a new license key
-    expiration = datetime.utcnow() + timedelta(days=1)  # 1-year validity
+    expiration = datetime.utcnow() + timedelta(days=365)  # 1-year validity
     license_key = LicenseKey(key=key, expiration_date=expiration, is_active=True)
     
     db.add(license_key)

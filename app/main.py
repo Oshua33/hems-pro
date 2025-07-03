@@ -11,6 +11,7 @@ from app.eventpayment.router import router as eventpayment_router
 import uvicorn
 import sys
 import os
+from starlette.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 #from app.bookings import router as booking_router
 from dotenv import load_dotenv
@@ -71,6 +72,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve React static files
+# Define the build path for React
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "react-frontend", "build"))
+
+
+# Serve React static files under /web
+# Mount React under /web (so frontend lives at /web)
+# Mount React frontend at /web
+app.mount("/web", StaticFiles(directory=frontend_path, html=True), name="static")
+
+# Fallback for React Router under /web only
+@app.get("/web/{full_path:path}")
+async def serve_spa(full_path: str):
+    index_file = os.path.join(frontend_path, "index.html")
+    return FileResponse(index_file)
+
+
 
 # ✅ Include all routers
 app.include_router(user_router, prefix="/users", tags=["Users"])

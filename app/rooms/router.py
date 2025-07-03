@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import and_, or_, not_
 from app.rooms import schemas as room_schemas, models as room_models, crud
 from app.bookings import models as booking_models  # Adjust path if needed
+from app.payments import models as payment_models
 from app.users import schemas
 from sqlalchemy import func
 from datetime import datetime, time, date
@@ -87,21 +88,18 @@ def create_room(
 
 
 
-
 @router.get("/", response_model=dict)
 def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    """
-    Fetch all rooms and update their status dynamically if a booking has expired.
-    """
     today = date.today()
 
-    # Fetch rooms with pagination
+    # Fetch rooms
     rooms = crud.get_rooms_with_pagination(skip=skip, limit=limit, db=db)
     room_numbers = [room.room_number for room in rooms]
 
-    # Fetch active bookings for those rooms (checked-in, reserved, or complimentary)
+    # Get relevant bookings for these rooms
     active_bookings = db.query(
         booking_models.Booking.room_number,
+        booking_models.Booking.arrival_date,
         booking_models.Booking.departure_date,
         booking_models.Booking.status
     ).filter(
@@ -109,39 +107,32 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
         booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
     ).all()
 
-    future_reservations = db.query(
-        booking_models.Booking.room_number
-    ).filter(
-        booking_models.Booking.room_number.in_(room_numbers),
-        booking_models.Booking.status == "reserved",
-        booking_models.Booking.arrival_date > today  # ⬅️ future only
-    ).all()
+    # Collect reservations (arrival today or future) for count
+    reservation_bookings = [
+        b for b in active_bookings if b.status == "reserved" and b.arrival_date >= today
+    ]
 
-    # Convert to set for quick lookup
-    future_reserved_rooms = set([res.room_number for res in future_reservations])
-
-
-    # Create a map from room_number to the latest departure_date
-    booking_map = {}
-    for booking in active_bookings:
-        # Only consider the latest departure for overlapping bookings
-        if (booking.room_number not in booking_map or 
-            booking.departure_date > booking_map[booking.room_number]):
-            booking_map[booking.room_number] = booking.departure_date
-
-    # Modify room status based on logic
+    # Build result
     serialized_rooms = []
     for room in rooms:
-        effective_status = room.status
-        if (
-            room.room_number in booking_map and
-            booking_map[room.room_number] < today and
-            room.status in ["checked-in", "reserved", "complimentary"]
-        ):
-            effective_status = "available"
+        final_status = "available"
+        relevant = [b for b in active_bookings if b.room_number == room.room_number]
 
-        count = sum(
-            1 for r in future_reservations if r.room_number == room.room_number
+        # Start with original room status in case it's "maintenance"
+        if room.status == "maintenance":
+            final_status = "maintenance"
+        else:
+            for booking in relevant:
+                if booking.status in ["checked-in", "complimentary"] and booking.arrival_date <= today <= booking.departure_date:
+                    final_status = "checked-in"
+                    break  # Highest priority
+                elif booking.status == "reserved" and booking.arrival_date >= today:
+                    final_status = "reserved"
+                    # Do not break — checked-in might still override later
+
+        # Count total reservations (today + future)
+        reservation_count = sum(
+            1 for r in reservation_bookings if r.room_number == room.room_number
         )
 
         serialized_rooms.append({
@@ -149,8 +140,8 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
             "room_number": room.room_number,
             "room_type": room.room_type,
             "amount": room.amount,
-            "status": effective_status,
-            "future_reservation_count": count  # ✅ new key
+            "status": final_status,
+            "future_reservation_count": reservation_count
         })
 
     total_rooms = crud.get_total_room_count(db=db)
@@ -163,38 +154,44 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.post("/update_status_after_checkout")
-
 def update_rooms_after_checkout(db: Session = Depends(get_db)):
     now = datetime.now()
     today = date.today()
     noon = time(12, 0)
 
-    # Get bookings departing today that are still active (not checked out or cancelled)
-    bookings = (
-        db.query(booking_models.Booking)
-        .filter(
-            booking_models.Booking.departure_date == today,
-            booking_models.Booking.status.in_(["checked-in", "reserved"])
-        )
-        .all()
-    )
+    # Get bookings departing today (checked-in, reserved, complimentary)
+    bookings = db.query(booking_models.Booking).filter(
+        booking_models.Booking.departure_date == today,
+        booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"])
+    ).all()
 
     updated_rooms = []
     updated_bookings = []
 
     if now.time() >= noon:
         for booking in bookings:
-            # Find room linked to booking
-            room = db.query(room_models.Room).filter_by(room_number=booking.room_number).first()
-            if room and room.status != "available":
-                room.status = "available"
-                updated_rooms.append(room.room_number)
+            # Check if there is another overlapping active booking for this room
+            overlapping = db.query(booking_models.Booking).filter(
+                booking_models.Booking.room_number == booking.room_number,
+                booking_models.Booking.id != booking.id,
+                booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
+                booking_models.Booking.arrival_date <= today,
+                booking_models.Booking.departure_date >= today,
+            ).first()
 
-            # Optional: auto-checkout the booking
+            if overlapping:
+                continue  # Skip this booking and don't change room status
+
+            # Mark the booking as checked-out
             booking.status = "checked-out"
             updated_bookings.append(booking.id)
 
-        # Commit all changes at once
+            # Update room status if not in maintenance
+            room = db.query(room_models.Room).filter_by(room_number=booking.room_number).first()
+            if room and room.status != "maintenance":
+                room.status = "available"
+                updated_rooms.append(room.room_number)
+
         db.commit()
 
     return {
@@ -202,7 +199,6 @@ def update_rooms_after_checkout(db: Session = Depends(get_db)):
         "rooms_updated": updated_rooms,
         "bookings_updated": updated_bookings,
     }
-
 
 
 
@@ -274,29 +270,37 @@ def list_available_rooms(db: Session = Depends(get_db)):
 
 import re
 
+
+
+
+
 @router.get("/unavailable", response_model=dict)
 def list_unavailable_rooms(db: Session = Depends(get_db)):
     """
     Return rooms that are currently unavailable based on bookings today,
-    along with the booking details making them unavailable.
-    Also includes number of days, booking date, attachment, and total cost.
+    but only if the booking has at least one payment.
     """
     today = date.today()
 
-    # Fetch bookings that make a room unavailable today
-    active_bookings = db.query(booking_models.Booking).filter(
+    # Subquery to check if a booking has any associated payment
+    has_payment = db.query(payment_models.Payment).filter(
+        payment_models.Payment.booking_id == booking_models.Booking.id,
+        payment_models.Payment.void_date.is_(None)  # ✅ Not voided
+        
+    ).exists()
+
+    # Bookings where room is currently occupied (and paid in some form)
+    paid_active_bookings = db.query(booking_models.Booking).filter(
         booking_models.Booking.arrival_date <= today,
         booking_models.Booking.departure_date >= today,
-        booking_models.Booking.status.in_(["checked-in", "reserved", "complimentary"]),
-        booking_models.Booking.payment_status.notin_(["pending"])
-
+        booking_models.Booking.status.in_(["checked-in", "complimentary", "reserved"]),
+        has_payment  # ✅ Only include bookings that have payments
     ).all()
 
     unavailable_rooms = []
     total_booking_cost = 0
 
-    for booking in active_bookings:
-        # Calculate number of days
+    for booking in paid_active_bookings:
         number_of_days = (booking.departure_date - booking.arrival_date).days or 1
 
         unavailable_rooms.append({
@@ -318,12 +322,11 @@ def list_unavailable_rooms(db: Session = Depends(get_db)):
 
         total_booking_cost += booking.booking_cost or 0
 
-    # ⬇️ Natural sort function
+    # Natural sort for room numbers (e.g., A1 before A10)
     def natural_sort_key(room):
         return [int(text) if text.isdigit() else text.lower()
                 for text in re.split(r'(\d+)', room["room_number"])]
 
-    # ⬇️ Sort the result before returning
     unavailable_rooms = sorted(unavailable_rooms, key=natural_sort_key)
 
     return {

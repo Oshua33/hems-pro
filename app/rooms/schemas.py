@@ -82,6 +82,8 @@ class RoomOut(BaseModel):
     amount: float
     status: Literal["available", "maintenance"]
     has_future_reservation: bool = False  # ✅ Add this
+    future_reservation_count: int = 0  # ✅ Add this line
+
 
     class Config:
         from_attributes = True
