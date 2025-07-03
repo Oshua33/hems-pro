@@ -313,7 +313,7 @@ const ListBooking = () => {
                           onClick={() => handlePayment(b)}
                           disabled={["fully paid", "excess payment"].includes(b.payment_status)}
                         >
-                          {["fully paid", "excess payment"].includes(b.payment_status) ? "Paid" : "Pay>"}
+                          {["fully paid", "excess payment"].includes(b.payment_status) ? "Paid" : "Pay Now"}
                         </button>
                         <button className="viewb-btn" onClick={() => handleView(b)}>
                           View

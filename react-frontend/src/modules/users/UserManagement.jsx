@@ -16,8 +16,8 @@ const UserManagement = ({ token }) => {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("user");
   const [adminPassword, setAdminPassword] = useState("");
-
-  const [userToDelete, setUserToDelete] = useState(null); // 🆕
+  const [userRole, setUserRole] = useState(""); // 🆕
+  const [userToDelete, setUserToDelete] = useState(null);
 
   const navigate = useNavigate();
 
@@ -26,8 +26,25 @@ const UserManagement = ({ token }) => {
       setError("You must be logged in");
       return;
     }
+
+    fetchUserRole();
     fetchUsers();
   }, [token]);
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to fetch user role");
+      setUserRole(data.role);
+      localStorage.setItem("role", data.role); // optional
+    } catch (err) {
+      console.error("Error fetching role:", err);
+      setError("Unable to determine user role");
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -83,40 +100,38 @@ const UserManagement = ({ token }) => {
 
       showPopup(data.message || `User ${userToDelete} deleted successfully`);
       fetchUsers();
-      setUserToDelete(null); // close modal
+      setUserToDelete(null);
     } catch (err) {
-      console.error("Delete Error:", err);
       showPopup(err.message || "Delete failed");
     }
   };
 
-    const submitUpdate = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await fetch(`${API_BASE_URL}/users/${editingUser.username}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        username: editingUser.username,
-        password: editPassword || undefined,
-        role: editRole,
-      }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.detail || "Update failed");
+  const submitUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${editingUser.username}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: editingUser.username,
+          password: editPassword || undefined,
+          role: editRole,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Update failed");
+      }
+      showPopup(`User ${editingUser.username} updated`);
+      cancelEdit();
+      fetchUsers();
+    } catch (err) {
+      showPopup(err.message || "Update failed");
     }
-    showPopup(`User ${editingUser.username} updated`);
-    cancelEdit();
-    fetchUsers();
-  } catch (err) {
-    showPopup(err.message || "Update failed");
-  }
-};
-
+  };
 
   const handleCancelDelete = () => {
     setUserToDelete(null);
@@ -124,6 +139,11 @@ const UserManagement = ({ token }) => {
 
   const submitAddUser = async (e) => {
     e.preventDefault();
+    if (userRole !== "admin") {
+      showPopup("Insufficient permissions");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE_URL}/users/register/`, {
         method: "POST",
@@ -167,28 +187,26 @@ const UserManagement = ({ token }) => {
             }}
           >
             <option value="list">List Users</option>
-            <option value="add">Add User</option>
+            {userRole === "admin" && <option value="add">Add User</option>}
             <option value="update" disabled={!editingUser}>
               Edit User
             </option>
           </select>
           {selectedAction === "list" && (
-          <button
-            className="close-main-button"
-            onClick={() => navigate("/dashboard/rooms/status")}
-          >
-            ❌
-          </button>
-        )}
-
-
-
+            <button
+              className="close-main-button"
+              onClick={() => navigate("/dashboard/rooms/status")}
+            >
+              ❌
+            </button>
+          )}
         </div>
       </div>
 
       {error && <div className="error">{error}</div>}
       {popupMsg && <div className="popup-inside">{popupMsg}</div>}
 
+      {/* 👥 List users */}
       {selectedAction === "list" && (
         <div className="user-table compact">
           <div className="table-header">
@@ -214,12 +232,12 @@ const UserManagement = ({ token }) => {
                   🗑️ Delete
                 </button>
               </div>
-
             </div>
           ))}
         </div>
       )}
 
+      {/* 🗑️ Confirm delete */}
       {userToDelete && (
         <div className="delete-user-modal">
           <div className="modal-overlay" onClick={handleCancelDelete}>
@@ -235,23 +253,15 @@ const UserManagement = ({ token }) => {
                   ❌ Cancel
                 </button>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
-      {selectedAction === "add" && (
+      {/* ➕ Add user */}
+      {selectedAction === "add" && userRole === "admin" && (
         <form onSubmit={submitAddUser} className="edit-form compact-form">
-          <div className="edit-header">
-            <h4>Add New User</h4>
-            <div className="edit-header">
-              <h4>Add New User</h4>
-            </div>
-
-
-          </div>
-
+          <div className="edit-header"><h4>Add New User</h4></div>
           <label>Username:
             <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required />
           </label>
@@ -274,13 +284,10 @@ const UserManagement = ({ token }) => {
         </form>
       )}
 
+      {/* ✏️ Update user */}
       {selectedAction === "update" && editingUser && (
         <form onSubmit={submitUpdate} className="edit-form compact-form">
-          <div className="edit-header">
-            <h4>Edit: {editingUser.username}</h4>
-          </div>
-
-
+          <div className="edit-header"><h4>Edit: {editingUser.username}</h4></div>
           <label>Role:
             <select value={editRole} onChange={(e) => setEditRole(e.target.value)} required>
               <option value="user">user</option>
@@ -294,7 +301,6 @@ const UserManagement = ({ token }) => {
             <button type="submit">💾 Save</button>
             <button type="button" onClick={cancelEdit}>❌ Cancel</button>
           </div>
-
         </form>
       )}
     </div>

@@ -4,6 +4,7 @@
   padding: 30px;
   background-color: #f3eeee;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border-radius: 12px;
 }
 
 .rooms-header {

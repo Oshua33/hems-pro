@@ -96,15 +96,16 @@ const RoomStatusBoard = () => {
               }}
               onClick={() => handleRoomClick(room)}
             >
-              {/* ✅ Show reservation count badge */}
+              {/* ✅ Show reservation count badge (current + future) */}
               {room.future_reservation_count > 0 && (
                 <div
                   className="reservation-badge"
-                  title={`${room.future_reservation_count} upcoming reservation(s)`}
+                  title={`${room.future_reservation_count} reservation(s)`} // Removed "upcoming"
                 >
                   {room.future_reservation_count}
                 </div>
               )}
+
 
               <h3 style={{ margin: "2px 0" }}>{room.room_number}</h3>
               <p style={{ margin: "1px 0" }}>{room.room_type}</p>
@@ -118,7 +119,10 @@ const RoomStatusBoard = () => {
       <div className="room-summary-footer" style={{ fontSize: "0.8rem", padding: "6px" }}>
         <span>🔘 Available: {statusCounts["available"] || 0}</span>
         <span>🟢 Checked-in🧍‍♂️: {statusCounts["checked-in"] || 0}</span>
-        <span>🟡 Reserved🕒: {futureReservationCount}</span>
+        <span>🟡 Reserved🕒: {
+          rooms.filter((room) => room.future_reservation_count > 0).length
+        }</span>
+
         <span>🔴 Maintenance🛠️: {statusCounts["maintenance"] || 0}</span>
       </div>
 

@@ -85,7 +85,7 @@ const VoidPayment = () => {
 
   return (
     <div className="void-payment-container">
-      <h2 className="void-title">Void Payment</h2>
+      <h2 className="void-title">❌Void Payment</h2>
 
       <div className="filter-row">
         <label htmlFor="start-date">Start Date:</label>

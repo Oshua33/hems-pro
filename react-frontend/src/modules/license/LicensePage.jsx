@@ -44,8 +44,13 @@ const LicensePage = () => {
         setLicenseKey("");
         setPassword("");
 
+        // ✅ Add this line:
+        if (typeof setIsLicenseVerified === "function") {
+          setIsLicenseVerified(true);
+        }
+
         setTimeout(() => {
-          navigate("/login");
+          navigate("/web/login");
         }, 1500);
       } else {
         setError(data.message || "Verification failed.");
@@ -55,21 +60,38 @@ const LicensePage = () => {
     }
   };
 
-  const handleGenerate = async () => {
+    const handleGenerate = async () => {
     setMessage("");
     setError("");
+
     if (!password || !licenseKey) {
       setError("Please enter both admin password and license key.");
       return;
     }
+
     try {
       const data = await generateLicense(password, licenseKey);
       setMessage(data.key ? `License generated: ${data.key}` : "License generated.");
-
       setLicenseKey("");
       setPassword("");
     } catch (err) {
-      setError(err.message || "License generation failed.");
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail || "";
+
+      if (status === 400) {
+        if (detail.toLowerCase().includes("already exists")) {
+          setError("This license key is already in use.");
+        } else {
+          setError(detail || "Invalid request.");
+        }
+      } else if (status === 403) {
+        setError("Invalid admin password.");
+      } else if (status === 409) {
+        setError("This license key already exists.");
+      } else {
+        
+        setError("License generation failed. Please try again.");
+      }
     }
   };
 

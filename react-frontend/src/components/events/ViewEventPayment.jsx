@@ -77,7 +77,6 @@ const ViewEventPayment = () => {
 
   return (
     <div className="view-event-payment-container">
-      <h2>Event Payment Details (ID: {payment.id})</h2>
 
       <button onClick={() => navigate(-1)}>← Back</button>
       <button onClick={handlePrint} style={{ marginLeft: "10px" }}>
@@ -85,6 +84,9 @@ const ViewEventPayment = () => {
       </button>
 
       <div ref={printRef}>
+
+        <h2>Event Payment Details (ID: {payment.id})</h2> {/* 👈 Now included in print */}
+  
         <table>
           <tbody>
             <tr>
