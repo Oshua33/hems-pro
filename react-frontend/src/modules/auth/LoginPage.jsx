@@ -16,7 +16,8 @@ const LoginPage = () => {
     setError("");
 
     try {
-      const token = await loginUser(username, password);
+      const token = await loginUser(username.trim().toLowerCase(), password);
+
       localStorage.setItem("token", token);
       localStorage.setItem("username", username);
       navigate("/dashboard/rooms/status");

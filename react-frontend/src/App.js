@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 
+
 import HomePage from "./pages/HomePage";
 import LicensePage from "./modules/license/LicensePage";
 import LoginPage from "./modules/auth/LoginPage";
@@ -36,6 +37,7 @@ import ViewEventForm from "./components/events/ViewEventForm"; // ✅ add this
 import EventUpdate from "./components/events/EventUpdate";
 import ViewEventPayment from "./components/events/ViewEventPayment";
 
+console.log("✅ API BASE:", process.env.REACT_APP_API_BASE_URL);
 
 
 // import SearchPayment from "./components/payments/SearchPayment";

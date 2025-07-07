@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./CancelBooking.css";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const CancelBooking = () => {
   const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ const CancelBooking = () => {
 
   const fetchCancellableBookings = async () => {
     const token = localStorage.getItem("token");
+
     if (!token) {
       setError("User not authenticated.");
       setLoading(false);
@@ -26,7 +27,7 @@ const CancelBooking = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/bookings/bookings/cancellable`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/bookings/cancellable`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -35,17 +36,20 @@ const CancelBooking = () => {
       const data = await res.json();
 
       if (!res.ok) {
+        console.log("Backend error:", data);
         setError(data.detail || "Failed to fetch cancellable bookings.");
+        setLoading(false); // <== ADD THIS here too
         return;
       }
 
       setBookings(data.bookings || []);
       setTotalEntries(data.total_bookings || 0);
       setTotalBookingCost(data.total_booking_cost || 0);
+      setLoading(false); // ✅ <== THIS IS MISSING IN YOUR CURRENT CODE
     } catch (err) {
+      console.error("Frontend error:", err.message || JSON.stringify(err));
       setError(err.message || JSON.stringify(err));
-    } finally {
-      setLoading(false);
+      setLoading(false); // ✅ <== Also add here
     }
   };
 
@@ -64,7 +68,7 @@ const CancelBooking = () => {
 
     try {
       const res = await fetch(
-        `${API_BASE}/bookings/cancel/${selectedBookingId}/?cancellation_reason=${encodeURIComponent(reason)}`,
+        `${API_BASE_URL}/bookings/cancel/${selectedBookingId}/?cancellation_reason=${encodeURIComponent(reason)}`,
         {
           method: "POST",
           headers: {
@@ -143,7 +147,7 @@ const CancelBooking = () => {
                         {b.attachment ? (
                           <a
                             className="attachment-link"
-                            href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
+                            href={`${API_BASE_URL}/files/attachments/${b.attachment.split("/").pop()}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

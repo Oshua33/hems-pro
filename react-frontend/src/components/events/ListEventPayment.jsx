@@ -3,6 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ListEventPayment.css";
 
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const ListEventPayment = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
@@ -18,7 +21,7 @@ const ListEventPayment = () => {
 
     try {
       const token = localStorage.getItem("token");
-      let url = "http://localhost:8000/eventpayment/";
+      let url = `${API_BASE_URL}/eventpayment/`;
       const params = new URLSearchParams();
 
       if (startDate) params.append("start_date", startDate);

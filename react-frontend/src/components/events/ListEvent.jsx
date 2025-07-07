@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
 import "./ListEvent.css";
-import EventUpdate from "./EventUpdate"; // Adjust path as needed
-import CancelEvent from "./CancelEvent"; // adjust path if necessary
+import CancelEvent from "./CancelEvent";
 
-
-
-
-
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const ListEvent = () => {
   const [events, setEvents] = useState([]);
@@ -19,10 +15,6 @@ const ListEvent = () => {
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-
-
-
-  //const [events, setEvents] = useState([]);
   const [summary, setSummary] = useState({ total_entries: 0, total_booking_amount: 0 });
 
   const fetchEvents = async () => {
@@ -30,11 +22,14 @@ const ListEvent = () => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      let url = "http://localhost:8000/events";
+      let url = `${API_BASE_URL}/events/`;  // ← trailing slash
       const params = new URLSearchParams();
+
       if (startDate) params.append("start_date", startDate);
       if (endDate) params.append("end_date", endDate);
       if (params.toString()) url += `?${params.toString()}`;
+
+      console.log("📡 Fetching events from:", url);
 
       const res = await fetch(url, {
         headers: {
@@ -43,33 +38,29 @@ const ListEvent = () => {
       });
 
       const data = await res.json();
+      console.log("🟢 Raw backend response:", data);
 
-      // Handle new backend format
       const filtered = organizer
-        ? data.events.filter((e) =>
+        ? (data.events || []).filter((e) =>
             e.organizer?.toLowerCase().includes(organizer.toLowerCase())
           )
-        : data.events;
+        : data.events || [];
 
       setEvents(filtered);
-      setSummary(data.summary || {});
+      setSummary(data.summary || { total_entries: 0, total_booking_amount: 0 });
     } catch (err) {
-      console.error(err);
+      console.error("❌ Fetch failed:", err);
       setError("Failed to fetch events");
     } finally {
       setLoading(false);
     }
   };
 
-
-
   useEffect(() => {
     fetchEvents();
   }, []);
 
-  const totalAmount = events.reduce((sum, e) => sum + (e.event_amount || 0), 0);
   const navigate = useNavigate();
-
 
   return (
     <div className="list-event-container">
@@ -86,7 +77,9 @@ const ListEvent = () => {
           />
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          <button onClick={fetchEvents} className="fetch-button">↻ Refresh</button>
+          <button onClick={fetchEvents} className="fetch-button">
+            ↻ Refresh
+          </button>
         </div>
       </div>
 
@@ -115,7 +108,9 @@ const ListEvent = () => {
           <tbody>
             {events.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: "center" }}>No events found</td>
+                <td colSpan="13" style={{ textAlign: "center" }}>
+                  No events found
+                </td>
               </tr>
             ) : (
               events.map((event) => (
@@ -135,19 +130,20 @@ const ListEvent = () => {
                   <td className="action-buttons">
                     <button
                       className="view-btn"
-                      onClick={() => navigate("/dashboard/events/view", { state: { event } })}
+                      onClick={() =>
+                        navigate("/dashboard/events/view", { state: { event } })
+                      }
                     >
                       View
                     </button>
-
                     <button
                       className="update-btn"
-                      onClick={() => navigate("/dashboard/events/update", { state: { event } })}
+                      onClick={() =>
+                        navigate("/dashboard/events/update", { state: { event } })
+                      }
                     >
                       Update
                     </button>
-
-
                     <button
                       className="cancel-btn"
                       onClick={() => {
@@ -157,7 +153,6 @@ const ListEvent = () => {
                     >
                       Cancel
                     </button>
-
                   </td>
                 </tr>
               ))
@@ -166,28 +161,28 @@ const ListEvent = () => {
         </table>
 
         {showCancelModal && selectedEventId && (
-        <CancelEvent
-          eventId={selectedEventId}
-          onClose={() => {
-            setShowCancelModal(false);
-            setSelectedEventId(null);
-            fetchEvents(); // refresh event list after cancellation
-          }}
-        />
-      )}
-
+          <CancelEvent
+            eventId={selectedEventId}
+            onClose={() => {
+              setShowCancelModal(false);
+              setSelectedEventId(null);
+              fetchEvents();
+            }}
+          />
+        )}
       </div>
 
       {events.length > 0 && (
-      <div className="event-summary-wrapper">
-        <div><strong>Total Entries:</strong> {summary.total_entries}</div>
-        <div><strong>Total Booking Amount:</strong> ₦{summary.total_booking_amount?.toLocaleString()}</div>
-      </div>
-    )}
-
-
-      
-
+        <div className="event-summary-wrapper">
+          <div>
+            <strong>Total Entries:</strong> {summary.total_entries}
+          </div>
+          <div>
+            <strong>Total Booking Amount:</strong> ₦
+            {summary.total_booking_amount?.toLocaleString()}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

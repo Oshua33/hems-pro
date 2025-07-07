@@ -3,7 +3,7 @@ import axios from "axios";
 import "./CreateBooking.css";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const CreateBooking = () => {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ const CreateBooking = () => {
     try {
       if (guestResults.length === 0) {
         // Initial search
-        const response = await axios.get(`${BASE_URL}/bookings/search-guest/`, {
+        const response = await axios.get(`${API_BASE_URL}/bookings/search-guest/`, {
           params: { guest_name: formData.guest_name.trim() },
         });
 
@@ -119,7 +119,7 @@ const CreateBooking = () => {
     }
 
     try {
-      const response = await axios.post(`${BASE_URL}/bookings/create/`, data, {
+      const response = await axios.post(`${API_BASE_URL}/bookings/create/`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

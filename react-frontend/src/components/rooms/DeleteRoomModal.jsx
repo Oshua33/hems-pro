@@ -1,11 +1,13 @@
 import React from "react";
 import "./DeleteRoomModal.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const DeleteRoomModal = ({ room, onClose, onRoomDeleted }) => {
   const handleConfirmDelete = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:8000/rooms/${room.room_number}`, {
+      const response = await fetch(`${API_BASE_URL}/rooms/${room.room_number}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

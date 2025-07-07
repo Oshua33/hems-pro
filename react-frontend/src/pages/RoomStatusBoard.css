@@ -85,3 +85,11 @@
   border-radius: 8px;
   border: 1px solid white;
 }
+
+.section-box {
+  border: 2px solid #cab6b6;
+  border-radius: 12px;
+  padding: 10px;
+  background-color: #f8f4f4;
+  margin-bottom: 15px;
+}

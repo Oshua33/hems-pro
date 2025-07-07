@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "./VoidEventPayment.css"; // Reuse the same style
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const VoidEventPayment = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ const VoidEventPayment = () => {
       params.append("start_date", startDate);
       params.append("end_date", endDate);
 
-      const url = `http://localhost:8000/eventpayment/?${params.toString()}`;
+      const url = `${API_BASE_URL}/eventpayment/?${params.toString()}`;
 
       const res = await fetch(url, {
         headers: {
@@ -53,8 +55,8 @@ const VoidEventPayment = () => {
     setVoiding(true);
     try {
       const res = await fetch(
-        `http://localhost:8000/eventpayment/void/${selectedPayment.id}/`,
-        {
+      `${API_BASE_URL}/eventpayment/void/${selectedPayment.id}/`,
+      {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

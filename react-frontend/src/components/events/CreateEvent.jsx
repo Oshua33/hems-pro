@@ -5,7 +5,7 @@ import axios from "axios";
 import "./CreateEvent.css";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ const CreateEvent = () => {
     }
 
     try {
-      const response = await axios.post(`${BASE_URL}/events/`, formData, {
+      const response = await axios.post(`${API_BASE_URL}/events/`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

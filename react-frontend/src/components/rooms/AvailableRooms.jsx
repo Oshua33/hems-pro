@@ -2,6 +2,10 @@
 import React, { useEffect, useState } from "react";
 import "./AvailableRooms.css";
 
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const AvailableRooms = ({ onClose }) => {
   const [availableRooms, setAvailableRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +18,7 @@ const AvailableRooms = ({ onClose }) => {
 
   const fetchAvailableRooms = async () => {
     try {
-      const res = await fetch("http://localhost:8000/rooms/available");
+      const res = await fetch(`${API_BASE_URL}/rooms/available`);
       const data = await res.json();
       setAvailableRooms(data.available_rooms || []);
       setTotalAvailable(data.total_available_rooms || 0);

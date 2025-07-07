@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export const loginUser = async (username, password) => {
   const res = await axios.post(`${BASE_URL}/users/token`, {

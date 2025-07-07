@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./CheckoutGuest.css";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const CheckoutGuest = ({ token }) => {
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ const CheckoutGuest = ({ token }) => {
 
   const fetchUnavailableRooms = async () => {
     try {
-      const res = await fetch(`${API_BASE}/rooms/unavailable`, {
+      const res = await fetch(`${API_BASE_URL}/rooms/unavailable`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -34,7 +34,8 @@ const CheckoutGuest = ({ token }) => {
 
   const handleCheckout = async (roomNumber) => {
   try {
-    const res = await fetch(`${API_BASE}/bookings/${roomNumber}/`, {
+    const res = await fetch(`${API_BASE_URL}/bookings/${roomNumber}/`, {
+
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -55,8 +56,6 @@ const CheckoutGuest = ({ token }) => {
   }
 };
 
-
-  
 
   return (
     <div className="checkout-guest-container">
@@ -113,7 +112,7 @@ const CheckoutGuest = ({ token }) => {
                         {b.attachment ? (
                           <a
                             className="attachment-link"
-                            href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
+                            href={`${API_BASE_URL}/files/attachments/${b.attachment.split("/").pop()}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

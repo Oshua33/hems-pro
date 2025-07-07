@@ -1,7 +1,12 @@
+// src/api/licenseApi.js
+
 import axios from "axios";
 
+// ✅ Use environment variable from .env
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const apiClient = axios.create({
-  baseURL: "http://127.0.0.1:8000",  // no "/api"
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -9,13 +14,14 @@ const apiClient = axios.create({
 
 export const verifyLicense = async (licenseKey) => {
   try {
-    const response = await apiClient.get(`/license/verify/${encodeURIComponent(licenseKey)}`);
+    const response = await apiClient.get(
+      `/license/verify/${encodeURIComponent(licenseKey)}`
+    );
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "API request failed" };
   }
 };
-
 
 export const generateLicense = async (adminPassword, licenseKey) => {
   if (!adminPassword || !licenseKey) {
@@ -31,6 +37,3 @@ export const generateLicense = async (adminPassword, licenseKey) => {
     throw error.response?.data || { message: "API request failed" };
   }
 };
-
-
-

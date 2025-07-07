@@ -1,11 +1,12 @@
 .cancel-guest-container {
-  padding: 1.5rem 0 1.5rem 0; /* ⬅️ Remove horizontal padding (left & right) */
+  padding-top: 0.25rem;
+  padding-bottom: 1rem;
+  margin: 0;
   font-family: Arial, sans-serif;
   color: #1a202c;
-  margin: 0;         /* ⬅️ Remove all external margins */
-  padding-left: 0;   /* ⬅️ Ensure no left padding */
-  padding-right: 0;  /* Optional: ensure no right padding */
+  width: 100%;
 }
+
 
 .cancel-title {
   font-size: 22px;
@@ -20,7 +21,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  margin-top: 0.5rem;
+  margin-top: 0rem;
 }
 
 .error-message {

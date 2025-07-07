@@ -9,6 +9,9 @@ import RoomFaultsView from "../components/rooms/RoomFaultsView";
 import AvailableRooms from "../components/rooms/AvailableRooms";
 import DeleteRoomModal from "../components/rooms/DeleteRoomModal";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const RoomsPage = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,7 @@ const RoomsPage = () => {
   const fetchRooms = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8000/rooms/");
+      const response =  await fetch(`${API_BASE_URL}/rooms/`);
       const data = await response.json();
       const sortedRooms = (data.rooms || data || []).sort((a, b) =>
         a.room_number.localeCompare(b.room_number, undefined, { numeric: true })

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./RoomFaultsView.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const RoomFaultsView = ({ room, onClose, onRefresh }) => {
   const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +12,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
   const fetchFaults = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/rooms/${room.room_number}/faults`, {
+      const res = await fetch(`${API_BASE_URL}/rooms/${room.room_number}/faults`, {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -33,9 +35,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
     if (!hasUnresolved) return; // already available
 
     try {
-      await fetch(
-        `http://localhost:8000/rooms/${room.room_number}/status`,
-        {
+      await fetch(`${API_BASE_URL}/rooms/${room.room_number}/status`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -58,7 +58,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
   /* ─────────────────────── Update Fault Status ─────────────────────── */
   const updateFaultStatus = async (faultId, resolved) => {
     try {
-      const response = await fetch("http://localhost:8000/rooms/faults/update", {
+      const response = await fetch(`${API_BASE_URL}/rooms/faults/update`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -75,7 +75,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
       }
 
       // Fetch updated faults
-      const faultsResponse = await fetch(`http://localhost:8000/rooms/${room.room_number}/faults`, {
+      const faultsResponse = await fetch(`${API_BASE_URL}/rooms/${room.room_number}/faults`, {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -87,7 +87,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
       const anyUnresolved = (freshFaults || []).some(f => !f.resolved);
       const newStatus = anyUnresolved ? "maintenance" : "available";
 
-      const statusResponse = await fetch(`http://localhost:8000/rooms/${room.room_number}/status`, {
+      const statusResponse = await fetch(`${API_BASE_URL}/rooms/${room.room_number}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

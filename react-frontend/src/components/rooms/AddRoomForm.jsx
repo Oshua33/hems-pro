@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import "./AddRoom.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const AddRoomForm = ({ onClose, onRoomAdded }) => {
   const [formData, setFormData] = useState({
     room_number: "",
@@ -22,7 +25,7 @@ const AddRoomForm = ({ onClose, onRoomAdded }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:8000/rooms/", {
+      const res = await fetch(`${API_BASE_URL}/rooms/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./UpdateForm.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const UpdateForm = ({ booking, onClose }) => {
   const [formData, setFormData] = useState({ ...booking });
   const [attachmentFile, setAttachmentFile] = useState(null);
@@ -54,7 +56,7 @@ const UpdateForm = ({ booking, onClose }) => {
       form.append("attachment_str", formData.attachment || "");
     }
 
-    const response = await fetch(`http://localhost:8000/bookings/update/`, {
+    const response = await fetch(`${API_BASE_URL}/bookings/update/`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -177,7 +179,7 @@ const UpdateForm = ({ booking, onClose }) => {
             <label>Current Attachment Preview</label>
             {formData.attachment ? (
               <img
-                src={`http://localhost:8000/files/attachments/${formData.attachment.split("/").pop()}`}
+                src={`${API_BASE_URL}/files/attachments/${formData.attachment.split("/").pop()}`}
                 alt="Attachment Preview"
                 style={{ maxWidth: "180px", maxHeight: "140px", marginBottom: "8px", borderRadius: "6px" }}
               />

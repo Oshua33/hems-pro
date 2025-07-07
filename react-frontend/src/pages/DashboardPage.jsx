@@ -10,7 +10,7 @@ import ExcelJS from "exceljs";
 import { FaFileExcel, FaPrint } from "react-icons/fa";
 
 
-
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -242,7 +242,7 @@ const printContent = () => {
       const checkDashboardStatus = async () => {
         try {
           // ✅ 1. Check reservation alerts
-          const res = await axios.get("http://localhost:8000/bookings/reservations/alerts", {
+          const res = await axios.get(`${API_BASE_URL}/bookings/reservations/alerts`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -252,7 +252,7 @@ const printContent = () => {
           setReservationCount(count);
 
           // ✅ 2. Trigger backend to auto-update room statuses after checkout time
-          await axios.post("http://localhost:8000/rooms/update_status_after_checkout", {}, {
+          await axios.post(`${API_BASE_URL}/rooms/update_status_after_checkout`, {}, {
             headers: {
               Authorization: `Bearer ${token}`,
             },

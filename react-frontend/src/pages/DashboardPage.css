@@ -238,5 +238,23 @@
  border-color: #5537c4;
 }
 
+.reservation-button.alert-active {
+  background-color: #dc2626; /* red */
+  color: white;
+  font-weight: bold;
+}
+
+.reservation-button.alert-inactive {
+  background-color: #6b7280; /* gray-500 */
+  color: white;
+  font-weight: normal;
+}
 
 
+.reservation-button.alert-active:hover {
+  background-color: #991b1b; /* darker red */
+}
+
+.reservation-button.alert-inactive:hover {
+  background-color: #4b5563; /* darker gray */
+}

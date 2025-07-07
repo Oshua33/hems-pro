@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useLocation } from "react-router-dom"; // 👈 Needed to access state
 import "./CreatePayment.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const CreatePayment = ({ booking: bookingProp, onClose, onSuccess }) => {
   const location = useLocation();
   const bookingFromState = location.state?.booking;
@@ -39,7 +41,7 @@ const CreatePayment = ({ booking: bookingProp, onClose, onSuccess }) => {
     setMessage("");
 
     try {
-      const response = await fetch(`http://localhost:8000/payments/${booking.booking_id || booking.id}`, {
+      const response = await fetch(`${API_BASE_URL}/payments/${booking.booking_id || booking.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

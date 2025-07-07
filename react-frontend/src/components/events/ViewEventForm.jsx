@@ -1,6 +1,10 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const ViewEventForm = () => {
   const location = useLocation();
   const navigate = useNavigate();

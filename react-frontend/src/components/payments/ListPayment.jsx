@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import "./ListPayment.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const ListPayment = () => {
   const [payments, setPayments] = useState([]);
   const [status, setStatus] = useState("none");
@@ -40,10 +43,10 @@ const ListPayment = () => {
 
       let url = "";
       if (status === "All") {
-        url = `http://localhost:8000/payments/list?${params}`;
+        url = `${API_BASE_URL}/payments/list?${params.toString()}`;
       } else {
         params.append("status", status);
-        url = `http://localhost:8000/payments/by-status?${params}`;
+        url = `${API_BASE_URL}/payments/by-status?${params.toString()}`;
       }
 
       const data = await fetchWithToken(url);
@@ -77,7 +80,7 @@ const ListPayment = () => {
     setError(null);
     setNoDataMessage("");
     try {
-      const data = await fetchWithToken("http://localhost:8000/payments/total_daily_payment");
+      const data = await fetchWithToken(`${API_BASE_URL}/payments/total_daily_payment`);
       setPayments(data.payments || []);
       setTotalPayments(data.total_payments || 0);
       setTotalAmount(data.total_amount || 0);
@@ -102,7 +105,7 @@ const ListPayment = () => {
       if (debtorName) params.append("debtor_name", debtorName);
       if (startDate) params.append("start_date", startDate);
       if (endDate) params.append("end_date", endDate);
-      const url = `http://localhost:8000/payments/debtor_list?${params}`;
+      const url = `${API_BASE_URL}/payments/debtor_list?${params}`;
       const data = await fetchWithToken(url);
 
       setPayments(data.debtors || []);

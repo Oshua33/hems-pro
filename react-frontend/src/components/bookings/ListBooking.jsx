@@ -5,6 +5,8 @@ import UpdateForm from "./UpdateForm";
 import CreatePayment from "../payments/CreatePayment";
 import { openViewForm } from "./viewFormUtils";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const ALL_COLUMNS = [
   { key: "id", label: "ID" },
   { key: "room_number", label: "Room" },
@@ -69,26 +71,27 @@ const ListBooking = () => {
 
     try {
       const token = localStorage.getItem("token");
-      let url = "http://localhost:8000/bookings/list";
+      let url = `${API_BASE_URL}/bookings/list`;
       const params = {};
 
       // 1. Status Filter (only if not "none")
       if (status && status !== "none") {
-        url = "http://localhost:8000/bookings/status";
+         url = `${API_BASE_URL}/bookings/status`;
         params.status = status;
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
       }
       // 2. Guest Name Filter (only when status is "none")
       else if (guestName) {
-        url = "http://localhost:8000/bookings/search";
+       url = `${API_BASE_URL}/bookings/search`;
         params.guest_name = guestName;
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
       }
       // 3. Room Number Filter (only when status is "none" and guest is empty)
       else if (roomNumber) {
-        url = `http://localhost:8000/bookings/room/${roomNumber}`;
+        url = `${API_BASE_URL}/bookings/room/${roomNumber}`;
+
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
       }
@@ -283,7 +286,7 @@ const ListBooking = () => {
                         {b.attachment ? (
                           <a
                             className="attachment-link"
-                            href={`http://localhost:8000/files/attachments/${b.attachment.split("/").pop()}`}
+                            href={`${API_BASE_URL}/files/attachments/${b.attachment.split("/").pop()}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

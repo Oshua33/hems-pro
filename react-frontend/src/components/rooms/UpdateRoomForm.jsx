@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import './UpdateRoomForm.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const UpdateRoomForm = ({ room, onClose, onRoomUpdated }) => {
   const [formData, setFormData] = useState({
     room_number: room.room_number,
@@ -52,7 +54,7 @@ const UpdateRoomForm = ({ room, onClose, onRoomUpdated }) => {
     };
 
     try {
-      const res = await fetch(`http://localhost:8000/rooms/${room.room_number}`, {
+      const res = await fetch(`${API_BASE_URL}/rooms/${room.room_number}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

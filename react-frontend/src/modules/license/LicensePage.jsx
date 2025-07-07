@@ -50,7 +50,7 @@ const LicensePage = () => {
         }
 
         setTimeout(() => {
-          navigate("/web/login");
+          navigate("/login");
         }, 1500);
       } else {
         setError(data.message || "Verification failed.");

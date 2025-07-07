@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./ReservationAlert.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const ReservationAlert = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const ReservationAlert = () => {
       }
 
       try {
-        const res = await axios.get("http://localhost:8000/bookings/reservation-alerts", {
+        const res = await axios.get(`${API_BASE_URL}/bookings/reservation-alerts`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

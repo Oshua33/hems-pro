@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./PaymentOutstandingList.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const PaymentOutstandingList = () => {
   const [outstandingData, setOutstandingData] = useState([]);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
@@ -14,7 +16,7 @@ const PaymentOutstandingList = () => {
   useEffect(() => {
     const fetchOutstanding = async () => {
       try {
-        const res = await fetch("http://localhost:8000/payments/outstanding", {
+        const res = await fetch(`${API_BASE_URL}/payments/outstanding`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },

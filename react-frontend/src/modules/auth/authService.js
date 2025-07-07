@@ -1,33 +1,58 @@
-// modules/auth/authService.js
+// src/api/authService.js
+import axios from "axios";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+// ✅ Fallback to window.location.hostname if env variable isn't loaded
+const BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  `http://${window.location.hostname}:8000`;
 
+console.log("🧪 Login API Base URL:", BASE_URL);
+
+const authClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// ✅ Login user (uses form data for FastAPI OAuth2PasswordRequestForm)
 export const loginUser = async (username, password) => {
-  const response = await fetch(`${API_BASE_URL}/users/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username, password }),
-  });
+  try {
+    const formData = new URLSearchParams();
+    formData.append("username", username);
+    formData.append("password", password);
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail || "Login failed");
+    const response = await authClient.post("/users/token", formData, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    return response.data; // { access_token, token_type }
+  } catch (error) {
+    console.error("❌ Login failed:", error);
+    throw error.response?.data || { message: "Login failed" };
   }
-
-  return response.json(); // { access_token: ..., token_type: ... }
 };
 
-export const registerUser = async ({ username, password, role, admin_password }) => {
-  const response = await fetch(`${API_BASE_URL}/users/register/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password, role, admin_password }),
-  });
+// ✅ Register user (admin password required)
+export const registerUser = async ({
+  username,
+  password,
+  role,
+  admin_password,
+}) => {
+  try {
+    const response = await authClient.post("/users/register/", {
+      username,
+      password,
+      role,
+      admin_password,
+    });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail || "Registration failed");
+    return response.data; // optional response
+  } catch (error) {
+    console.error("❌ Registration failed:", error);
+    throw error.response?.data || { message: "Registration failed" };
   }
-
-  return response.json(); // optional response
 };

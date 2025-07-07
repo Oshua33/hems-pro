@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./EventPayment.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const EventPayment = () => {
   const [loading, setLoading] = useState(true);
   const [outstandingEvents, setOutstandingEvents] = useState([]);
@@ -33,7 +35,7 @@ const EventPayment = () => {
     }
 
     try {
-      const response = await axios.get("http://localhost:8000/eventpayment/outstanding", {
+      const response = await axios.get(`${API_BASE_URL}/eventpayment/outstanding`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOutstandingEvents(response.data.outstanding_events);
@@ -85,7 +87,7 @@ const EventPayment = () => {
     };
 
     try {
-      await axios.post("http://127.0.0.1:8000/eventpayment/", paymentData, {
+      await axios.post(`${API_BASE_URL}/eventpayment/`, paymentData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

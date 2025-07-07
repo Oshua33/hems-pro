@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import "./VoidPayment.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+
 const VoidPayment = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +29,7 @@ const VoidPayment = () => {
       params.append("start_date", startDate);
       params.append("end_date", endDate);
 
-      const url = `http://localhost:8000/payments/list?${params.toString()}`;
+      const url = `${API_BASE_URL}/payments/list?${params.toString()}`;
 
       const res = await fetch(url, {
         headers: {
@@ -52,7 +55,7 @@ const VoidPayment = () => {
   const handleConfirmVoid = async () => {
     setVoiding(true);
     try {
-      const res = await fetch(`http://localhost:8000/payments/void/${selectedPayment.payment_id}/`, {
+      const res = await fetch(`${API_BASE_URL}/payments/void/${selectedPayment.payment_id}/`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,

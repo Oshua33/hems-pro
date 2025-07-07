@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./EventUpdate.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
 const EventUpdate = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ const EventUpdate = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:8000/events/${event.id}`, {
+      const response = await fetch(`${API_BASE_URL}/events/${event.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
