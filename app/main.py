@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.routing import APIRoute
 from app.database import engine, Base
 from app.users.router import router as user_router
 from app.rooms.router import router as rooms_router
@@ -8,53 +11,43 @@ from app.payments.router import router as payments_router
 from app.license.router import router as license_router
 from app.events.router import router as events_router
 from app.eventpayment.router import router as eventpayment_router
+
 import uvicorn
-import sys
 import os
-from starlette.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-#from app.bookings import router as booking_router
-from dotenv import load_dotenv
-load_dotenv()  # This loads the .env variables into os.environ
-
-
+import sys
 import pytz
 from datetime import datetime
+from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+
+# Load environment variables
+load_dotenv()
+
+SERVER_IP = os.getenv("SERVER_IP", "127.0.0.1")
+print("Running on SERVER_IP:", SERVER_IP)
 
 
+# Ensure upload folder exists
 os.makedirs("uploads/attachments", exist_ok=True)
 
-
-
-# Set Africa/Lagos as default timezone in your Python application
+# Set default timezone to Africa/Lagos
 os.environ["TZ"] = "Africa/Lagos"
-
-# Convert UTC to Africa/Lagos
 lagos_tz = pytz.timezone("Africa/Lagos")
 current_time = datetime.now(lagos_tz)
 
-#print("Africa/Lagos Time:", current_time)
-
-
-
-from contextlib import asynccontextmanager
-
-
-
-
+# Adjust sys path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
+# Database startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application startup")
-    Base.metadata.create_all(bind=engine)  # Database initialization
+    Base.metadata.create_all(bind=engine)
     yield
     print("Application shutdown")
 
-
-# ✅ Only one FastAPI instance
+# Create app
 app = FastAPI(
     title="Hotel & Event Management System",
     description="An API for managing hotel operations including Bookings, Reservations, Rooms, and Payments.",
@@ -62,36 +55,24 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.mount("/files", StaticFiles(directory="uploads"), name="files")
-
-# ✅ Add CORS middleware
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins - not recommended for production
+    allow_origins=["*"],  # For production, change to specific domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Serve React static files
-# Define the build path for React
-frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "react-frontend", "build"))
+# Static files (uploads)
+app.mount("/files", StaticFiles(directory="uploads"), name="files")
 
+# Static React frontend
+react_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "react-frontend", "build"))
+react_static_dir = os.path.join(react_build_dir, "static")
+app.mount("/static", StaticFiles(directory=react_static_dir), name="static")
 
-# Serve React static files under /web
-# Mount React under /web (so frontend lives at /web)
-# Mount React frontend at /web
-app.mount("/web", StaticFiles(directory=frontend_path, html=True), name="static")
-
-# Fallback for React Router under /web only
-@app.get("/web/{full_path:path}")
-async def serve_spa(full_path: str):
-    index_file = os.path.join(frontend_path, "index.html")
-    return FileResponse(index_file)
-
-
-
-# ✅ Include all routers
+# Routers
 app.include_router(user_router, prefix="/users", tags=["Users"])
 app.include_router(rooms_router, prefix="/rooms", tags=["Rooms"])
 app.include_router(bookings_router, prefix="/bookings", tags=["Bookings"])
@@ -100,13 +81,25 @@ app.include_router(events_router, prefix="/events", tags=["Events"])
 app.include_router(eventpayment_router, prefix="/eventpayment", tags=["Event_Payments"])
 app.include_router(license_router, prefix="/license", tags=["License"])
 
-
+# Simple health check
 @app.get("/debug/ping")
 def debug_ping():
     return {"status": "ok"}
 
+# ✅ Route fallback for SPA (React frontend)
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # Skip fallback for known API/static routes
+    known_paths = [route.path for route in app.routes if isinstance(route, APIRoute)]
+    if any(full_path == path.strip("/") or full_path.startswith(path.strip("/") + "/") for path in known_paths):
+        return JSONResponse(status_code=404, content={"detail": "This is an API route, not SPA."})
 
+    index_file = os.path.join(react_build_dir, "index.html")
+    return FileResponse(index_file)
+
+# Entry point
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, log_level="info", access_log=False)
+    
+    uvicorn.run("app.main:app", host=SERVER_IP, port=8000, log_level="info", access_log=False)
 
 

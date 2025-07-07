@@ -44,9 +44,18 @@ def get_password_hash(password: str) -> str:
 
 
 def authenticate_user(db: Session, username: str, password: str):
+    print(f"🔍 Looking for user: '{username}'")
     user = crud.get_user_by_username(db, username)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user:
+        print("❌ User not found.")
         return None
+
+    print("✅ User found. Checking password...")
+    if not verify_password(password, user.hashed_password):
+        print("❌ Password incorrect.")
+        return None
+
+    print("✅ Password correct.")
     return user
 
 

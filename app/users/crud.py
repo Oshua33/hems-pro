@@ -27,6 +27,8 @@ def get_user_by_username(db: Session, username: str):
 
 
 
+
+
 def get_all_users(db: Session, skip: int = 0, limit: int = 50):
     # Fetch all user fields (ORM objects) from the database
     return db.query(User).offset(skip).limit(limit).all()

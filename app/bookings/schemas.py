@@ -57,13 +57,15 @@ class BookingSchemaResponse(BaseModel):
     number_of_days: Optional[int] = None  # ✅ supported and computed
     booking_cost: Optional[float] = None
     is_checked_out: Optional[bool] = False
-    cancellation_reason: Optional[str] = None
+    cancellation_reason: str
     created_by: str
     vehicle_no: Optional[str] = None  # ✅ NEW FIELD
     attachment: Optional[str] = None  # ✅ NEW FIELD
 
     class Config:
         from_attributes = True
+
+
 
 
 class UserDisplaySchema(BaseModel):

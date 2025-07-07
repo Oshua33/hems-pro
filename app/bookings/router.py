@@ -1021,7 +1021,8 @@ def list_cancellable_bookings(
 @router.post("/cancel/{booking_id}/")
 def cancel_booking(
     booking_id: int,
-    cancellation_reason: str = Query(None), 
+    cancellation_reason: str = Query(None),
+ 
     db: Session = Depends(get_db),
     current_user: schemas.UserDisplaySchema = Depends(get_current_user),
 ):

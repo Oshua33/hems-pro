@@ -28,6 +28,7 @@ logger.add("app.log", rotation="500 MB", level="DEBUG")
 def sign_up(user: schemas.UserSchema, db: Session = Depends(get_db)):
     # Check if the username already exists
     logger.info("creating user.....")
+    user.username = user.username.strip().lower()
     existing_user = user_crud.get_user_by_username(db, user.username)
     if existing_user:
         logger.warning(f"user trying to register but username entered already exist: {user.username}")
@@ -48,13 +49,18 @@ def sign_up(user: schemas.UserSchema, db: Session = Depends(get_db)):
 
 @router.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+    username = form_data.username.strip().lower()
+    password = form_data.password
+
+    print("🔐 Login attempt:", username)
+
+    user = authenticate_user(db, username, password)
     if not user:
-        logger.warning(f"usr trying to authenicate but authentication denied: {user.username}")
+        logger.warning(f"Authentication denied for username: {username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    access_token = create_access_token(data={"sub": user.username})
-    logger.info(f"user authentication successful: {user.username}")
+
+    access_token = create_access_token(data={"sub": username})
+    logger.info(f"✅ User authenticated: {username}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
