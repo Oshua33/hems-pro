@@ -314,7 +314,7 @@ const ListBooking = () => {
                               : ""
                           }`}
                           onClick={() => handlePayment(b)}
-                          disabled={["fully paid", "excess payment"].includes(b.payment_status)}
+                          disabled={["fully paid", "excess payment", "complimentary"].includes(b.payment_status)}
                         >
                           {["fully paid", "excess payment"].includes(b.payment_status) ? "Paid" : "Pay Now"}
                         </button>

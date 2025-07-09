@@ -1,0 +1,187 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./RoomStatusBoard.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
+
+const RoomStatusBoard = () => {
+  const [rooms, setRooms] = useState([]);
+  const navigate = useNavigate();
+
+  const formatNaira = (amount) => {
+    return amount?.toLocaleString("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    });
+  };
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await axios.get(`${API_BASE_URL}/rooms/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = res.data;
+        console.log("Fetched rooms response:", data);
+
+        if (Array.isArray(data?.rooms)) {
+          setRooms(data.rooms);
+        } else {
+          setRooms([]);
+        }
+      } catch (err) {
+        console.error("Error fetching rooms:", err);
+        setRooms([]);
+      }
+    };
+
+    fetchRooms();
+  }, []);
+
+  const handleRoomClick = (room) => {
+    const nonClickableStatuses = ["maintenance", "checked-in", "reserved", "complimentary"];
+    if (nonClickableStatuses.includes(room.status?.toLowerCase())) return;
+
+    navigate(`/dashboard/bookings/create?room_number=${room.room_number}`);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "available": return "#cabebef8";
+      case "reserved": return "#FFD700";
+      case "checked-in": return "#4CAF50";
+      case "checked-out": return "#90A4AE";
+      case "maintenance": return "#e60606";
+      case "complimentary": return "#6A5ACD";
+      default: return "#BDBDBD";
+    }
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "fully-paid": return "#4CAF50";         // green
+      case "part-payment": return "#555";          // dark grey
+      case "pending": return "#ccc";               // light grey
+      case "complimentary": return "#6A5ACD";       // blue
+      default: return "#E0E0E0";
+    }
+  };
+
+  const getPaymentStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case "fully-paid": return "🟢";
+      case "part-payment": return "⚫";
+      case "pending": return "⚪";
+      case "complimentary": return "🔵";
+      default: return "❔";
+    }
+  };
+
+  const statusCounts = rooms.reduce((acc, room) => {
+    const status = room.status?.toLowerCase() || "unknown";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const paymentStatusCounts = rooms.reduce((acc, room) => {
+    const status = room.payment_status?.toLowerCase() || "pending";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const futureReservationCount = rooms.reduce(
+    (total, room) => total + (room.future_reservation_count || 0),
+    0
+  );
+
+  return (
+    <div style={{ maxHeight: "100vh", overflow: "hidden" }}>
+      {/* Room Status Section */}
+      <div className="section-box" style={{ maxHeight: "35vh", overflowY: "auto" }}>
+        <div className="room-grid">
+          {rooms.map((room) => {
+            const isClickable = !["maintenance", "checked-in", "reserved", "complimentary"].includes(
+              room.status?.toLowerCase()
+            );
+
+            return (
+              <div
+                key={room.id}
+                className={`room-card ${isClickable ? "clickable" : "disabled"}`}
+                style={{
+                  backgroundColor: getStatusColor(room.status),
+                  fontSize: "0.7rem",
+                  padding: "4px",
+                  position: "relative",
+                }}
+                onClick={() => handleRoomClick(room)}
+              >
+                {room.future_reservation_count > 0 && (
+                  <div
+                    className="reservation-badge"
+                    title={`${room.future_reservation_count} reservation(s)`}
+                  >
+                    {room.future_reservation_count}
+                  </div>
+                )}
+                <h3 style={{ margin: "2px 0" }}>{room.room_number}</h3>
+                <p style={{ margin: "1px 0" }}>{room.room_type}</p>
+                <p style={{ margin: "1px 0" }}>{formatNaira(room.amount)}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Room Status Summary */}
+      <div className="room-summary-footer" style={{ fontSize: "0.8rem", padding: "6px" }}>
+        <span>🔘 Available: {statusCounts["available"] || 0}</span>
+        <span>🟢 Checked-in🧍‍♂️: {statusCounts["checked-in"] || 0}</span>
+        <span>🟡 Reserved🕒: {futureReservationCount}</span>
+        <span>🔵 Complimentary: {statusCounts["complimentary"] || 0}</span>
+        <span>🔴 Maintenance🛠️: {statusCounts["maintenance"] || 0}</span>
+      </div>
+
+      <hr className="room-divider" style={{ margin: "8px 0" }} />
+
+      {/* Payment Status Section */}
+      <div className="section-box" style={{ maxHeight: "30vh", overflowY: "auto" }}>
+        <h4 style={{ margin: "4px 8px" }}>💳 Room Payment Status</h4>
+        <div className="room-grid">
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              className="room-card"
+              style={{
+                backgroundColor: getPaymentStatusColor(room.payment_status),
+                fontSize: "0.7rem",
+                padding: "4px",
+              }}
+            >
+              <h3 style={{ margin: "2px 0" }}>{room.room_number}</h3>
+              <p style={{ margin: "1px 0", fontWeight: "bold" }}>
+                {getPaymentStatusIcon(room.payment_status)}{" "}
+                {room.payment_status?.replace("-", " ") || "N/A"}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Payment Status Summary */}
+        <div style={{ fontSize: "0.8rem", padding: "6px", marginTop: "6px" }}>
+          <strong>
+            🟢 Fully Paid: {paymentStatusCounts["fully-paid"] || 0} | ⚪ Pending: {paymentStatusCounts["pending"] || 0} | ⚫ Part Payment: {paymentStatusCounts["part-payment"] || 0} | 🔵 Complimentary: {paymentStatusCounts["complimentary"] || 0}
+          </strong>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RoomStatusBoard;

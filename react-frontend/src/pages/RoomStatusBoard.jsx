@@ -59,7 +59,7 @@ const RoomStatusBoard = () => {
   }, []);
 
   const handleRoomClick = (room) => {
-    const nonClickableStatuses = ["maintenance", "checked-in", "reserved"];
+    const nonClickableStatuses = ["maintenance", "checked-in", "reserved", "complimentary"];
     if (nonClickableStatuses.includes(room.status?.toLowerCase())) return;
 
     navigate(`/dashboard/bookings/create?room_number=${room.room_number}`);
@@ -77,6 +77,8 @@ const RoomStatusBoard = () => {
         return "#90A4AE";
       case "maintenance":
         return "#e60606";
+      case "complimentary":
+        return "#6A5ACD";
       default:
         return "#BDBDBD";
     }
@@ -100,6 +102,7 @@ const RoomStatusBoard = () => {
     { name: "Available", value: statusCounts["available"] || 0, color: "#cabebef8" },
     { name: "Checked-in", value: statusCounts["checked-in"] || 0, color: "#4CAF50" },
     { name: "Reserved", value: futureReservationCount, color: "#FFD700" },
+    { name: "Complimentary", value: statusCounts["complimentary"] || 0, color: "#6A5ACD" },
     { name: "Maintenance", value: statusCounts["maintenance"] || 0, color: "#e60606" },
   ];
 
@@ -110,7 +113,7 @@ const RoomStatusBoard = () => {
         <div className="room-grid">
           {Array.isArray(rooms) &&
             rooms.map((room) => {
-              const isClickable = !["maintenance", "checked-in", "reserved"].includes(
+              const isClickable = !["maintenance", "checked-in", "reserved", "complimentary"].includes(
                 room.status?.toLowerCase()
               );
 
@@ -147,6 +150,7 @@ const RoomStatusBoard = () => {
         <span>🔘 Available: {statusCounts["available"] || 0}</span>
         <span>🟢 Checked-in🧍‍♂️: {statusCounts["checked-in"] || 0}</span>
         <span>🟡 Reserved🕒: {rooms.filter((r) => r.future_reservation_count > 0).length}</span>
+        <span>🔵 Complimentary: {statusCounts["complimentary"] || 0}</span>
         <span>🔴 Maintenance🛠️: {statusCounts["maintenance"] || 0}</span>
       </div>
 
