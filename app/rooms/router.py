@@ -123,11 +123,15 @@ def list_rooms(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
             final_status = "maintenance"
         else:
             for booking in relevant:
-                if booking.status in ["checked-in", "complimentary"] and booking.arrival_date <= today <= booking.departure_date:
+                if booking.status == "complimentary" and booking.arrival_date <= today <= booking.departure_date:
+                    final_status = "complimentary"
+                    break  # Complimentary gets highest priority
+                elif booking.status == "checked-in" and booking.arrival_date <= today <= booking.departure_date:
                     final_status = "checked-in"
-                    break  # Highest priority
+                    break  # Checked-in next priority
                 elif booking.status == "reserved" and booking.arrival_date >= today:
                     final_status = "reserved"
+
                     # Do not break — checked-in might still override later
 
         # Count total reservations (today + future)

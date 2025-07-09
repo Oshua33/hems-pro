@@ -31,18 +31,30 @@ def get_rooms_with_pagination(skip: int, limit: int, db: Session):
 # crud.py
 def serialize_rooms(rooms):
     """
-    Convert Room SQLAlchemy objects to JSON-serializable dicts.
+    Convert Room SQLAlchemy objects (optionally joined with additional info)
+    to JSON-serializable dicts.
     """
-    return [
-        {
+    serialized = []
+    for room in rooms:
+        if room.id is None:
+            continue  # skip corrupted entries
+
+        # Support attributes that might be dynamically added (e.g., via joins or annotations)
+        payment_status = getattr(room, "payment_status", None)
+        future_reservation_count = getattr(room, "future_reservation_count", 0)
+
+        serialized.append({
             "id": room.id,
             "room_number": room.room_number,
             "room_type": room.room_type,
             "amount": room.amount,
-            "status": room.status
-        }
-        for room in rooms if room.id is not None  # skip corrupted entries if any
-    ]
+            "status": room.status,
+            #"payment_status": payment_status,
+            "future_reservation_count": future_reservation_count,
+        })
+
+    return serialized
+
 
     
 

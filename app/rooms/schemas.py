@@ -43,7 +43,7 @@ class RoomUpdateSchema(BaseModel):
     room_number: Optional[str] = None
     room_type: Optional[str] = None
     amount: Optional[int] = None
-    status: Optional[Literal["available", "checked-in", "reserved", "maintenance", "complimentery"]] = None
+    status: Optional[Literal["available", "checked-in", "reserved", "maintenance", "complimentary"]] = None
     faults: Optional[List[RoomFaultSchema]] = None  # ✅ Accept faults with optional IDs
 
     class Config:

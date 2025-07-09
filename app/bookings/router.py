@@ -155,7 +155,7 @@ def create_booking(
     if booking_type == "complimentary":
         booking_cost = 0
         payment_status = "complimentary"
-        booking_status = "checked-in"
+        booking_status = "complimentary"
     else:
         booking_cost = room.amount * number_of_days
         payment_status = "pending"
