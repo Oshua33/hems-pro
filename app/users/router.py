@@ -3,7 +3,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.users.auth import pwd_context, authenticate_user, create_access_token, get_current_user
 from app.database import get_db
-from app.users import crud as user_crud, schemas  # Correct import for user CRUD operations
+from app.users import crud as user_crud, schemas # Correct import for user CRUD operations
+from app.users import models as user_models
 import os
 from loguru import logger
 import os
@@ -52,13 +53,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     username = form_data.username.strip().lower()
     password = form_data.password
 
-    print("🔐 Login attempt:", username)
+    #print("🔐 Login attempt:", username)
 
     user = authenticate_user(db, username, password)
     if not user:
         logger.warning(f"Authentication denied for username: {username}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+
+    
     access_token = create_access_token(data={"sub": username})
     logger.info(f"✅ User authenticated: {username}")
     return {"access_token": access_token, "token_type": "bearer"}

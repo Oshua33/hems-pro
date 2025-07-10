@@ -7,6 +7,12 @@ from app.users import schemas
 from app.license import schemas as license_schemas
 from loguru import logger
 
+
+from datetime import datetime
+
+from app.license import models as license_models
+
+
 import os
 
 router = APIRouter()
@@ -36,3 +42,20 @@ def verify_license(key: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=result["message"])
     
     return result
+
+
+@router.get("/license/check")
+def check_license_status(db: Session = Depends(get_db)):
+    license_record = db.query(license_models.LicenseKey).filter(license_models.LicenseKey.is_active == True).first()
+
+    if license_record and license_record.expiration_date > datetime.utcnow():
+        return {
+            "valid": True,
+            "expires_on": license_record.expiration_date.isoformat()
+        }
+
+    return {
+        "valid": False,
+        "expires_on": None
+    }
+

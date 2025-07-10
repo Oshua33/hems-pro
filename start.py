@@ -33,7 +33,7 @@ if os.path.exists(PYTHON_VENV):
 elif os.path.exists(PYTHON_EMBED):
     PYTHON_EXECUTABLE = PYTHON_EMBED
 else:
-    print("❌ Error: No valid Python environment found.")
+    print("Error: No valid Python environment found.")
     sys.exit(1)
 
 def get_preferred_ip():
@@ -46,6 +46,10 @@ def get_preferred_ip():
     }
 
     for interface, addrs in psutil.net_if_addrs().items():
+        if_stats = psutil.net_if_stats().get(interface)
+        if not if_stats or not if_stats.isup:
+            continue  # skip disconnected interface
+
         for addr in addrs:
             if addr.family == socket.AF_INET and not addr.address.startswith("169.254"):
                 if "Ethernet" in interface and not ip_priority["Ethernet"]:
@@ -53,15 +57,17 @@ def get_preferred_ip():
                 elif "Wi-Fi" in interface and not ip_priority["Wi-Fi"]:
                     ip_priority["Wi-Fi"] = addr.address
 
-    return ip_priority["Ethernet"] or ip_priority["Wi-Fi"] or "127.0.0.1"
+    selected_ip = ip_priority["Ethernet"] or ip_priority["Wi-Fi"] or "127.0.0.1"
+    print(f"[INFO] Selected IP: {selected_ip}")
+    return selected_ip
 
 def update_env_server_ip(ip_address):
     """Update backend and frontend .env with SERVER_IP"""
     set_key(ENV_PATH, "SERVER_IP", ip_address)
-    print(f"📱 SERVER_IP set to {ip_address} in backend .env")
+    print(f"[INFO] SERVER_IP set to {ip_address} in backend .env")
 
     set_key(REACT_ENV_PATH, "REACT_APP_API_BASE_URL", f"http://{ip_address}:8000")
-    print(f"🌐 REACT_APP_API_BASE_URL set in frontend .env")
+    print(f"[INFO] REACT_APP_API_BASE_URL set in frontend .env")
 
 def start_backend():
     """Start FastAPI backend which serves both API and React UI"""
@@ -77,7 +83,7 @@ def start_backend():
 def open_browser(ip):
     """Open browser to the preferred IP"""
     time.sleep(3)  # Wait for backend to start
-    print(f"🌐 Opening browser at http://{ip}:8000")
+    print(f"[INFO] Opening browser at http://{ip}:8000")
     webbrowser.open(f"http://{ip}:8000")
 
 if __name__ == "__main__":
@@ -85,7 +91,7 @@ if __name__ == "__main__":
         ip = get_preferred_ip()
         update_env_server_ip(ip)
 
-        print("🚀 Starting backend...")
+        print("[INFO] Starting backend...")
         backend_proc = start_backend()
         open_browser(ip)
 
@@ -94,6 +100,6 @@ if __name__ == "__main__":
 
     except Exception as e:
         with open(os.path.join(BASE_DIR, "hems_error_log.txt"), "w") as f:
-            f.write("❌ Application startup failed:\n")
+            f.write("Application startup failed:\n")
             f.write(str(e))
         raise
