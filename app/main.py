@@ -11,6 +11,7 @@ from app.payments.router import router as payments_router
 from app.license.router import router as license_router
 from app.events.router import router as events_router
 from app.eventpayment.router import router as eventpayment_router
+from backup.backup import router as backup_router
 
 import uvicorn
 import os
@@ -80,6 +81,7 @@ app.include_router(payments_router, prefix="/payments", tags=["Payments"])
 app.include_router(events_router, prefix="/events", tags=["Events"])
 app.include_router(eventpayment_router, prefix="/eventpayment", tags=["Event_Payments"])
 app.include_router(license_router, prefix="/license", tags=["License"])
+app.include_router(backup_router)
 
 # Simple health check
 @app.get("/debug/ping")
