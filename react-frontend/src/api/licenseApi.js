@@ -37,3 +37,13 @@ export const generateLicense = async (adminPassword, licenseKey) => {
     throw error.response?.data || { message: "API request failed" };
   }
 };
+
+// ✅ NEW: Check current license status (used in HomePage)
+export const checkLicenseStatus = async () => {
+  try {
+    const response = await apiClient.get(`/license/check`);
+    return response.data; // Expected { valid: true/false, expires_on: "..." }
+  } catch (error) {
+    throw error.response?.data || { message: "License check failed" };
+  }
+};

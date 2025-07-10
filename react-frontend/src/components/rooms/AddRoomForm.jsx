@@ -36,10 +36,8 @@ const AddRoomForm = ({ onClose, onRoomAdded }) => {
 
       if (res.ok) {
         setSuccessMessage("Room successfully added!");
-        setTimeout(() => {
-          onRoomAdded();
-          onClose();
-        }, 1500); // Delay before closing
+        onRoomAdded();
+        
       } else {
         const errorText = await res.text();
         console.error("Add room failed:", errorText);

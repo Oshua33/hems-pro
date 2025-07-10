@@ -102,8 +102,8 @@ const RoomStatusBoard = () => {
     { name: "Available", value: statusCounts["available"] || 0, color: "#cabebef8" },
     { name: "Checked-in", value: statusCounts["checked-in"] || 0, color: "#4CAF50" },
     { name: "Reserved", value: futureReservationCount, color: "#FFD700" },
-    { name: "Complimentary", value: statusCounts["complimentary"] || 0, color: "#6A5ACD" },
     { name: "Maintenance", value: statusCounts["maintenance"] || 0, color: "#e60606" },
+    { name: "Complimentary", value: statusCounts["complimentary"] || 0, color: "#6A5ACD" },
   ];
 
   return (

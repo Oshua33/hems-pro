@@ -1,33 +1,38 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { checkLicenseStatus } from "../api/licenseApi"; // Make sure this exists
 import "./HomePage.css";
 
 const HomePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkLicenseStatus = () => {
-      const verified = localStorage.getItem("license_verified");
-      const validUntil = localStorage.getItem("license_valid_until");
+    const verifyLicense = async () => {
+      try {
+        const data = await checkLicenseStatus(); // Expects { valid: true, expires_on: "..." }
 
-      const now = new Date();
-      const expiryDate = validUntil ? new Date(validUntil) : null;
+        const now = new Date();
+        const expiresOn = data.expires_on ? new Date(data.expires_on) : null;
 
-      const isStillValid = verified === "true" && expiryDate && expiryDate > now;
-
-      // Wait 2 seconds then redirect
-      setTimeout(() => {
-        if (isStillValid) {
+        if (data.valid && expiresOn && expiresOn > now) {
+          localStorage.setItem("license_verified", "true");
+          localStorage.setItem("license_valid_until", expiresOn.toISOString());
           navigate("/login");
         } else {
+          localStorage.removeItem("license_verified");
+          localStorage.removeItem("license_valid_until");
           navigate("/license");
         }
-      }, 3000); // 2-second delay
+      } catch (error) {
+        console.error("License check failed", error);
+        navigate("/license");
+      }
     };
 
-    checkLicenseStatus();
+    setTimeout(() => {
+      verifyLicense();
+    }, 3000); // Keep your animation delay if you like
   }, [navigate]);
-
   return (
     <>
       <link
