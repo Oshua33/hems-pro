@@ -258,3 +258,20 @@
 .reservation-button.alert-inactive:hover {
   background-color: #4b5563; /* darker gray */
 }
+
+
+.sidebars-button {
+  padding: 8px 12px;
+  background-color: #3e66a3;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 6px 0;
+  transition: background-color 0.3s;
+}
+
+.sidebars-button:hover {
+  background-color: #2e518c;
+}

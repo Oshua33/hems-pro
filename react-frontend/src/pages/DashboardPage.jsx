@@ -306,6 +306,47 @@ const printContent = () => {
   ];
 
 
+  const handleBackupClick = async () => {
+    const confirmBackup = window.confirm("Are you sure you want to back up the database?");
+    if (!confirmBackup) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/backup/db`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        alert(`❌ Backup failed: ${text}`);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      const disposition = response.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="?([^"]+)"?/);
+      const filename = match?.[1] || "backup.sql";
+
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      alert(`✅ Backup downloaded: ${filename}`);
+    } catch (error) {
+      alert(`❌ Backup failed: ${error.message}`);
+    }
+  };
+
+
+
+
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
@@ -410,6 +451,15 @@ const printContent = () => {
               </div>
             ) : null;
           })}
+
+          <button
+            onClick={handleBackupClick}
+            className="sidebars-button"
+            style={{ fontSize: "0.9rem", marginTop: "8px" }}
+          >
+            💾 Backup
+          </button>
+
 
           <button
             onClick={() => navigate("/dashboard/reservation-alert")}
