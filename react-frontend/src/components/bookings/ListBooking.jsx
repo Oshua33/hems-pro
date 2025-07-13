@@ -309,15 +309,31 @@ const ListBooking = () => {
                               ? "complimentary"
                               : b.payment_status === "void"
                               ? "void"
-                              : ["part payment", "pending"].includes(b.payment_status)
+                              : ["checked-out", "cancelled"].includes(b.status)
+                              ? "closed"
+                              : b.payment_status === "part payment"
                               ? "incomplete"
+                              : b.payment_status === "pending"
+                              ? "pending"
                               : ""
                           }`}
                           onClick={() => handlePayment(b)}
-                          disabled={["fully paid", "excess payment", "complimentary"].includes(b.payment_status)}
+                          disabled={
+                            ["fully paid", "excess payment", "complimentary"].includes(b.payment_status) ||
+                            ["checked-out", "cancelled"].includes(b.status)
+                          }
                         >
-                          {["fully paid", "excess payment"].includes(b.payment_status) ? "Paid" : "Pay Now"}
+                          {["checked-out", "cancelled"].includes(b.status)
+                            ? "Closed"
+                            : ["fully paid", "excess payment"].includes(b.payment_status)
+                            ? "Paid"
+                            : b.payment_status === "complimentary"
+                            ? "Free"
+                            : "Pay Now"}
                         </button>
+
+
+
                         <button className="viewb-btn" onClick={() => handleView(b)}>
                           View
                         </button>

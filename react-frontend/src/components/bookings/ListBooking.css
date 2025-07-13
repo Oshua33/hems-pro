@@ -246,23 +246,61 @@ button {
   text-align: center; /* optional, to center "Paid" nicely */
 }
 
-.payment-btn.incomplete,
-.payment-btn.pending {
-  background-color: #e74c3c;
+/* Gray for closed (checked-out or cancelled) */
+.payment-btn.closed {
+  background-color: #a9a9a9; /* Dark Gray */
+  color: white;
+  cursor: not-allowed;
+  border: none;
+  opacity: 0.8;
 }
 
-.payment-btn.complimentary,
-.payment-btn.void {
-  background-color: #a6a3af;
+/* Purple for complimentary bookings */
+.payment-btn.complimentary {
+  background-color: #a9a9a9; /* Dark Gray */
+  color: white;
+  cursor: not-allowed;
+  border: none;
+  opacity: 0.9;
 }
 
+/* Existing styling for reference */
 .payment-btn.completed {
-  background-color: #32a763;
+  background-color: green;
+  color: white;
 }
 
 .payment-btn.excess {
-  background-color: #03f162;
+  background-color: #004080; /* Dark Blue */
+  color: white;
 }
+
+/* Part Payment – Orange (keep existing) */
+.payment-btn.incomplete {
+  /*background-color: rgb(206, 149, 42);*/
+  background-color: rgb(140, 172, 140);
+  color: white;
+  border: none;
+}
+
+/* Pending – Light Red */
+.payment-btn.pending {
+  background-color: #f10909; /* Light red */
+  color: white;
+  border: none;
+}
+
+
+.payment-btn.void {
+  background-color: red;
+  color: white;
+}
+
+.payment-btn:disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 
 .booking-table {
   width: 100%;
@@ -302,4 +340,7 @@ button {
 .booking-table td {
   padding: 6px;
 }
+
+
+
 

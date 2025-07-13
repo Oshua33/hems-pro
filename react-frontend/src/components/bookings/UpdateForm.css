@@ -4,7 +4,7 @@
   top: 0;
   left: 0;
   width: 100vw;
-  height: 96vh;
+  height: 100vh;
   background-color: rgba(10, 10, 10, 0.4);
   display: flex;
   justify-content: center;
@@ -21,7 +21,7 @@
   border-radius: 12px;
   max-width: 800px;
   width: 100%;
-  max-height: 96vh;
+  max-height: 100vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(121, 69, 69, 0.08);
   font-family: "Segoe UI", sans-serif;
@@ -122,7 +122,7 @@
   font-size: 0.85rem;
   font-weight: 500;
   color: #c0392b;
-  margin-top: 0.4rem;
+  margin-top: 0.2rem;
 }
 
 /* Scrollbar slim for attachment scroll */
