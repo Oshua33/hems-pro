@@ -96,12 +96,16 @@ def create_payment(
             status_code=404, detail=f"Room {booking_record.room_number} does not exist."
         )
     
-    # Ensure the booking status allows payments
+    # Allow payments for checked-in, reserved, or checked-out (if not fully paid)
     if booking_record.status not in ["checked-in", "reserved"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Booking ID {booking_id} must be checked-in or reserved to make a payment.",
-        )
+        if booking_record.status == "checked-out" and booking_record.payment_status != "fully paid":
+            pass  # allow payment
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Booking ID {booking_id} must be checked-in, reserved, or checked-out with pending balance to make a payment.",
+            )
+
     
     
 
@@ -601,10 +605,11 @@ def list_outstanding_bookings(
         # Fetch all bookings that are not cancelled or complimentary or fully paid
         bookings = db.query(booking_models.Booking).filter(
             booking_models.Booking.status != "cancelled",
-            booking_models.Booking.payment_status != "payment completed",
-            booking_models.Booking.payment_status != "complimentary",
-            booking_models.Booking.status != "checked-out"
+            booking_models.Booking.payment_status.notin_([
+                "fully paid", "complimentary", "void"
+            ])
         ).all()
+
 
         if not bookings:
             raise HTTPException(status_code=404, detail="No outstanding bookings found.")

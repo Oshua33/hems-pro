@@ -287,24 +287,28 @@ def list_unavailable_rooms(db: Session = Depends(get_db)):
     today = date.today()
 
     # Subquery to check if a booking has any associated payment
+    # Subquery to check if a booking has any associated valid (non-void) payment
     has_payment = db.query(payment_models.Payment).filter(
         payment_models.Payment.booking_id == booking_models.Booking.id,
-        payment_models.Payment.void_date.is_(None)  # ✅ Not voided
-        
+        payment_models.Payment.void_date.is_(None)
     ).exists()
 
-    # Bookings where room is currently occupied (and paid in some form)
-    paid_active_bookings = db.query(booking_models.Booking).filter(
+    # Include bookings with payment OR complimentary bookings
+    active_bookings = db.query(booking_models.Booking).filter(
         booking_models.Booking.arrival_date <= today,
         booking_models.Booking.departure_date >= today,
         booking_models.Booking.status.in_(["checked-in", "complimentary", "reserved"]),
-        has_payment  # ✅ Only include bookings that have payments
+        or_(
+            has_payment,
+            booking_models.Booking.payment_status == "complimentary"
+        )
     ).all()
+
 
     unavailable_rooms = []
     total_booking_cost = 0
 
-    for booking in paid_active_bookings:
+    for booking in active_bookings:
         number_of_days = (booking.departure_date - booking.arrival_date).days or 1
 
         unavailable_rooms.append({

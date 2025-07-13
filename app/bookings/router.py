@@ -793,13 +793,21 @@ def update_booking(
             raise HTTPException(status_code=400, detail="Number of days must be greater than zero.")
 
         # Determine booking status and cost based on the type
+        previous_booking_type = booking.booking_type
+        previous_payment_status = booking.payment_status
+
         if booking_type == "complimentary":
             booking_cost = 0
             payment_status = "complimentary"
             status = "checked-in"
         else:
             booking_cost = room.amount * number_of_days
-            payment_status = booking.payment_status or "pending"
+            # Check if we are transitioning from complimentary to something else
+            if previous_booking_type == "complimentary" and previous_payment_status == "complimentary":
+                payment_status = "pending"
+            else:
+                payment_status = booking.payment_status or "pending"
+
             status = "reserved" if booking_type == "reservation" else "checked-in"
 
         # Handle attachment update if a new file is provided
