@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
+from app.store.schemas import StoreItemDisplay
 from app.users.schemas import UserDisplaySchema
-from app.store.schemas import StoreItemDisplay  # reuse item data
 
 
 # ----------------------------
@@ -26,32 +26,19 @@ class BarDisplay(BarBase):
 
 
 # ----------------------------
-# Bar Item
+# Bar Inventory (item + selling price)
 # ----------------------------
-class BarItemBase(BaseModel):
-    item_id: int
+class BarInventoryBase(BaseModel):
     bar_id: int
-    quantity: int
+    item_id: int
+
+
+class BarInventoryCreate(BarInventoryBase):
     selling_price: float
 
 
-class BarItemCreate(BarItemBase):
-    pass
-
-
-class BarItemDisplay(BaseModel):
-    id: int
-    item_id: int
-    bar_id: int
-    quantity: int
+class BarInventoryUpdatePrice(BaseModel):
     selling_price: float
-    created_at: datetime
-    item: StoreItemDisplay
-    bar: BarDisplay
-
-    class Config:
-        from_attributes = True
-
 
 class BarPriceUpdate(BaseModel):
     bar_id: int
@@ -59,22 +46,39 @@ class BarPriceUpdate(BaseModel):
     new_price: float
 
 
-class BarSaleItemCreate(BaseModel):
-    bar_item_id: int
+
+class BarInventoryDisplay(BaseModel):
+    id: int
+    bar_id: int
+    item_id: int
     quantity: int
+    selling_price: float
+    item: StoreItemDisplay
+    bar: BarDisplay
+
+    class Config:
+        from_attributes = True
+
+
+# ----------------------------
+# Bar Sale
+# ----------------------------
+class BarSaleItemCreate(BaseModel):
+    item_id: int
+    quantity: int
+
 
 
 class BarSaleCreate(BaseModel):
     bar_id: int
-    #sold_by_id: int
     items: List[BarSaleItemCreate]
 
 
 class BarSaleItemDisplay(BaseModel):
     id: int
     quantity: int
-    #selling_price: float
-    bar_item: BarItemDisplay
+    total_amount: float
+    bar_inventory: BarInventoryDisplay
 
     class Config:
         from_attributes = True
@@ -83,9 +87,21 @@ class BarSaleItemDisplay(BaseModel):
 class BarSaleDisplay(BaseModel):
     id: int
     bar: BarDisplay
-    created_by: str  # ✅ use nested schema here
+    created_by: str  # Only username
     sale_date: datetime
     sale_items: List[BarSaleItemDisplay]
 
     class Config:
         from_attributes = True
+
+
+class BarInventorySummaryDisplay(BaseModel):
+    item_id: int
+    item_name: str
+    quantity: int
+    current_unit_price: Optional[float]
+    selling_price: Optional[float]
+
+    class Config:
+        from_attributes = True
+
