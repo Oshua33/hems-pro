@@ -41,6 +41,47 @@ def list_categories(
 ):
     return db.query(store_models.StoreCategory).all()
 
+
+@router.put("/categories/{category_id}", response_model=store_schemas.StoreCategoryDisplay)
+def update_category(
+    category_id: int,
+    update_data: store_schemas.StoreCategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    category = db.query(store_models.StoreCategory).filter_by(id=category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    existing = db.query(store_models.StoreCategory).filter(
+        store_models.StoreCategory.name == update_data.name,
+        store_models.StoreCategory.id != category_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category name already exists")
+
+    category.name = update_data.name
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+@router.delete("/categories/{category_id}")
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    category = db.query(store_models.StoreCategory).filter_by(id=category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    db.delete(category)
+    db.commit()
+    return {"detail": "Category deleted successfully"}
+
+
+
 # ----------------------------
 # ITEM ROUTES
 # ----------------------------
@@ -71,6 +112,50 @@ def list_items(
     if category:
         query = query.join(store_models.StoreItem.category).filter(StoreCategory.name == category)
     return query.order_by(store_models.StoreItem.name).all()
+
+
+
+
+@router.put("/items/{item_id}", response_model=store_schemas.StoreItemDisplay)
+def update_item(
+    item_id: int,
+    update_data: store_schemas.StoreItemCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    item = db.query(store_models.StoreItem).filter_by(id=item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    existing = db.query(store_models.StoreItem).filter(
+        store_models.StoreItem.name == update_data.name,
+        store_models.StoreItem.id != item_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Item name already exists")
+
+    for field, value in update_data.dict().items():
+        setattr(item, field, value)
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/items/{item_id}")
+def delete_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    item = db.query(store_models.StoreItem).filter_by(id=item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    db.delete(item)
+    db.commit()
+    return {"detail": "Item deleted successfully"}
+
 
 # ----------------------------
 # PURCHASE / STOCK ENTRY
@@ -104,6 +189,49 @@ def list_stock_entries(
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     return db.query(store_models.StoreStockEntry).order_by(store_models.StoreStockEntry.purchase_date.desc()).all()
+
+
+@router.put("/purchases/{entry_id}", response_model=store_schemas.StoreStockEntryDisplay)
+def update_purchase(
+    entry_id: int,
+    update_data: store_schemas.StoreStockEntryCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    entry = db.query(store_models.StoreStockEntry).filter_by(id=entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Purchase entry not found")
+
+    item = db.query(store_models.StoreItem).filter_by(id=update_data.item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    total = (update_data.quantity * update_data.unit_price) if update_data.unit_price else None
+
+    for field, value in update_data.dict().items():
+        setattr(entry, field, value)
+    entry.total_amount = total
+
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/purchases/{entry_id}")
+def delete_purchase(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    entry = db.query(store_models.StoreStockEntry).filter_by(id=entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Purchase entry not found")
+
+    db.delete(entry)
+    db.commit()
+    return {"detail": "Purchase entry deleted successfully"}
+
+
 
 # ----------------------------
 # ISSUE TO BAR (Update BarInventory)
@@ -167,6 +295,57 @@ def list_issues(
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     return db.query(StoreIssue).order_by(StoreIssue.issue_date.desc()).all()
+
+
+
+@router.put("/issues/{issue_id}", response_model=store_schemas.IssueDisplay)
+def update_issue(
+    issue_id: int,
+    update_data: store_schemas.IssueCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    issue = db.query(StoreIssue).filter_by(id=issue_id).first()
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+
+    # Delete old issue items
+    db.query(StoreIssueItem).filter_by(issue_id=issue_id).delete()
+
+    # Update metadata
+    issue.issue_to = update_data.issue_to
+    issue.issued_to_id = update_data.issued_to_id
+    issue.issue_date = update_data.issue_date or datetime.utcnow()
+    issue.issued_by_id = current_user.id
+
+    for item_data in update_data.issue_items:
+        new_issue_item = StoreIssueItem(
+            issue_id=issue_id,
+            item_id=item_data.item_id,
+            quantity=item_data.quantity,
+        )
+        db.add(new_issue_item)
+
+    db.commit()
+    db.refresh(issue)
+    return issue
+
+
+@router.delete("/issues/{issue_id}")
+def delete_issue(
+    issue_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    issue = db.query(StoreIssue).filter_by(id=issue_id).first()
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+
+    db.query(StoreIssueItem).filter_by(issue_id=issue.id).delete()
+    db.delete(issue)
+    db.commit()
+    return {"detail": "Issue deleted successfully"}
+
 
 # ----------------------------
 # STORE BALANCE REPORT

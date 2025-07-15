@@ -46,6 +46,33 @@ def list_bars(
 # BAR INVENTORY (Replace BarItem)
 # ----------------------------
 
+@router.put("/bars/{bar_id}", response_model=bar_schemas.BarDisplay)
+def update_bar(
+    bar_id: int,
+    bar_update: bar_schemas.BarCreate,  # Same schema used in creation
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    bar = db.query(bar_models.Bar).filter_by(id=bar_id).first()
+    if not bar:
+        raise HTTPException(status_code=404, detail="Bar not found")
+
+    # Check if name is being changed to an existing bar name
+    existing = db.query(bar_models.Bar).filter(
+        bar_models.Bar.name == bar_update.name,
+        bar_models.Bar.id != bar_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bar name already exists")
+
+    for field, value in bar_update.dict().items():
+        setattr(bar, field, value)
+
+    db.commit()
+    db.refresh(bar)
+    return bar
+
+
 
 
 @router.get("/inventory", response_model=List[bar_schemas.BarInventorySummaryDisplay])
@@ -266,6 +293,72 @@ def list_bar_sales(
     return query.order_by(BarSale.sale_date.desc()).all()
 
 
+@router.put("/sales/{sale_id}", response_model=bar_schemas.BarSaleDisplay)
+def update_bar_sale(
+    sale_id: int,
+    sale_data: bar_schemas.BarSaleCreate,  # Same structure as create
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    if sale.bar_id != sale_data.bar_id:
+        raise HTTPException(status_code=400, detail="Bar ID mismatch")
+
+    # Delete old sale items
+    db.query(bar_models.BarSaleItem).filter_by(sale_id=sale.id).delete()
+
+    # Re-create sale items with updated quantities
+    for item_data in sale_data.items:
+        inventory = db.query(bar_models.BarInventory).filter_by(
+            bar_id=sale_data.bar_id,
+            item_id=item_data.item_id
+        ).first()
+
+        if not inventory:
+            raise HTTPException(status_code=404, detail=f"Inventory not found for item {item_data.item_id}")
+
+        # Re-calculate availability excluding current sale quantities
+        total_issued = db.query(func.sum(store_models.StoreIssueItem.quantity)).join(
+            store_models.StoreIssue
+        ).filter(
+            store_models.StoreIssue.issued_to_id == sale_data.bar_id,
+            store_models.StoreIssueItem.item_id == item_data.item_id
+        ).scalar() or 0
+
+        total_sold_excluding_current = db.query(func.sum(bar_models.BarSaleItem.quantity)).join(
+            bar_models.BarSale
+        ).filter(
+            bar_models.BarSale.bar_id == sale_data.bar_id,
+            bar_models.BarSaleItem.bar_inventory_id == inventory.id,
+            bar_models.BarSaleItem.sale_id != sale.id  # exclude current
+        ).scalar() or 0
+
+        available = total_issued - total_sold_excluding_current
+
+        if item_data.quantity > available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not enough stock for item ID {item_data.item_id} (available: {available})"
+            )
+
+        total = item_data.quantity * inventory.selling_price
+
+        sale_item = bar_models.BarSaleItem(
+            sale_id=sale.id,
+            bar_inventory_id=inventory.id,
+            quantity=item_data.quantity,
+            total_amount=total
+        )
+        db.add(sale_item)
+
+    db.commit()
+    db.refresh(sale)
+    return sale
+
+
 # ----------------------------
 # RECEIVED ITEMS
 # ----------------------------
@@ -328,3 +421,39 @@ def get_received_items(
         }
         for r in results
     ]
+
+
+@router.delete("/bars/{bar_id}")
+def delete_bar(
+    bar_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    bar = db.query(bar_models.Bar).filter_by(id=bar_id).first()
+    if not bar:
+        raise HTTPException(status_code=404, detail="Bar not found")
+
+    # Optional: Check if this bar has sales or inventory, and block deletion if necessary
+
+    db.delete(bar)
+    db.commit()
+    return {"detail": "Bar deleted successfully"}
+
+
+@router.delete("/sales/{sale_id}")
+def delete_bar_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    # Delete all sale items first
+    db.query(bar_models.BarSaleItem).filter_by(sale_id=sale.id).delete()
+    
+    # Then delete the sale itself
+    db.delete(sale)
+    db.commit()
+    return {"detail": "Bar sale deleted successfully"}
