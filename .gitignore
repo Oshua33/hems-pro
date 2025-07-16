@@ -1,0 +1,18 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+
+# Environment variables
+.env
+
+# VSCode settings
+.vscode/
+
+# Ignore license and dependency files
+requirements.txt
+licence.txt
+

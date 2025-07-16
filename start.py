@@ -1,3 +1,4 @@
+from dotenv import set_key, load_dotenv
 import os
 import sys
 import subprocess
@@ -5,7 +6,6 @@ import time
 import webbrowser
 import psutil
 import socket
-from dotenv import set_key, load_dotenv
 
 # Set timezone
 os.environ["TZ"] = "Africa/Lagos"
