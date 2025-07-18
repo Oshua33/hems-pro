@@ -24,7 +24,9 @@ ADMIN_LICENSE_PASSWORD = os.getenv("ADMIN_LICENSE_PASSWORD")
 
 # Endpoint to generate a new license key (Admin Only)
 @router.post("/generate", response_model=license_schemas.LicenseResponse)
-def generate_license_key(license_password: str, key: str, db: Session = Depends(get_db)):
+def generate_license_key(license_password: str, key: str, db: Session = Depends(get_db),
+    #current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
     
     if license_password != ADMIN_LICENSE_PASSWORD:
         raise HTTPException(status_code=403, detail="Invalid license password.")
@@ -34,7 +36,9 @@ def generate_license_key(license_password: str, key: str, db: Session = Depends(
 
 # Endpoint to verify a license key
 @router.get("/verify/{key}")
-def verify_license(key: str, db: Session = Depends(get_db)):
+def verify_license(key: str, db: Session = Depends(get_db),
+    #current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
     
     result = services.verify_license_key(db, key)
     
@@ -45,7 +49,9 @@ def verify_license(key: str, db: Session = Depends(get_db)):
 
 
 @router.get("/license/check")
-def check_license_status(db: Session = Depends(get_db)):
+def check_license_status(db: Session = Depends(get_db),
+    #current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+):
     license_record = db.query(license_models.LicenseKey).filter(license_models.LicenseKey.is_active == True).first()
 
     if license_record and license_record.expiration_date > datetime.utcnow():

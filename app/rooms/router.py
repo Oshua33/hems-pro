@@ -382,16 +382,29 @@ def update_faults(faults: List[FaultUpdate], db: Session = Depends(get_db)):
     return {"message": "Faults updated successfully"}
 
 @router.patch("/faults/{fault_id}")
-def update_fault_status(fault_id: int, update: FaultUpdate, db: Session = Depends(get_db)):
+def update_fault_status(
+    fault_id: int,
+    update: FaultUpdate,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserDisplaySchema = Depends(get_current_user)
+):
     fault = db.query(RoomFault).filter(RoomFault.id == fault_id).first()
     if not fault:
         raise HTTPException(status_code=404, detail="Fault not found")
+
+    if fault.resolved and update.resolved is False:
+        if current_user.role.lower() != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Only an admin can mark a resolved fault as unresolved."
+            )
 
     fault.resolved = update.resolved
     fault.resolved_at = datetime.utcnow() if update.resolved else None
 
     db.commit()
     db.refresh(fault)
+
     return {
         "id": fault.id,
         "room_number": fault.room_number,
