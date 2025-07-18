@@ -24,7 +24,7 @@ REACT_ENV_PATH = os.path.join(BASE_DIR, "react-frontend", ".env")
 load_dotenv(ENV_PATH)
 
 # Python executable paths
-PYTHON_VENV = os.path.join(BASE_DIR, "env", "Scripts", "python.exe")
+PYTHON_VENV = os.path.join(BASE_DIR, "venv", "Scripts", "python.exe")
 PYTHON_EMBED = os.path.join(BASE_DIR, "python", "python.exe")
 
 # Choose correct Python executable

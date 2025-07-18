@@ -15,4 +15,6 @@ venv/
 # Ignore license and dependency files
 requirements.txt
 licence.txt
+# python-3.12.2-embed-amd64/LICENSE.txt
+python
 
