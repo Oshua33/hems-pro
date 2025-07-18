@@ -50,14 +50,16 @@ class BarPriceUpdate(BaseModel):
 class BarInventoryDisplay(BaseModel):
     id: int
     bar_id: int
+    bar_name: str
     item_id: int
-    quantity: int
-    selling_price: float
-    item: StoreItemDisplay
-    bar: BarDisplay
+    item_name: str
+    unit_price: float
+    total_issued: int
+    total_sold: int
+    available_quantity: int  # = issued - sold
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 
 # ----------------------------
@@ -83,16 +85,36 @@ class BarSaleItemDisplay(BaseModel):
     class Config:
         from_attributes = True
 
+class BarSaleItemSummary(BaseModel):
+    item_id: int
+    item_name: str  # This must be populated
+    quantity: int
+    selling_price: float
+    total_amount: float
+
+    class Config:
+        orm_mode = True
+
 
 class BarSaleDisplay(BaseModel):
     id: int
-    bar: BarDisplay
-    created_by: str  # Only username
     sale_date: datetime
-    sale_items: List[BarSaleItemDisplay]
+    bar_id: int
+    bar_name: str
+    created_by: str
+    status: str
+    total_amount: float
+    sale_items: List[BarSaleItemSummary]
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True  # replaces orm_mode in Pydantic v2
+    }
+
+
+class BarSaleListResponse(BaseModel):
+    total_entries: int
+    total_sales_amount: float
+    sales: List[BarSaleDisplay]
 
 
 class BarInventorySummaryDisplay(BaseModel):

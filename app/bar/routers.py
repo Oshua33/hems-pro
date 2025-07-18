@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import aliased
 from typing import Optional, List
 from datetime import datetime, date
 from app.database import get_db
@@ -10,6 +12,11 @@ from app.bar import models as bar_models, schemas as bar_schemas
 from app.store import models as store_models
 from app.bar.models import Bar, BarInventory, BarSale, BarSaleItem
 from app.users.models import User
+from app.bar.models import BarInventory
+from typing import Optional
+
+
+
 
 router = APIRouter()
 
@@ -81,7 +88,7 @@ def list_bar_inventory(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    # 1. Total Issued to Bar(s)
+    # 1. Total Issued to Bar
     issued_query = db.query(
         store_models.StoreIssueItem.item_id,
         store_models.StoreIssue.issued_to_id.label("bar_id"),
@@ -89,6 +96,7 @@ def list_bar_inventory(
     ).join(
         store_models.StoreIssue, store_models.StoreIssue.id == store_models.StoreIssueItem.issue_id
     )
+
     if bar_id:
         issued_query = issued_query.filter(store_models.StoreIssue.issued_to_id == bar_id)
 
@@ -97,25 +105,30 @@ def list_bar_inventory(
         store_models.StoreIssue.issued_to_id
     ).subquery()
 
-    # 2. Total Sold from Bar(s)
+    # 2. Total Sold from Bar
+    bar_inventory_alias = aliased(bar_models.BarInventory)
+    bar_sale_item_alias = aliased(bar_models.BarSaleItem)
+    bar_sale_alias = aliased(bar_models.BarSale)
+
     sold_query = db.query(
-        bar_models.BarInventory.item_id.label("item_id"),
-        bar_models.BarInventory.bar_id.label("bar_id"),
-        func.sum(bar_models.BarSaleItem.quantity).label("total_sold")
+        bar_inventory_alias.item_id.label("item_id"),
+        bar_inventory_alias.bar_id.label("bar_id"),
+        func.sum(bar_sale_item_alias.quantity).label("total_sold")
     ).join(
-        bar_models.BarSaleItem, bar_models.BarInventory.id == bar_models.BarSaleItem.bar_inventory_id
+        bar_sale_item_alias, bar_inventory_alias.id == bar_sale_item_alias.bar_inventory_id
     ).join(
-        bar_models.BarSale, bar_models.BarSale.id == bar_models.BarSaleItem.sale_id
+        bar_sale_alias, bar_sale_item_alias.bar_sale_id == bar_sale_alias.id  # ✅ FIXED HERE
     )
+
     if bar_id:
-        sold_query = sold_query.filter(bar_models.BarSale.bar_id == bar_id)
+        sold_query = sold_query.filter(bar_sale_alias.bar_id == bar_id)
 
     sold_subq = sold_query.group_by(
-        bar_models.BarInventory.item_id,
-        bar_models.BarInventory.bar_id
+        bar_inventory_alias.item_id,
+        bar_inventory_alias.bar_id
     ).subquery()
 
-    # 3. Latest Store Unit Price
+    # 3. Latest Unit Price
     latest_price_subq = (
         db.query(
             store_models.StoreStockEntry.item_id,
@@ -129,25 +142,29 @@ def list_bar_inventory(
         .subquery()
     )
 
-    # 4. Selling price from BarInventory
-    selling_price_subq = db.query(
+    # 4. Selling price
+    selling_price_query = db.query(
         bar_models.BarInventory.item_id,
         bar_models.BarInventory.bar_id,
         bar_models.BarInventory.selling_price
     )
+
     if bar_id:
-        selling_price_subq = selling_price_subq.filter(bar_models.BarInventory.bar_id == bar_id)
+        selling_price_query = selling_price_query.filter(bar_models.BarInventory.bar_id == bar_id)
 
-    selling_price_subq = selling_price_subq.subquery()
+    selling_price_subq = selling_price_query.subquery()
 
-    # 5. Final Query
+    # 5. Final query
     query = db.query(
         store_models.StoreItem.id.label("item_id"),
         store_models.StoreItem.name.label("item_name"),
-        issued_subq.c.bar_id.label("bar_id"),
-        func.coalesce(issued_subq.c.total_issued, 0).label("issued"),
-        func.coalesce(sold_subq.c.total_sold, 0).label("sold"),
-        (func.coalesce(issued_subq.c.total_issued, 0) - func.coalesce(sold_subq.c.total_sold, 0)).label("quantity"),
+        issued_subq.c.bar_id,
+        func.coalesce(issued_subq.c.total_issued, 0).label("total_issued"),
+        func.coalesce(sold_subq.c.total_sold, 0).label("total_sold"),
+        (
+            func.coalesce(issued_subq.c.total_issued, 0) -
+            func.coalesce(sold_subq.c.total_sold, 0)
+        ).label("available_quantity"),
         func.coalesce(latest_price_subq.c.unit_price, 0).label("current_unit_price"),
         func.coalesce(selling_price_subq.c.selling_price, 0).label("selling_price")
     ).join(
@@ -157,7 +174,8 @@ def list_bar_inventory(
         (store_models.StoreItem.id == sold_subq.c.item_id) &
         (issued_subq.c.bar_id == sold_subq.c.bar_id)
     ).outerjoin(
-        latest_price_subq, store_models.StoreItem.id == latest_price_subq.c.item_id
+        latest_price_subq,
+        store_models.StoreItem.id == latest_price_subq.c.item_id
     ).outerjoin(
         selling_price_subq,
         (store_models.StoreItem.id == selling_price_subq.c.item_id) &
@@ -171,13 +189,12 @@ def list_bar_inventory(
             "item_id": r.item_id,
             "item_name": r.item_name,
             "bar_id": r.bar_id,
-            "quantity": r.quantity,
+            "quantity": r.available_quantity,
             "current_unit_price": r.current_unit_price,
             "selling_price": r.selling_price,
         }
-        for r in results if r.quantity > 0
+        for r in results if r.available_quantity > 0
     ]
-
 
 @router.put("/inventory/set-price", response_model=bar_schemas.BarInventoryDisplay)
 def update_selling_price(
@@ -266,7 +283,7 @@ def create_bar_sale(
         total = item_data.quantity * inventory.selling_price
 
         sale_item = bar_models.BarSaleItem(
-            sale_id=sale.id,
+            bar_sale_id=sale.id,
             bar_inventory_id=inventory.id,
             quantity=item_data.quantity,
             total_amount=total
@@ -275,23 +292,114 @@ def create_bar_sale(
 
     db.commit()
     db.refresh(sale)
-    return sale
+
+    # Re-fetch with joins for full details
+    sale = db.query(bar_models.BarSale).options(
+        joinedload(bar_models.BarSale.bar),
+        joinedload(bar_models.BarSale.created_by_user),
+        joinedload(bar_models.BarSale.sale_items).joinedload(bar_models.BarSaleItem.bar_inventory).joinedload(bar_models.BarInventory.item)
+    ).get(sale.id)
+
+    sale_items = []
+    total_amount = 0.0
+
+    for item in sale.sale_items:
+        inventory = item.bar_inventory
+        store_item = inventory.item if inventory else None
+        item_name = store_item.name if store_item else "Unknown"
+
+        sale_items.append({
+            "item_id": inventory.item_id if inventory else 0,
+            "item_name": item_name,
+            "quantity": item.quantity,
+            "selling_price": inventory.selling_price if inventory else 0.0,
+            "total_amount": item.total_amount
+        })
+
+        total_amount += item.total_amount
+
+    return {
+        "id": sale.id,
+        "sale_date": sale.sale_date,
+        "bar_id": sale.bar_id,
+        "bar_name": sale.bar.name if sale.bar else "",
+        "created_by": sale.created_by_user.username if sale.created_by_user else "",
+        "status": getattr(sale, "status", "completed"),
+        "total_amount": total_amount,
+        "sale_items": sale_items
+    }
 
 
-@router.get("/sales", response_model=List[bar_schemas.BarSaleDisplay])
+
+
+
+
+@router.get("/sales", response_model=bar_schemas.BarSaleListResponse)
 def list_bar_sales(
     bar_id: Optional[int] = None,
-    sale_date: Optional[date] = None,
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    query = db.query(BarSale)
+    query = db.query(BarSale).options(
+        joinedload(BarSale.bar),
+        joinedload(BarSale.created_by_user),
+        joinedload(BarSale.sale_items).joinedload(BarSaleItem.bar_inventory).joinedload(BarInventory.item)
+    )
+
     if bar_id:
         query = query.filter(BarSale.bar_id == bar_id)
-    if sale_date:
-        query = query.filter(func.date(BarSale.sale_date) == sale_date)
-    return query.order_by(BarSale.sale_date.desc()).all()
+    if start_date and end_date:
+        query = query.filter(func.date(BarSale.sale_date).between(start_date, end_date))
+    elif start_date:
+        query = query.filter(func.date(BarSale.sale_date) >= start_date)
+    elif end_date:
+        query = query.filter(func.date(BarSale.sale_date) <= end_date)
 
+    sales = query.order_by(BarSale.sale_date.desc()).all()
+
+    result = []
+    for sale in sales:
+        sale_items = []
+        total_amount = 0.0
+
+        for item in sale.sale_items:
+            inventory = item.bar_inventory
+            store_item = inventory.item if inventory else None
+            item_name = store_item.name if store_item else "Unknown"
+
+            sale_items.append({
+                "item_id": inventory.item_id if inventory else 0,
+                "item_name": item_name,
+                "quantity": item.quantity,
+                "selling_price": inventory.selling_price if inventory else 0.0,
+                "total_amount": item.total_amount
+            })
+
+            total_amount += item.total_amount
+
+        sale_data = {
+            "id": sale.id,
+            "sale_date": sale.sale_date,
+            "bar_id": sale.bar_id,
+            "bar_name": sale.bar.name if sale.bar else "",
+            "created_by": sale.created_by_user.username if sale.created_by_user else "",
+            "status": getattr(sale, "status", "completed"),
+            "total_amount": total_amount,
+            "sale_items": sale_items
+        }
+
+        result.append(sale_data)
+
+    total_sales_amount = sum(sale["total_amount"] for sale in result)
+    total_entries = len(result)
+
+    return {
+        "total_entries": total_entries,
+        "total_sales_amount": total_sales_amount,
+        "sales": result
+    }
 
 @router.put("/sales/{sale_id}", response_model=bar_schemas.BarSaleDisplay)
 def update_bar_sale(

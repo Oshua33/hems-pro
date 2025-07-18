@@ -351,7 +351,7 @@ def delete_issue(
 # STORE BALANCE REPORT
 # ----------------------------
 
-@router.get("/balance", response_model=list[dict])
+@router.get("/balance-stock", response_model=list[dict])
 def get_store_balances(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
