@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from datetime import datetime
 from app.database import Base
+#from app.vendor import Vendor  # ✅ adjust the path as needed
 
 
 # ----------------------------
@@ -29,26 +31,40 @@ class StoreItem(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Optional: create relationship if you store category_id instead of name
-    # category_id = Column(Integer, ForeignKey("store_categories.id"), nullable=True)
-    # category = relationship("StoreCategory")
-
+    stock_entries = relationship("StoreStockEntry", back_populates="item")  # 🔧 This line fixes the error
+    
 
 # ----------------------------
 # 3. Store Stock Entry (Purchase)
 # ----------------------------
+# models.py
+
+
 class StoreStockEntry(Base):
     __tablename__ = "store_stock_entries"
 
     id = Column(Integer, primary_key=True, index=True)
-    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
-    quantity = Column(Integer, nullable=False)
+    item_id = Column(Integer, ForeignKey("store_items.id"))
+    item_name= Column(String, nullable=False)  # Track who created the purchase
+    quantity = Column(Integer)
     unit_price = Column(Float, nullable=True)
-    total_amount = Column(Float, nullable=True)  # ✅ new
-    vendor = Column(String, nullable=True)
+    total_amount = Column(Float)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"))
     purchase_date = Column(DateTime, default=datetime.utcnow)
+    #created_by_id = Column(Integer, ForeignKey("users.id"))  # ✅ FK to users
+    created_by = Column(String, nullable=False)  # Track who created the purchase
+    created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     item = relationship("StoreItem")
+    vendor = relationship("Vendor", back_populates="purchases")
+    #created_by_user = relationship("User", lazy="joined")  # ✅ Proper relationship to user
+
+    #@property
+    #def created_by(self):
+        #return self.created_by_user.username if self.created_by_user else None
+
+    
 
 
 # ----------------------------
@@ -78,3 +94,7 @@ class StoreIssueItem(Base):
 
     issue = relationship("StoreIssue", back_populates="issue_items")
     item = relationship("StoreItem")
+
+
+
+
