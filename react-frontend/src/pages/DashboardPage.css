@@ -69,6 +69,13 @@
   font-size: 14px;            /* optional: smaller font for tighter look */
 }
 
+.reservation-button.alert-active {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+
 
 /* Adjust reservation button hover */
 .reservation-button:hover {
