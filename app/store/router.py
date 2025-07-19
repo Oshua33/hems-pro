@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
+from typing import List
 from sqlalchemy import func
-
+from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.users.auth import get_current_user
 from app.users import schemas as user_schemas
@@ -11,6 +12,8 @@ from app.store import models as store_models
 from app.store import schemas as store_schemas
 from app.bar.models import BarInventory  # ✅ updated model
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
+from app.vendor import models as vendor_models
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -161,7 +164,11 @@ def delete_item(
 # PURCHASE / STOCK ENTRY
 # ----------------------------
 
-@router.post("/purchases", response_model=store_schemas.StoreStockEntryDisplay)
+
+
+from fastapi import Body
+
+@router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
 def receive_inventory(
     entry: store_schemas.StoreStockEntryCreate,
     db: Session = Depends(get_db),
@@ -173,25 +180,58 @@ def receive_inventory(
 
     total = (entry.quantity * entry.unit_price) if entry.unit_price else None
 
+    # Exclude 'created_by' from entry dict
+    entry_data = entry.dict(exclude={"created_by"})
+
     stock_entry = store_models.StoreStockEntry(
-        **entry.dict(),
-        total_amount=total
+        **entry_data,
+        total_amount=total,
+        created_by=current_user.username
     )
+
     db.add(stock_entry)
     db.commit()
     db.refresh(stock_entry)
+
+    stock_entry = db.query(store_models.StoreStockEntry)\
+        .options(selectinload(store_models.StoreStockEntry.vendor))\
+        .get(stock_entry.id)
+
     return stock_entry
 
 
-@router.get("/entries", response_model=list[store_schemas.StoreStockEntryDisplay])
-def list_stock_entries(
+@router.get("/purchases", response_model=List[store_schemas.StoreStockEntryDisplay])
+def list_purchases(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    return db.query(store_models.StoreStockEntry).order_by(store_models.StoreStockEntry.purchase_date.desc()).all()
+    purchases = (
+        db.query(store_models.StoreStockEntry)
+        .options(
+            selectinload(store_models.StoreStockEntry.vendor),
+            selectinload(store_models.StoreStockEntry.item),
+        )
+        .order_by(store_models.StoreStockEntry.created_at.desc())
+        .all()
+    )
 
+    results = []
+    for purchase in purchases:
+        results.append({
+            "id": purchase.id,
+            "item_name": purchase.item.name if purchase.item else "",
+            "quantity": purchase.quantity,
+            "unit_price": purchase.unit_price,
+            "total_amount": purchase.total_amount,
+            "vendor_name": purchase.vendor.business_name if purchase.vendor else "",
+            #"created_by": purchase.created_by or "",  # ✅ plain string column
+            "created_by": purchase.created_by,
+            "created_at": purchase.created_at,
+        })
 
-@router.put("/purchases/{entry_id}", response_model=store_schemas.StoreStockEntryDisplay)
+    return results
+
+@router.put("/purchases/{entry_id}", response_model=store_schemas.UpdatePurchase)
 def update_purchase(
     entry_id: int,
     update_data: store_schemas.StoreStockEntryCreate,
@@ -202,19 +242,32 @@ def update_purchase(
     if not entry:
         raise HTTPException(status_code=404, detail="Purchase entry not found")
 
+    # Check that the item exists
     item = db.query(store_models.StoreItem).filter_by(id=update_data.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
     total = (update_data.quantity * update_data.unit_price) if update_data.unit_price else None
 
-    for field, value in update_data.dict().items():
+    # Exclude 'created_by' from update_data
+    update_fields = update_data.dict(exclude={"created_by"})
+
+    for field, value in update_fields.items():
         setattr(entry, field, value)
+
     entry.total_amount = total
+    entry.created_by = current_user.username  # Ensure created_by is updated with current user
 
     db.commit()
     db.refresh(entry)
+
+    # Load related vendor (if needed for the frontend like in POST route)
+    entry = db.query(store_models.StoreStockEntry)\
+        .options(selectinload(store_models.StoreStockEntry.vendor))\
+        .get(entry.id)
+
     return entry
+
 
 
 @router.delete("/purchases/{entry_id}")

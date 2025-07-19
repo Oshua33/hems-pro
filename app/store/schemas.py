@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
+from app.vendor.schemas import VendorDisplay  # ✅ import this
+from app.vendor.schemas import VendorInStoreDisplay  # make sure this import path is correct
 
 
 # ----------------------------
@@ -53,22 +55,53 @@ class StoreItemDisplay(BaseModel):
 # ----------------------------
 class StoreStockEntryCreate(BaseModel):
     item_id: int
+    item_name: str
     quantity: int
     unit_price: Optional[float] = None
-    vendor: Optional[str] = None
+    vendor_id: Optional[int] = None  # 🔗 vendor ID
+    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    #created_by: Optional[str] = None
+
+class PurchaseCreateList(BaseModel):
+    id: int
+    item_id: int
+    item_name: str
+    quantity: int
+    unit_price: float
+    total_amount: float
+    vendor_id: Optional[int] = None  # 🔗 vendor ID
+    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    created_by: Optional[str] = None
 
 
 class StoreStockEntryDisplay(BaseModel):
     id: int
-    item: StoreItemDisplay
+    item_name: str
     quantity: int
-    unit_price: Optional[float]
-    total_amount: Optional[float]  # ✅ new
-    vendor: Optional[str]
-    purchase_date: datetime
+    unit_price: float
+    total_amount: float
+    vendor_name: Optional[str]
+    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime
+    created_by: Optional[str]
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+class UpdatePurchase(BaseModel):
+    id: int
+    item_name: str
+    quantity: int
+    unit_price: float
+    total_amount: float
+    vendor_id: int
+    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime
+    created_by: Optional[str]
+
+    class Config:
+        orm_mode = True
+
 
 
 # ----------------------------
@@ -105,3 +138,5 @@ class IssueDisplay(BaseModel):  # ✅ renamed from StoreIssueDisplay
 
     class Config:
         from_attributes = True
+
+
