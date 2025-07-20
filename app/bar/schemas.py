@@ -47,16 +47,25 @@ class BarPriceUpdate(BaseModel):
 
 
 
-class BarInventoryDisplay(BaseModel):
-    id: int
+class BarStockReceiveCreate(BaseModel):
     bar_id: int
-    bar_name: str
+    bar_name: Optional[str]  # <-- Add this
     item_id: int
     item_name: str
-    unit_price: float
-    total_issued: int
-    total_sold: int
-    available_quantity: int  # = issued - sold
+    quantity: int
+    selling_price: float
+    note: Optional[str] = None
+
+class BarInventoryDisplay(BaseModel):
+    id: int
+    item_id: int
+    item_name: Optional[str]
+    bar_id: int
+    bar_name: Optional[str]  # <-- Add this
+    quantity: int
+    selling_price: float
+    received_at: datetime  # ✅ Include this field
+    note: Optional[str]
 
     class Config:
         orm_mode = True
@@ -127,3 +136,17 @@ class BarInventorySummaryDisplay(BaseModel):
     class Config:
         from_attributes = True
 
+class BarStockUpdate(BaseModel):
+    bar_id: int
+    item_id: int
+    new_quantity: int
+    selling_price: Optional[float] = None
+    note: Optional[str] = None
+
+
+class BarStockBalance(BaseModel):
+    item_id: int
+    item_name: str
+    total_issued: int
+    total_sold: int
+    balance: int

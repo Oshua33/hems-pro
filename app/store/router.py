@@ -13,6 +13,8 @@ from app.store import schemas as store_schemas
 from app.bar.models import BarInventory  # ✅ updated model
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
+
+
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
@@ -166,8 +168,6 @@ def delete_item(
 
 
 
-from fastapi import Body
-
 @router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
 def receive_inventory(
     entry: store_schemas.StoreStockEntryCreate,
@@ -296,6 +296,8 @@ def supply_to_bars(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    print("ISSUE TO:", issue_data.issue_to)
+
     issue = StoreIssue(
         issue_to=issue_data.issue_to,
         issued_to_id=issue_data.issued_to_id,
@@ -303,7 +305,7 @@ def supply_to_bars(
         issue_date=issue_data.issue_date or datetime.utcnow(),
     )
     db.add(issue)
-    db.flush()  # so we can use issue.id for items
+    db.flush()
 
     for item_data in issue_data.issue_items:
         issue_item = StoreIssueItem(
@@ -313,8 +315,18 @@ def supply_to_bars(
         )
         db.add(issue_item)
 
+        # Deduct from StoreStockEntry
+        stock_entry = (
+            db.query(StoreStockEntry)
+            .filter(StoreStockEntry.item_id == item_data.item_id)
+            .order_by(StoreStockEntry.purchase_date.desc())
+            .first()
+        )
+
+        if not stock_entry or stock_entry.quantity < item_data.quantity:
+            raise HTTPException(status_code=404, detail=f"Not enough inventory for item {item_data.item_id}")
+
         if issue_data.issue_to.lower() == "bar":
-            # ✅ Update BarInventory instead of BarItem
             bar_inventory = db.query(BarInventory).filter_by(
                 bar_id=issue_data.issued_to_id,
                 item_id=item_data.item_id
@@ -322,25 +334,32 @@ def supply_to_bars(
 
             if bar_inventory:
                 bar_inventory.quantity += item_data.quantity
+                print(f"✅ Updated BarInventory: item_id={item_data.item_id}, new_qty={bar_inventory.quantity}")
             else:
-                # Set selling price based on latest purchase (or 0 if not found)
-                latest_price = (
-                    db.query(StoreStockEntry.unit_price)
+                latest_stock = (
+                    db.query(StoreStockEntry)
                     .filter(StoreStockEntry.item_id == item_data.item_id)
                     .order_by(StoreStockEntry.id.desc())
                     .first()
                 )
+
                 bar_inventory = BarInventory(
                     bar_id=issue_data.issued_to_id,
                     item_id=item_data.item_id,
                     quantity=item_data.quantity,
-                    selling_price=latest_price[0] if latest_price else 0
+                    selling_price=latest_stock.unit_price if latest_stock else 0
                 )
                 db.add(bar_inventory)
+                print(f"➕ Added to BarInventory: item_id={item_data.item_id}, bar_id={issue_data.issued_to_id}, qty={item_data.quantity}")
+
+        # Deduct quantity from stock after BarInventory has been updated
+        #stock_entry.quantity -= item_data.quantity
 
     db.commit()
     db.refresh(issue)
     return issue
+
+
 
 @router.get("/issues", response_model=list[store_schemas.IssueDisplay])
 def list_issues(

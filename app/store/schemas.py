@@ -123,6 +123,7 @@ class IssueCreate(BaseModel):  # ✅ renamed from StoreIssueCreate
 class IssueItemDisplay(BaseModel):  # ✅ renamed from StoreIssueItemDisplay
     id: int
     item: StoreItemDisplay
+    item: StoreItemDisplay
     quantity: int
 
     class Config:
