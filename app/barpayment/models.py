@@ -14,6 +14,9 @@ class BarPayment(Base):
     payment_method = Column(String, nullable=False)  # e.g. "cash", "POS", "transfer"
     date_paid = Column(DateTime, default=datetime.utcnow)
     received_by_id = Column(Integer, ForeignKey("users.id"))
+    status = Column(String, default="active")  # <-- NEW
+    created_by = Column(String)  # Track user
+    note = Column(String, nullable=True)  # <-- NEW
 
     bar_sale = relationship("BarSale", back_populates="payments")
     received_by_user = relationship("User", lazy="joined")

@@ -6,19 +6,23 @@ from datetime import datetime
 from typing import Optional
 
 
+# schemas.py
+
 class BarPaymentCreate(BaseModel):
     bar_sale_id: int
-    amount: float
-    method: Literal["cash", "transfer", "pos"]
+    amount_paid: float
+    payment_method: Literal["cash", "transfer", "pos"]
     note: Optional[str] = None
+
 
 class BarPaymentDisplay(BaseModel):
     id: int
     bar_sale_id: int
-    amount: float
-    method: str
-    note: Optional[str]
-    created_at: datetime
+    amount_paid: float
+    payment_method: str
+    note: Optional[str] = None
+    date_paid: datetime
+    status: str
 
     class Config:
         orm_mode = True
