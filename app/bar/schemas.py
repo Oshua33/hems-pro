@@ -65,6 +65,7 @@ class BarInventoryDisplay(BaseModel):
     quantity: int
     selling_price: float
     received_at: datetime  # ✅ Include this field
+
     note: Optional[str]
 
     class Config:
@@ -118,6 +119,22 @@ class BarSaleDisplay(BaseModel):
     model_config = {
         "from_attributes": True  # replaces orm_mode in Pydantic v2
     }
+
+class BarInventoryReceiptDisplay(BaseModel):
+    id: int
+    bar_id: int
+    bar_name: Optional[str]
+    item_id: int
+    item_name: Optional[str]
+    quantity: int
+    selling_price: float
+    received_at: datetime
+    note: Optional[str]
+    created_by: Optional[str]
+
+    class Config:
+        orm_mode = True
+
 
 
 class BarSaleListResponse(BaseModel):

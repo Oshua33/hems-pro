@@ -303,8 +303,6 @@ def supply_to_bars(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    print("ISSUE TO:", issue_data.issue_to)
-
     issue = StoreIssue(
         issue_to=issue_data.issue_to,
         issued_to_id=issue_data.issued_to_id,
@@ -315,6 +313,15 @@ def supply_to_bars(
     db.flush()
 
     for item_data in issue_data.issue_items:
+        # 1. Check available stock
+        total_available_stock = db.query(func.sum(StoreStockEntry.quantity))\
+            .filter(StoreStockEntry.item_id == item_data.item_id)\
+            .scalar() or 0
+
+        if total_available_stock < item_data.quantity:
+            raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
+
+        # 2. Create the issue item record
         issue_item = StoreIssueItem(
             issue_id=issue.id,
             item_id=item_data.item_id,
@@ -322,20 +329,12 @@ def supply_to_bars(
         )
         db.add(issue_item)
 
-        # Deduct from StoreStockEntry
-        # Calculate total available stock for the item
-        total_stock = db.query(func.sum(StoreStockEntry.quantity))\
-            .filter(StoreStockEntry.item_id == item_data.item_id)\
-            .scalar() or 0
-
-        if total_stock < item_data.quantity:
-            raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
-
-        # Deduct the issued quantity from available stock entries (FIFO: oldest first)
+        # 3. Deduct from store using FIFO (oldest entries first)
         remaining_quantity = item_data.quantity
         stock_entries = db.query(StoreStockEntry)\
             .filter(StoreStockEntry.item_id == item_data.item_id, StoreStockEntry.quantity > 0)\
-            .order_by(StoreStockEntry.purchase_date.asc()).all()
+            .order_by(StoreStockEntry.purchase_date.asc())\
+            .all()
 
         for stock_entry in stock_entries:
             if remaining_quantity <= 0:
@@ -348,10 +347,9 @@ def supply_to_bars(
                 remaining_quantity -= stock_entry.quantity
                 stock_entry.quantity = 0
 
+        # ✅ All quantity has been successfully deducted at this point
 
-        if not stock_entry or stock_entry.quantity < item_data.quantity:
-            raise HTTPException(status_code=404, detail=f"Not enough inventory for item {item_data.item_id}")
-
+        # 4. Add or update BarInventory
         if issue_data.issue_to.lower() == "bar":
             bar_inventory = db.query(BarInventory).filter_by(
                 bar_id=issue_data.issued_to_id,
@@ -360,14 +358,11 @@ def supply_to_bars(
 
             if bar_inventory:
                 bar_inventory.quantity += item_data.quantity
-                print(f"✅ Updated BarInventory: item_id={item_data.item_id}, new_qty={bar_inventory.quantity}")
             else:
-                latest_stock = (
-                    db.query(StoreStockEntry)
-                    .filter(StoreStockEntry.item_id == item_data.item_id)
-                    .order_by(StoreStockEntry.id.desc())
+                latest_stock = db.query(StoreStockEntry)\
+                    .filter(StoreStockEntry.item_id == item_data.item_id)\
+                    .order_by(StoreStockEntry.id.desc())\
                     .first()
-                )
 
                 bar_inventory = BarInventory(
                     bar_id=issue_data.issued_to_id,
@@ -376,15 +371,10 @@ def supply_to_bars(
                     selling_price=latest_stock.unit_price if latest_stock else 0
                 )
                 db.add(bar_inventory)
-                print(f"➕ Added to BarInventory: item_id={item_data.item_id}, bar_id={issue_data.issued_to_id}, qty={item_data.quantity}")
-
-        # Deduct quantity from stock after BarInventory has been updated
-        #stock_entry.quantity -= item_data.quantity
 
     db.commit()
     db.refresh(issue)
     return issue
-
 
 
 @router.get("/issues", response_model=list[store_schemas.IssueDisplay])

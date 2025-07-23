@@ -13,12 +13,13 @@ from app.bar import models as bar_models, schemas as bar_schemas
 from app.store import models as store_models
 from app.bar.models import Bar, BarInventory, BarSale, BarSaleItem
 from app.users.models import User
-from app.bar.models import BarInventory
+from app.bar.models import Bar, BarInventoryReceipt
 
-from app.bar.models import BarInventoryReceipt
 from app.store.models import StoreItem
 #from models.bars import Bar
 from app.bar.schemas import BarStockReceiveCreate, BarInventoryDisplay
+from datetime import datetime
+from app.bar.schemas import  BarInventoryReceiptDisplay  # <- New response schema
 
 
 from typing import Optional
@@ -88,7 +89,9 @@ def update_bar(
     return bar
 
 
-@router.post("/receive-stock", response_model=BarInventoryDisplay)
+
+
+@router.post("/receive-stock", response_model=BarInventoryReceiptDisplay)
 def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)):
     # Validate bar and item
     bar = db.query(Bar).filter(Bar.id == data.bar_id).first()
@@ -99,7 +102,7 @@ def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Update existing bar inventory or create it
+    # Update or create inventory
     inventory = db.query(BarInventory).filter(
         BarInventory.bar_id == data.bar_id,
         BarInventory.item_id == data.item_id
@@ -121,7 +124,7 @@ def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)
         )
         db.add(inventory)
 
-    # Always add a receipt log entry
+    # Create receipt log
     receipt = BarInventoryReceipt(
         bar_id=data.bar_id,
         bar_name=bar.name,
@@ -130,14 +133,14 @@ def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)
         quantity=data.quantity,
         selling_price=data.selling_price,
         note=data.note,
-        created_by="fcn"  # or extract from user auth
+        created_by="fcn"
     )
     db.add(receipt)
 
     db.commit()
-    db.refresh(inventory)
+    db.refresh(receipt)
 
-    return inventory
+    return receipt
 
 
 
@@ -418,6 +421,88 @@ def list_bar_sales(
 
 
 
+
+@router.put("/sales/{sale_id}", response_model=bar_schemas.BarSaleDisplay)
+def update_bar_sale(
+    sale_id: int,
+    sale_data: bar_schemas.BarSaleCreate,  # Same structure as create
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    if sale.bar_id != sale_data.bar_id:
+        raise HTTPException(status_code=400, detail="Bar ID mismatch")
+
+    # Delete old sale items
+    db.query(bar_models.BarSaleItem).filter_by(sale_id=sale.id).delete()
+
+    # Re-create sale items with updated quantities
+    for item_data in sale_data.items:
+        inventory = db.query(bar_models.BarInventory).filter_by(
+            bar_id=sale_data.bar_id,
+            item_id=item_data.item_id
+        ).first()
+
+        if not inventory:
+            raise HTTPException(status_code=404, detail=f"Inventory not found for item {item_data.item_id}")
+
+        # Re-calculate availability excluding current sale quantities
+        total_issued = db.query(func.sum(store_models.StoreIssueItem.quantity)).join(
+            store_models.StoreIssue
+        ).filter(
+            store_models.StoreIssue.issued_to_id == sale_data.bar_id,
+            store_models.StoreIssueItem.item_id == item_data.item_id
+        ).scalar() or 0
+
+        total_sold_excluding_current = db.query(func.sum(bar_models.BarSaleItem.quantity)).join(
+            bar_models.BarSale
+        ).filter(
+            bar_models.BarSale.bar_id == sale_data.bar_id,
+            bar_models.BarSaleItem.bar_inventory_id == inventory.id,
+            bar_models.BarSaleItem.sale_id != sale.id  # exclude current
+        ).scalar() or 0
+
+        available = total_issued - total_sold_excluding_current
+
+        if item_data.quantity > available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not enough stock for item ID {item_data.item_id} (available: {available})"
+            )
+
+        total = item_data.quantity * inventory.selling_price
+
+        sale_item = bar_models.BarSaleItem(
+            sale_id=sale.id,
+            bar_inventory_id=inventory.id,
+            quantity=item_data.quantity,
+            total_amount=total
+        )
+        db.add(sale_item)
+
+    db.commit()
+    db.refresh(sale)
+    return sale
+
+@router.delete("/sales/{sale_id}")
+def delete_bar_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    db.delete(sale)
+    db.commit()
+    return {"detail": "Bar sale deleted successfully"}
+
+
+
 @router.get("/stock-balance", response_model=List[bar_schemas.BarStockBalance])
 def get_bar_stock_balance(
     bar_id: Optional[int] = None,
@@ -486,80 +571,30 @@ def get_bar_stock_balance(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve stock balance: {str(e)}")
 
 
-
-
-@router.put("/sales/{sale_id}", response_model=bar_schemas.BarSaleDisplay)
-def update_bar_sale(
-    sale_id: int,
-    sale_data: bar_schemas.BarSaleCreate,  # Same structure as create
+@router.delete("/bars/{bar_id}")
+def delete_bar(
+    bar_id: int,
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
+    bar = db.query(bar_models.Bar).filter_by(id=bar_id).first()
+    if not bar:
+        raise HTTPException(status_code=404, detail="Bar not found")
 
-    if sale.bar_id != sale_data.bar_id:
-        raise HTTPException(status_code=400, detail="Bar ID mismatch")
+    # Optional: Check if this bar has sales or inventory, and block deletion if necessary
 
-    # Delete old sale items
-    db.query(bar_models.BarSaleItem).filter_by(sale_id=sale.id).delete()
-
-    # Re-create sale items with updated quantities
-    for item_data in sale_data.items:
-        inventory = db.query(bar_models.BarInventory).filter_by(
-            bar_id=sale_data.bar_id,
-            item_id=item_data.item_id
-        ).first()
-
-        if not inventory:
-            raise HTTPException(status_code=404, detail=f"Inventory not found for item {item_data.item_id}")
-
-        # Re-calculate availability excluding current sale quantities
-        total_issued = db.query(func.sum(store_models.StoreIssueItem.quantity)).join(
-            store_models.StoreIssue
-        ).filter(
-            store_models.StoreIssue.issued_to_id == sale_data.bar_id,
-            store_models.StoreIssueItem.item_id == item_data.item_id
-        ).scalar() or 0
-
-        total_sold_excluding_current = db.query(func.sum(bar_models.BarSaleItem.quantity)).join(
-            bar_models.BarSale
-        ).filter(
-            bar_models.BarSale.bar_id == sale_data.bar_id,
-            bar_models.BarSaleItem.bar_inventory_id == inventory.id,
-            bar_models.BarSaleItem.sale_id != sale.id  # exclude current
-        ).scalar() or 0
-
-        available = total_issued - total_sold_excluding_current
-
-        if item_data.quantity > available:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Not enough stock for item ID {item_data.item_id} (available: {available})"
-            )
-
-        total = item_data.quantity * inventory.selling_price
-
-        sale_item = bar_models.BarSaleItem(
-            sale_id=sale.id,
-            bar_inventory_id=inventory.id,
-            quantity=item_data.quantity,
-            total_amount=total
-        )
-        db.add(sale_item)
-
+    db.delete(bar)
     db.commit()
-    db.refresh(sale)
-    return sale
+    return {"detail": "Bar deleted successfully"}
+
 
 
 # ----------------------------
 # RECEIVED ITEMS
 # ----------------------------
 
-@router.get("/check-items-received", response_model=List[dict])
-def get_items_received(
+@router.get("/store-issue-control", response_model=List[dict])
+def get_store_items_received(
     bar_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
@@ -618,33 +653,4 @@ def get_items_received(
     ]
 
 
-@router.delete("/bars/{bar_id}")
-def delete_bar(
-    bar_id: int,
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    bar = db.query(bar_models.Bar).filter_by(id=bar_id).first()
-    if not bar:
-        raise HTTPException(status_code=404, detail="Bar not found")
 
-    # Optional: Check if this bar has sales or inventory, and block deletion if necessary
-
-    db.delete(bar)
-    db.commit()
-    return {"detail": "Bar deleted successfully"}
-
-
-@router.delete("/sales/{sale_id}")
-def delete_bar_sale(
-    sale_id: int,
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    sale = db.query(bar_models.BarSale).filter_by(id=sale_id).first()
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-
-    db.delete(sale)
-    db.commit()
-    return {"detail": "Bar sale deleted successfully"}
