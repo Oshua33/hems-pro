@@ -47,6 +47,7 @@ class StoreStockEntry(Base):
     item_id = Column(Integer, ForeignKey("store_items.id"))
     item_name= Column(String, nullable=False)  # Track who created the purchase
     quantity = Column(Integer)
+    original_quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=True)
     total_amount = Column(Float)
     vendor_id = Column(Integer, ForeignKey("vendors.id"))
