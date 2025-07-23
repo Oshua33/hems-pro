@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import "./RoomFaultsView.css";
 
+import { getUserRoleFromToken } from '../../api/auth';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
 const RoomFaultsView = ({ room, onClose, onRefresh }) => {
   const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("token"); // ⬅️ Get token from localStorage
+  const userRole = getUserRoleFromToken(token); // 👈 get role from token
 
   /* ───────────────────────── Fetch Faults ───────────────────────── */
   const fetchFaults = async () => {
@@ -140,6 +142,7 @@ const RoomFaultsView = ({ room, onClose, onRefresh }) => {
                       <input
                         type="checkbox"
                         checked={f.resolved}
+                        disabled={f.resolved && userRole !== "admin"} // ⛔ disable if not admin
                         onChange={(e) => updateFaultStatus(f.id, e.target.checked)}
                       />
                     </td>
