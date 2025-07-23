@@ -15,7 +15,7 @@ from app.bar.models import Bar, BarInventory, BarSale, BarSaleItem
 from app.users.models import User
 from app.bar.models import BarInventory
 
-from app.bar.models import BarInventory
+from app.bar.models import BarInventoryReceipt
 from app.store.models import StoreItem
 #from models.bars import Bar
 from app.bar.schemas import BarStockReceiveCreate, BarInventoryDisplay
@@ -90,43 +90,52 @@ def update_bar(
 
 @router.post("/receive-stock", response_model=BarInventoryDisplay)
 def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)):
-    # Check bar exists
+    # Validate bar and item
     bar = db.query(Bar).filter(Bar.id == data.bar_id).first()
     if not bar:
         raise HTTPException(status_code=404, detail="Bar not found")
 
-    # Check item exists
     item = db.query(StoreItem).filter(StoreItem.id == data.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Check if the item already exists in the bar inventory
+    # Update existing bar inventory or create it
     inventory = db.query(BarInventory).filter(
         BarInventory.bar_id == data.bar_id,
         BarInventory.item_id == data.item_id
     ).first()
 
     if inventory:
-        # Update quantity and price
         inventory.quantity += data.quantity
         inventory.selling_price = data.selling_price
         inventory.note = data.note
-        db.commit()
-        db.refresh(inventory)
     else:
-        # Create new record
         inventory = BarInventory(
             bar_id=data.bar_id,
-            bar_name=bar.name,  # <-- set bar_name
+            bar_name=bar.name,
             item_id=data.item_id,
-            item_name=item.name,  # <-- set item_name
+            item_name=item.name,
             quantity=data.quantity,
             selling_price=data.selling_price,
             note=data.note
         )
         db.add(inventory)
-        db.commit()
-        db.refresh(inventory)
+
+    # Always add a receipt log entry
+    receipt = BarInventoryReceipt(
+        bar_id=data.bar_id,
+        bar_name=bar.name,
+        item_id=data.item_id,
+        item_name=item.name,
+        quantity=data.quantity,
+        selling_price=data.selling_price,
+        note=data.note,
+        created_by="fcn"  # or extract from user auth
+    )
+    db.add(receipt)
+
+    db.commit()
+    db.refresh(inventory)
 
     return inventory
 
@@ -139,21 +148,21 @@ def list_received_stocks(
     end_date: Optional[datetime] = Query(None),
     db: Session = Depends(get_db)
 ):
-    query = db.query(BarInventory)
+    query = db.query(BarInventoryReceipt)
 
     filters = []
     if bar_id:
-        filters.append(BarInventory.bar_id == bar_id)
+        filters.append(BarInventoryReceipt.bar_id == bar_id)
     if start_date:
-        filters.append(BarInventory.received_at >= start_date)
+        filters.append(BarInventoryReceipt.created_at >= start_date)
     if end_date:
-        filters.append(BarInventory.received_at <= end_date)
+        filters.append(BarInventoryReceipt.created_at <= end_date)
 
     if filters:
         query = query.filter(and_(*filters))
 
-    stocks = query.order_by(BarInventory.received_at.desc()).all()
-    return stocks
+    receipts = query.order_by(BarInventoryReceipt.created_at.desc()).all()
+    return receipts
 
 
 @router.put("/update-received-stock", response_model=bar_schemas.BarInventoryDisplay)
@@ -188,6 +197,17 @@ def update_received_stock(data: bar_schemas.BarStockUpdate, db: Session = Depend
     db.refresh(inventory)
 
     return inventory
+
+
+@router.delete("/bar-inventory/{inventory_id}", status_code=204)
+def delete_bar_inventory(inventory_id: int, db: Session = Depends(get_db)):
+    inventory = db.query(BarInventory).filter(BarInventory.id == inventory_id).first()
+    if not inventory:
+        raise HTTPException(status_code=404, detail="Inventory record not found")
+
+    db.delete(inventory)
+    db.commit()
+    return {"message": "Inventory entry deleted successfully"}
 
 
 
