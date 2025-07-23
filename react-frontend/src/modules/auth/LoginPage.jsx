@@ -73,8 +73,15 @@ const LoginPage = () => {
             Don't have an account? <Link to="/register">Register</Link>
           </p>
         </form>
+        </div>
+
+        <footer className="homes-footer">
+          <div>Produced & Licensed by School of Accounting Package</div>
+          <div>© 2025</div>
+        </footer>
       </div>
-    </div>
+      
+    
   );
 };
 

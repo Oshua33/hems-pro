@@ -13,6 +13,8 @@ from app.store import schemas as store_schemas
 from app.bar.models import BarInventory  # ✅ updated model
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
+
+
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
@@ -166,8 +168,6 @@ def delete_item(
 
 
 
-from fastapi import Body
-
 @router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
 def receive_inventory(
     entry: store_schemas.StoreStockEntryCreate,
@@ -184,10 +184,17 @@ def receive_inventory(
     entry_data = entry.dict(exclude={"created_by"})
 
     stock_entry = store_models.StoreStockEntry(
-        **entry_data,
+        item_id=entry.item_id,
+        item_name=entry.item_name,
+        quantity=entry.quantity,
+        original_quantity=entry.quantity,  # <-- Add this line
+        unit_price=entry.unit_price,
         total_amount=total,
-        created_by=current_user.username
+        vendor_id=entry.vendor_id,
+        created_by=current_user.username,
     )
+
+
 
     db.add(stock_entry)
     db.commit()
@@ -296,6 +303,8 @@ def supply_to_bars(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    print("ISSUE TO:", issue_data.issue_to)
+
     issue = StoreIssue(
         issue_to=issue_data.issue_to,
         issued_to_id=issue_data.issued_to_id,
@@ -303,7 +312,7 @@ def supply_to_bars(
         issue_date=issue_data.issue_date or datetime.utcnow(),
     )
     db.add(issue)
-    db.flush()  # so we can use issue.id for items
+    db.flush()
 
     for item_data in issue_data.issue_items:
         issue_item = StoreIssueItem(
@@ -313,8 +322,37 @@ def supply_to_bars(
         )
         db.add(issue_item)
 
+        # Deduct from StoreStockEntry
+        # Calculate total available stock for the item
+        total_stock = db.query(func.sum(StoreStockEntry.quantity))\
+            .filter(StoreStockEntry.item_id == item_data.item_id)\
+            .scalar() or 0
+
+        if total_stock < item_data.quantity:
+            raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
+
+        # Deduct the issued quantity from available stock entries (FIFO: oldest first)
+        remaining_quantity = item_data.quantity
+        stock_entries = db.query(StoreStockEntry)\
+            .filter(StoreStockEntry.item_id == item_data.item_id, StoreStockEntry.quantity > 0)\
+            .order_by(StoreStockEntry.purchase_date.asc()).all()
+
+        for stock_entry in stock_entries:
+            if remaining_quantity <= 0:
+                break
+
+            if stock_entry.quantity >= remaining_quantity:
+                stock_entry.quantity -= remaining_quantity
+                remaining_quantity = 0
+            else:
+                remaining_quantity -= stock_entry.quantity
+                stock_entry.quantity = 0
+
+
+        if not stock_entry or stock_entry.quantity < item_data.quantity:
+            raise HTTPException(status_code=404, detail=f"Not enough inventory for item {item_data.item_id}")
+
         if issue_data.issue_to.lower() == "bar":
-            # ✅ Update BarInventory instead of BarItem
             bar_inventory = db.query(BarInventory).filter_by(
                 bar_id=issue_data.issued_to_id,
                 item_id=item_data.item_id
@@ -322,25 +360,32 @@ def supply_to_bars(
 
             if bar_inventory:
                 bar_inventory.quantity += item_data.quantity
+                print(f"✅ Updated BarInventory: item_id={item_data.item_id}, new_qty={bar_inventory.quantity}")
             else:
-                # Set selling price based on latest purchase (or 0 if not found)
-                latest_price = (
-                    db.query(StoreStockEntry.unit_price)
+                latest_stock = (
+                    db.query(StoreStockEntry)
                     .filter(StoreStockEntry.item_id == item_data.item_id)
                     .order_by(StoreStockEntry.id.desc())
                     .first()
                 )
+
                 bar_inventory = BarInventory(
                     bar_id=issue_data.issued_to_id,
                     item_id=item_data.item_id,
                     quantity=item_data.quantity,
-                    selling_price=latest_price[0] if latest_price else 0
+                    selling_price=latest_stock.unit_price if latest_stock else 0
                 )
                 db.add(bar_inventory)
+                print(f"➕ Added to BarInventory: item_id={item_data.item_id}, bar_id={issue_data.issued_to_id}, qty={item_data.quantity}")
+
+        # Deduct quantity from stock after BarInventory has been updated
+        #stock_entry.quantity -= item_data.quantity
 
     db.commit()
     db.refresh(issue)
     return issue
+
+
 
 @router.get("/issues", response_model=list[store_schemas.IssueDisplay])
 def list_issues(
@@ -409,43 +454,33 @@ def get_store_balances(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    # Total received per item
-    received = db.query(
+    # Group by item: total received and current balance
+    received_data = db.query(
         store_models.StoreItem.id.label("item_id"),
         store_models.StoreItem.name,
         store_models.StoreItem.unit,
-        func.sum(StoreStockEntry.quantity).label("total_received")
-    ).join(StoreStockEntry).group_by(store_models.StoreItem.id).subquery()
-
-    # Total issued per item
-    issued = db.query(
-        StoreIssueItem.item_id,
-        func.sum(StoreIssueItem.quantity).label("total_issued")
-    ).group_by(StoreIssueItem.item_id).subquery()
-
-    # Join both
-    result = db.query(
-        received.c.item_id,
-        received.c.name,
-        received.c.unit,
-        received.c.total_received,
-        func.coalesce(issued.c.total_issued, 0).label("total_issued"),
-        (received.c.total_received - func.coalesce(issued.c.total_issued, 0)).label("balance")
-    ).outerjoin(issued, received.c.item_id == issued.c.item_id).all()
+        func.sum(StoreStockEntry.original_quantity).label("total_received"),
+        func.sum(StoreStockEntry.quantity).label("balance")
+    ).join(StoreStockEntry).group_by(store_models.StoreItem.id).all()
 
     response = []
-    for r in result:
-        latest_entry = db.query(StoreStockEntry).filter_by(item_id=r.item_id).order_by(StoreStockEntry.purchase_date.desc()).first()
+    for item in received_data:
+        latest_entry = db.query(StoreStockEntry)\
+            .filter_by(item_id=item.item_id)\
+            .order_by(StoreStockEntry.purchase_date.desc())\
+            .first()
+
         unit_price = latest_entry.unit_price if latest_entry else None
-        total_amount = unit_price * r.balance if unit_price is not None else None
+        total_issued = item.total_received - item.balance
+        total_amount = unit_price * item.balance if unit_price is not None else None
 
         response.append({
-            "item_id": r.item_id,
-            "item_name": r.name,
-            "unit": r.unit,
-            "total_received": r.total_received,
-            "total_issued": r.total_issued,
-            "balance": r.balance,
+            "item_id": item.item_id,
+            "item_name": item.name,
+            "unit": item.unit,
+            "total_received": item.total_received,
+            "total_issued": total_issued,
+            "balance": item.balance,
             "last_unit_price": unit_price,
             "balance_total_amount": round(total_amount, 2) if total_amount else None
         })

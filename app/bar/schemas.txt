@@ -4,7 +4,6 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import aliased
 from typing import Optional, List
-from sqlalchemy import and_
 from datetime import datetime, date
 from app.database import get_db
 from app.users.auth import get_current_user
@@ -14,13 +13,6 @@ from app.store import models as store_models
 from app.bar.models import Bar, BarInventory, BarSale, BarSaleItem
 from app.users.models import User
 from app.bar.models import BarInventory
-
-from app.bar.models import BarInventory
-from app.store.models import StoreItem
-#from models.bars import Bar
-from app.bar.schemas import BarStockReceiveCreate, BarInventoryDisplay
-
-
 from typing import Optional
 
 
@@ -88,108 +80,121 @@ def update_bar(
     return bar
 
 
-@router.post("/receive-stock", response_model=BarInventoryDisplay)
-def receive_bar_stock(data: BarStockReceiveCreate, db: Session = Depends(get_db)):
-    # Check bar exists
-    bar = db.query(Bar).filter(Bar.id == data.bar_id).first()
-    if not bar:
-        raise HTTPException(status_code=404, detail="Bar not found")
-
-    # Check item exists
-    item = db.query(StoreItem).filter(StoreItem.id == data.item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    # Check if the item already exists in the bar inventory
-    inventory = db.query(BarInventory).filter(
-        BarInventory.bar_id == data.bar_id,
-        BarInventory.item_id == data.item_id
-    ).first()
-
-    if inventory:
-        # Update quantity and price
-        inventory.quantity += data.quantity
-        inventory.selling_price = data.selling_price
-        inventory.note = data.note
-        db.commit()
-        db.refresh(inventory)
-    else:
-        # Create new record
-        inventory = BarInventory(
-            bar_id=data.bar_id,
-            bar_name=bar.name,  # <-- set bar_name
-            item_id=data.item_id,
-            item_name=item.name,  # <-- set item_name
-            quantity=data.quantity,
-            selling_price=data.selling_price,
-            note=data.note
-        )
-        db.add(inventory)
-        db.commit()
-        db.refresh(inventory)
-
-    return inventory
 
 
-
-@router.get("/received-stocks", response_model=List[BarInventoryDisplay])
-def list_received_stocks(
-    bar_id: Optional[int] = Query(None),
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None),
-    db: Session = Depends(get_db)
+@router.get("/inventory", response_model=List[bar_schemas.BarInventorySummaryDisplay])
+def list_bar_inventory(
+    bar_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    query = db.query(BarInventory)
+    # 1. Total Issued to Bar
+    issued_query = db.query(
+        store_models.StoreIssueItem.item_id,
+        store_models.StoreIssue.issued_to_id.label("bar_id"),
+        func.sum(store_models.StoreIssueItem.quantity).label("total_issued")
+    ).join(
+        store_models.StoreIssue, store_models.StoreIssue.id == store_models.StoreIssueItem.issue_id
+    )
 
-    filters = []
     if bar_id:
-        filters.append(BarInventory.bar_id == bar_id)
-    if start_date:
-        filters.append(BarInventory.received_at >= start_date)
-    if end_date:
-        filters.append(BarInventory.received_at <= end_date)
+        issued_query = issued_query.filter(store_models.StoreIssue.issued_to_id == bar_id)
 
-    if filters:
-        query = query.filter(and_(*filters))
+    issued_subq = issued_query.group_by(
+        store_models.StoreIssueItem.item_id,
+        store_models.StoreIssue.issued_to_id
+    ).subquery()
 
-    stocks = query.order_by(BarInventory.received_at.desc()).all()
-    return stocks
+    # 2. Total Sold from Bar
+    bar_inventory_alias = aliased(bar_models.BarInventory)
+    bar_sale_item_alias = aliased(bar_models.BarSaleItem)
+    bar_sale_alias = aliased(bar_models.BarSale)
 
+    sold_query = db.query(
+        bar_inventory_alias.item_id.label("item_id"),
+        bar_inventory_alias.bar_id.label("bar_id"),
+        func.sum(bar_sale_item_alias.quantity).label("total_sold")
+    ).join(
+        bar_sale_item_alias, bar_inventory_alias.id == bar_sale_item_alias.bar_inventory_id
+    ).join(
+        bar_sale_alias, bar_sale_item_alias.bar_sale_id == bar_sale_alias.id  # ✅ FIXED HERE
+    )
 
-@router.put("/update-received-stock", response_model=bar_schemas.BarInventoryDisplay)
-def update_received_stock(data: bar_schemas.BarStockUpdate, db: Session = Depends(get_db)):
-    # Validate bar
-    bar = db.query(Bar).filter(Bar.id == data.bar_id).first()
-    if not bar:
-        raise HTTPException(status_code=404, detail="Bar not found")
+    if bar_id:
+        sold_query = sold_query.filter(bar_sale_alias.bar_id == bar_id)
 
-    # Validate item
-    item = db.query(StoreItem).filter(StoreItem.id == data.item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+    sold_subq = sold_query.group_by(
+        bar_inventory_alias.item_id,
+        bar_inventory_alias.bar_id
+    ).subquery()
 
-    # Find the inventory record
-    inventory = db.query(BarInventory).filter(
-        BarInventory.bar_id == data.bar_id,
-        BarInventory.item_id == data.item_id
-    ).first()
+    # 3. Latest Unit Price
+    latest_price_subq = (
+        db.query(
+            store_models.StoreStockEntry.item_id,
+            store_models.StoreStockEntry.unit_price
+        )
+        .order_by(
+            store_models.StoreStockEntry.item_id,
+            store_models.StoreStockEntry.purchase_date.desc()
+        )
+        .distinct(store_models.StoreStockEntry.item_id)
+        .subquery()
+    )
 
-    if not inventory:
-        raise HTTPException(status_code=404, detail="Inventory record not found for update")
+    # 4. Selling price
+    selling_price_query = db.query(
+        bar_models.BarInventory.item_id,
+        bar_models.BarInventory.bar_id,
+        bar_models.BarInventory.selling_price
+    )
 
-    # Update fields
-    inventory.quantity = data.new_quantity
-    if data.selling_price is not None:
-        inventory.selling_price = data.selling_price
-    if data.note is not None:
-        inventory.note = data.note
+    if bar_id:
+        selling_price_query = selling_price_query.filter(bar_models.BarInventory.bar_id == bar_id)
 
-    db.commit()
-    db.refresh(inventory)
+    selling_price_subq = selling_price_query.subquery()
 
-    return inventory
+    # 5. Final query
+    query = db.query(
+        store_models.StoreItem.id.label("item_id"),
+        store_models.StoreItem.name.label("item_name"),
+        issued_subq.c.bar_id,
+        func.coalesce(issued_subq.c.total_issued, 0).label("total_issued"),
+        func.coalesce(sold_subq.c.total_sold, 0).label("total_sold"),
+        (
+            func.coalesce(issued_subq.c.total_issued, 0) -
+            func.coalesce(sold_subq.c.total_sold, 0)
+        ).label("available_quantity"),
+        func.coalesce(latest_price_subq.c.unit_price, 0).label("current_unit_price"),
+        func.coalesce(selling_price_subq.c.selling_price, 0).label("selling_price")
+    ).join(
+        issued_subq, store_models.StoreItem.id == issued_subq.c.item_id
+    ).outerjoin(
+        sold_subq,
+        (store_models.StoreItem.id == sold_subq.c.item_id) &
+        (issued_subq.c.bar_id == sold_subq.c.bar_id)
+    ).outerjoin(
+        latest_price_subq,
+        store_models.StoreItem.id == latest_price_subq.c.item_id
+    ).outerjoin(
+        selling_price_subq,
+        (store_models.StoreItem.id == selling_price_subq.c.item_id) &
+        (issued_subq.c.bar_id == selling_price_subq.c.bar_id)
+    )
 
+    results = query.all()
 
+    return [
+        {
+            "item_id": r.item_id,
+            "item_name": r.item_name,
+            "bar_id": r.bar_id,
+            "quantity": r.available_quantity,
+            "current_unit_price": r.current_unit_price,
+            "selling_price": r.selling_price,
+        }
+        for r in results if r.available_quantity > 0
+    ]
 
 @router.put("/inventory/set-price", response_model=bar_schemas.BarInventoryDisplay)
 def update_selling_price(
@@ -240,7 +245,7 @@ def create_bar_sale(
             created_by_id=current_user.id
         )
         db.add(sale)
-        db.flush()  # Get sale.id before committing
+        db.flush()  # Get the sale.id before committing
 
         for item_data in sale_data.items:
             # Step 1: Get BarInventory record
@@ -252,42 +257,50 @@ def create_bar_sale(
             if not inventory:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Inventory not found for item ID {item_data.item_id}"
+                    detail=f"Inventory not found for item {item_data.item_id}"
                 )
 
-            # Step 2: Check available quantity directly from inventory
-            if inventory.quantity < item_data.quantity:
+            # Step 2: Calculate available quantity
+            total_issued = db.query(func.sum(store_models.StoreIssueItem.quantity)).join(
+                store_models.StoreIssue
+            ).filter(
+                store_models.StoreIssue.issued_to_id == sale_data.bar_id,
+                store_models.StoreIssueItem.item_id == item_data.item_id
+            ).scalar() or 0
+
+            total_sold = db.query(func.sum(bar_models.BarSaleItem.quantity)).join(
+                bar_models.BarSale
+            ).filter(
+                bar_models.BarSale.bar_id == sale_data.bar_id,
+                bar_models.BarSaleItem.bar_inventory_id == inventory.id
+            ).scalar() or 0
+
+            available = total_issued - total_sold
+
+            if available < item_data.quantity:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Not enough stock for item ID {item_data.item_id} (available: {inventory.quantity})"
+                    detail=f"Not enough stock for item ID {item_data.item_id} (available: {available})"
                 )
 
-            # Step 3: Update inventory quantity
-            inventory.quantity -= item_data.quantity
-
-            # Step 4: Calculate total for item
+            # Step 3: Calculate total for item
             item_total = item_data.quantity * inventory.selling_price
             total_amount += item_total
 
-            # Step 5: Add the sale item
+            # Step 4: Add the sale item
             sale_item = bar_models.BarSaleItem(
-            sale_id=sale.id,
-            bar_inventory_id=inventory.id,
-            quantity=item_data.quantity,
-            unit_price=inventory.selling_price,  # <-- This line is required
-            total_amount=item_total
-        )
-
-
-
+                bar_sale_id=sale.id,
+                bar_inventory_id=inventory.id,
+                quantity=item_data.quantity,
+                total_amount=item_total
+            )
             db.add(sale_item)
 
-        # Step 6: Finalize sale
         sale.total_amount = total_amount
         db.commit()
         db.refresh(sale)
 
-        # Step 7: Load response
+        # Fetch full details for response
         sale = db.query(bar_models.BarSale).options(
             joinedload(bar_models.BarSale.bar),
             joinedload(bar_models.BarSale.created_by_user),
@@ -324,6 +337,8 @@ def create_bar_sale(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 @router.get("/sales", response_model=bar_schemas.BarSaleListResponse)
@@ -397,77 +412,6 @@ def list_bar_sales(
     }
 
 
-
-@router.get("/stock-balance", response_model=List[bar_schemas.BarStockBalance])
-def get_bar_stock_balance(
-    bar_id: Optional[int] = None,
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    try:
-        # Step 1: Fetch issued items
-        issued_query = db.query(
-            store_models.StoreIssueItem.item_id,
-            func.sum(store_models.StoreIssueItem.quantity).label("total_issued")
-        ).join(store_models.StoreIssue)
-
-        if bar_id:
-            issued_query = issued_query.filter(store_models.StoreIssue.issued_to_id == bar_id)
-
-        if start_date:
-            issued_query = issued_query.filter(store_models.StoreIssue.issued_at >= start_date)
-        if end_date:
-            issued_query = issued_query.filter(store_models.StoreIssue.issued_at <= end_date)
-
-        issued_query = issued_query.group_by(store_models.StoreIssueItem.item_id)
-        issued_data = {row.item_id: row.total_issued for row in issued_query.all()}
-
-        # Step 2: Fetch sold items
-        sold_query = db.query(
-            bar_models.BarInventory.item_id,
-            func.sum(bar_models.BarSaleItem.quantity).label("total_sold")
-        ).join(bar_models.BarSaleItem.bar_inventory).join(bar_models.BarSaleItem.sale)
-
-        if bar_id:
-            sold_query = sold_query.filter(bar_models.BarSale.bar_id == bar_id)
-
-        if start_date:
-            sold_query = sold_query.filter(bar_models.BarSale.sale_date >= start_date)
-        if end_date:
-            sold_query = sold_query.filter(bar_models.BarSale.sale_date <= end_date)
-
-        sold_query = sold_query.group_by(bar_models.BarInventory.item_id)
-        sold_data = {row.item_id: row.total_sold for row in sold_query.all()}
-
-        # Step 3: Combine issued and sold to compute balances
-        all_item_ids = set(issued_data.keys()).union(sold_data.keys())
-        results = []
-
-        for item_id in all_item_ids:
-            issued = issued_data.get(item_id, 0)
-            sold = sold_data.get(item_id, 0)
-            balance = issued - sold
-
-            item = db.query(store_models.StoreItem).get(item_id)
-
-            results.append(bar_schemas.BarStockBalance(
-                item_id=item_id,
-                item_name=item.name if item else "Unknown",
-                total_issued=issued,
-                total_sold=sold,
-                balance=balance
-            ))
-
-        return results
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve stock balance: {str(e)}")
-
-
-
-
 @router.put("/sales/{sale_id}", response_model=bar_schemas.BarSaleDisplay)
 def update_bar_sale(
     sale_id: int,
@@ -538,8 +482,8 @@ def update_bar_sale(
 # RECEIVED ITEMS
 # ----------------------------
 
-@router.get("/check-items-received", response_model=List[dict])
-def get_items_received(
+@router.get("/received-items", response_model=List[dict])
+def get_received_items(
     bar_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
@@ -625,6 +569,10 @@ def delete_bar_sale(
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
 
+    # Delete all sale items first
+    db.query(bar_models.BarSaleItem).filter_by(sale_id=sale.id).delete()
+    
+    # Then delete the sale itself
     db.delete(sale)
     db.commit()
     return {"detail": "Bar sale deleted successfully"}

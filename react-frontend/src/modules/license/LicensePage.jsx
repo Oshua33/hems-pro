@@ -51,7 +51,7 @@ const LicensePage = () => {
 
         setTimeout(() => {
           navigate("/login");
-        }, 1500);
+        }, 2000);
       } else {
         setError(data.message || "Verification failed.");
       }

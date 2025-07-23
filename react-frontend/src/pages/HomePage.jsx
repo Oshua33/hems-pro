@@ -1,46 +1,73 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import { checkLicenseStatus } from "../api/licenseApi"; // Make sure this exists
+import { checkLicenseStatus } from "../api/licenseApi";
+import backgroundImage from "../assets/images/hotel-bg.jpg";
 import "./HomePage.css";
 
 const HomePage = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const verifyLicense = async () => {
-      try {
-        const data = await checkLicenseStatus(); // Expects { valid: true, expires_on: "..." }
+  const verifyLicense = async () => {
+    try {
+      const storedVerified = localStorage.getItem("license_verified");
+      const storedExpires = localStorage.getItem("license_valid_until");
+      const now = new Date();
 
-        const now = new Date();
-        const expiresOn = data.expires_on ? new Date(data.expires_on) : null;
-
-        if (data.valid && expiresOn && expiresOn > now) {
-          localStorage.setItem("license_verified", "true");
-          localStorage.setItem("license_valid_until", expiresOn.toISOString());
+      if (storedVerified === "true" && storedExpires) {
+        const expiresOn = new Date(storedExpires);
+        if (expiresOn > now) {
           navigate("/login");
+          return;
         } else {
           localStorage.removeItem("license_verified");
           localStorage.removeItem("license_valid_until");
-          navigate("/license");
         }
-      } catch (error) {
-        console.error("License check failed", error);
+      }
+
+      const data = await checkLicenseStatus();
+      const expiresOn = data.expires_on ? new Date(data.expires_on) : null;
+
+      if (data.valid && expiresOn && expiresOn > now) {
+        localStorage.setItem("license_verified", "true");
+        localStorage.setItem("license_valid_until", expiresOn.toISOString());
+        navigate("/login");
+      } else {
         navigate("/license");
       }
-    };
+    } catch (error) {
+      console.error("License check failed", error);
+      navigate("/license");
+    }
+  };
 
-    setTimeout(() => {
-      verifyLicense();
-    }, 3000); // Keep your animation delay if you like
-  }, [navigate]);
   return (
     <>
       <link
         href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap"
         rel="stylesheet"
       />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap"
+        rel="stylesheet"
+      />
 
-      <div className="home-container">
+      <div
+        className="home-container"
+        style={{
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        <div className="hotel-name-banner">
+          Richard Continental Hotel and Suite
+        </div>
+
         <div className="home-card">
           <div className="hems-text">
             <span className="hems-letter">H</span>
@@ -49,14 +76,15 @@ const HomePage = () => {
             <span className="hems-letter">S</span>
           </div>
 
-          <div className="spinner-container">
-            <div className="spinner-ring ring-1" />
-            <div className="spinner-ring ring-2" />
-            <div className="spinner-ring ring-3" />
-          </div>
-
           <h1 className="heading-line1">Welcome to</h1>
           <h2 className="heading-line2">Hotel & Event Management System</h2>
+
+          <button
+            className="proceed-button"
+            onClick={verifyLicense}
+          >
+            Proceed &gt;&gt;
+          </button>
         </div>
 
         <footer className="home-footer">

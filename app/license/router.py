@@ -49,10 +49,13 @@ def verify_license(key: str, db: Session = Depends(get_db),
 
 
 @router.get("/license/check")
-def check_license_status(db: Session = Depends(get_db),
-    #current_user: schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    license_record = db.query(license_models.LicenseKey).filter(license_models.LicenseKey.is_active == True).first()
+def check_license_status(db: Session = Depends(get_db)):
+    license_record = (
+        db.query(license_models.LicenseKey)
+        .filter(license_models.LicenseKey.is_active == True)
+        .order_by(license_models.LicenseKey.expiration_date.desc())
+        .first()
+    )
 
     if license_record and license_record.expiration_date > datetime.utcnow():
         return {
