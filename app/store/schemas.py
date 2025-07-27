@@ -60,7 +60,10 @@ class StoreStockEntryCreate(BaseModel):
     unit_price: Optional[float] = None
     vendor_id: Optional[int] = None  # 🔗 vendor ID
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
-    #created_by: Optional[str] = None
+    attachment: Optional[str] = None  # <-- Add this if uploading file path as string
+
+
+
 
 class PurchaseCreateList(BaseModel):
     id: int
@@ -72,6 +75,8 @@ class PurchaseCreateList(BaseModel):
     vendor_id: Optional[int] = None  # 🔗 vendor ID
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     created_by: Optional[str] = None
+    attachment_url: Optional[str] = None  # This is what FastAPI is complaining about
+
 
 
 class StoreStockEntryDisplay(BaseModel):
@@ -84,6 +89,7 @@ class StoreStockEntryDisplay(BaseModel):
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     created_at: datetime
     created_by: Optional[str]
+    attachment_url: Optional[str]  # ✅ this is the missing field
 
     class Config:
         from_attributes = True
@@ -98,6 +104,7 @@ class UpdatePurchase(BaseModel):
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     created_at: datetime
     created_by: Optional[str]
+    attachment: Optional[str] = None  # <-- download URL
 
     class Config:
         from_attributes = True

@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 from app.database import Base
 #from app.vendor import Vendor  # ✅ adjust the path as needed
+import os
 
 
 # ----------------------------
@@ -52,19 +53,25 @@ class StoreStockEntry(Base):
     total_amount = Column(Float)
     vendor_id = Column(Integer, ForeignKey("vendors.id"))
     purchase_date = Column(DateTime, default=datetime.utcnow)
-    #created_by_id = Column(Integer, ForeignKey("users.id"))  # ✅ FK to users
+    #created_by_id = Column(Integer, ForeignKey("users.id"))  
     created_by = Column(String, nullable=False)  # Track who created the purchase
     created_at = Column(DateTime, default=datetime.utcnow)
+    attachment = Column(String, nullable=True)  # <-- New: file path
 
     # Relationships
     item = relationship("StoreItem")
     vendor = relationship("Vendor", back_populates="purchases")
-    #created_by_user = relationship("User", lazy="joined")  # ✅ Proper relationship to user
+    #created_by_user = relationship("User", lazy="joined")  
 
     #@property
     #def created_by(self):
         #return self.created_by_user.username if self.created_by_user else None
 
+    @property
+    def attachment_url(self):
+        if self.attachment:
+            return f"/attachments/store_invoices/{os.path.basename(self.attachment)}"
+        return None
     
 
 

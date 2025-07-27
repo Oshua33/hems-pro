@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -11,12 +11,17 @@ from app.users.models import User
 from app.users import schemas as user_schemas
 from app.store import models as store_models
 from app.store import schemas as store_schemas
-from app.bar.models import BarInventory  # ✅ updated model
+from app.bar.models import BarInventory  
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
 from app.store.models import StoreInventoryAdjustment
 from app.store.schemas import  StoreInventoryAdjustmentCreate, StoreInventoryAdjustmentDisplay
 from sqlalchemy.orm import joinedload
+from fastapi import File, UploadFile, Form
+import os
+
+from fastapi.responses import JSONResponse
+import shutil
 
 
 
@@ -173,44 +178,65 @@ def delete_item(
 
 
 
+
 @router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
-def receive_inventory(
-    entry: store_schemas.StoreStockEntryCreate,
+async def receive_inventory(
+    entry: store_schemas.StoreStockEntryCreate = Depends(),
+    attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    # Check if item exists
     item = db.query(store_models.StoreItem).filter_by(id=entry.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
+    # Calculate total amount
     total = (entry.quantity * entry.unit_price) if entry.unit_price else None
 
-    # Exclude 'created_by' from entry dict
-    entry_data = entry.dict(exclude={"created_by"})
+    # Set attachment path (default is None)
+    attachment_path = None
 
+    # Save attachment if provided
+    if attachment:
+        #upload_dir = "attachments/store_invoices"
+        upload_dir = "uploads/store_invoices"
+
+        os.makedirs(upload_dir, exist_ok=True)
+
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{attachment.filename}"
+        file_location = os.path.join(upload_dir, filename)
+
+        with open(file_location, "wb") as f:
+            f.write(await attachment.read())
+
+        # Store relative path or public URL if needed
+        attachment_path = file_location
+
+    # Create stock entry
     stock_entry = store_models.StoreStockEntry(
         item_id=entry.item_id,
         item_name=entry.item_name,
         quantity=entry.quantity,
-        original_quantity=entry.quantity,  # <-- Add this line
+        original_quantity=entry.quantity,
         unit_price=entry.unit_price,
         total_amount=total,
         vendor_id=entry.vendor_id,
+        purchase_date=entry.purchase_date,
         created_by=current_user.username,
+        attachment=attachment_path,
     )
-
-
 
     db.add(stock_entry)
     db.commit()
     db.refresh(stock_entry)
 
+    # Load related vendor for full response
     stock_entry = db.query(store_models.StoreStockEntry)\
         .options(selectinload(store_models.StoreStockEntry.vendor))\
         .get(stock_entry.id)
 
     return stock_entry
-
 
 @router.get("/purchases", response_model=List[store_schemas.StoreStockEntryDisplay])
 def list_purchases(
@@ -229,19 +255,30 @@ def list_purchases(
 
     results = []
     for purchase in purchases:
+        # Generate attachment URL if attachment exists
+        attachment_url = (
+            f"/files/{os.path.relpath(purchase.attachment, 'uploads').replace(os.sep, '/')}"
+            if purchase.attachment else None
+        )
+
         results.append({
             "id": purchase.id,
+            "item_id": purchase.item_id,
             "item_name": purchase.item.name if purchase.item else "",
             "quantity": purchase.quantity,
             "unit_price": purchase.unit_price,
             "total_amount": purchase.total_amount,
+            "vendor_id": purchase.vendor_id,
             "vendor_name": purchase.vendor.business_name if purchase.vendor else "",
-            #"created_by": purchase.created_by or "",  # ✅ plain string column
+            "purchase_date": purchase.purchase_date,
             "created_by": purchase.created_by,
             "created_at": purchase.created_at,
+            "attachment_url": attachment_url,
         })
 
     return results
+
+
 
 @router.put("/purchases/{entry_id}", response_model=store_schemas.UpdatePurchase)
 def update_purchase(
