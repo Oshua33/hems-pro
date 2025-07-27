@@ -86,7 +86,7 @@ class StoreStockEntryDisplay(BaseModel):
     created_by: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UpdatePurchase(BaseModel):
     id: int
@@ -100,7 +100,7 @@ class UpdatePurchase(BaseModel):
     created_by: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 
@@ -141,3 +141,19 @@ class IssueDisplay(BaseModel):  # ✅ renamed from StoreIssueDisplay
         from_attributes = True
 
 
+class StoreInventoryAdjustmentCreate(BaseModel):
+    item_id: int
+    quantity_adjusted: int
+    reason: str
+
+
+class StoreInventoryAdjustmentDisplay(BaseModel):
+    id: int
+    item: StoreItemDisplay
+    quantity_adjusted: int
+    reason: str
+    adjusted_by: str
+    adjusted_at: datetime
+
+    class Config:
+        from_attributes = True

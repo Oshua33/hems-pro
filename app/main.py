@@ -13,6 +13,13 @@ from app.events.router import router as events_router
 from app.eventpayment.router import router as eventpayment_router
 from backup.backup import router as backup_router
 
+
+from app.store.router import router as store_router
+from app.bar.routers import router as bar_router
+from app.barpayment.router import router as barpayment_router
+from app.vendor.router import router as vendor_router
+
+
 import uvicorn
 import os
 import sys
@@ -83,6 +90,14 @@ app.include_router(events_router, prefix="/events", tags=["Events"])
 app.include_router(eventpayment_router, prefix="/eventpayment", tags=["Event_Payments"])
 app.include_router(license_router, prefix="/license", tags=["License"])
 app.include_router(backup_router)
+
+
+app.include_router(store_router, prefix="/store", tags=["Store"])
+app.include_router(bar_router, prefix="/bar", tags=["Bar"])
+app.include_router(barpayment_router, prefix="/barpayment", tags=["Bar Payment"])
+app.include_router(vendor_router, prefix="/vendor", tags=["Vendor"])
+
+
 
 # Simple health check
 @app.get("/debug/ping")

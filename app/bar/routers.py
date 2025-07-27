@@ -14,6 +14,7 @@ from app.store import models as store_models
 from app.bar.models import Bar, BarInventory, BarSale, BarSaleItem
 from app.users.models import User
 from app.bar.models import Bar, BarInventoryReceipt
+from typing import Optional
 
 from app.store.models import StoreItem
 #from models.bars import Bar
@@ -21,8 +22,13 @@ from app.bar.schemas import BarStockReceiveCreate, BarInventoryDisplay
 from datetime import datetime
 from app.bar.schemas import  BarInventoryReceiptDisplay  # <- New response schema
 
+from app.users.models import User
+from app.bar.models import BarInventory, BarInventoryAdjustment
+from app.bar.schemas import BarInventoryAdjustmentCreate, BarInventoryAdjustmentDisplay
 
-from typing import Optional
+
+
+
 
 
 
@@ -520,7 +526,6 @@ def get_bar_stock_balance(
 
         if bar_id:
             issued_query = issued_query.filter(store_models.StoreIssue.issued_to_id == bar_id)
-
         if start_date:
             issued_query = issued_query.filter(store_models.StoreIssue.issued_at >= start_date)
         if end_date:
@@ -537,7 +542,6 @@ def get_bar_stock_balance(
 
         if bar_id:
             sold_query = sold_query.filter(bar_models.BarSale.bar_id == bar_id)
-
         if start_date:
             sold_query = sold_query.filter(bar_models.BarSale.sale_date >= start_date)
         if end_date:
@@ -546,14 +550,31 @@ def get_bar_stock_balance(
         sold_query = sold_query.group_by(bar_models.BarInventory.item_id)
         sold_data = {row.item_id: row.total_sold for row in sold_query.all()}
 
-        # Step 3: Combine issued and sold to compute balances
-        all_item_ids = set(issued_data.keys()).union(sold_data.keys())
+        # Step 3: Fetch adjusted items
+        adjusted_query = db.query(
+            bar_models.BarInventoryAdjustment.item_id,
+            func.sum(bar_models.BarInventoryAdjustment.quantity_adjusted).label("total_adjusted")
+        ).filter(True)
+
+        if bar_id:
+            adjusted_query = adjusted_query.filter(bar_models.BarInventoryAdjustment.bar_id == bar_id)
+        if start_date:
+            adjusted_query = adjusted_query.filter(bar_models.BarInventoryAdjustment.adjusted_at >= start_date)
+        if end_date:
+            adjusted_query = adjusted_query.filter(bar_models.BarInventoryAdjustment.adjusted_at <= end_date)
+
+        adjusted_query = adjusted_query.group_by(bar_models.BarInventoryAdjustment.item_id)
+        adjusted_data = {row.item_id: row.total_adjusted for row in adjusted_query.all()}
+
+        # Step 4: Merge all data
+        all_item_ids = set(issued_data.keys()) | set(sold_data.keys()) | set(adjusted_data.keys())
         results = []
 
         for item_id in all_item_ids:
             issued = issued_data.get(item_id, 0)
             sold = sold_data.get(item_id, 0)
-            balance = issued - sold
+            adjusted = adjusted_data.get(item_id, 0)
+            balance = issued - sold - adjusted
 
             item = db.query(store_models.StoreItem).get(item_id)
 
@@ -562,6 +583,7 @@ def get_bar_stock_balance(
                 item_name=item.name if item else "Unknown",
                 total_issued=issued,
                 total_sold=sold,
+                total_adjusted=adjusted,
                 balance=balance
             ))
 
@@ -569,6 +591,103 @@ def get_bar_stock_balance(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve stock balance: {str(e)}")
+    
+
+
+@router.post("/adjust", response_model=BarInventoryAdjustmentDisplay)
+def adjust_bar_inventory(
+    adjustment_data: BarInventoryAdjustmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # ✅ Only admins can adjust
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can adjust inventory.")
+
+    # 🔍 Get existing inventory
+    inventory = db.query(BarInventory).filter(
+        BarInventory.bar_id == adjustment_data.bar_id,
+        BarInventory.item_id == adjustment_data.item_id
+    ).first()
+
+    if not inventory:
+        raise HTTPException(status_code=404, detail="Inventory not found.")
+
+    if adjustment_data.quantity_adjusted > inventory.quantity:
+        raise HTTPException(status_code=400, detail="Adjustment exceeds available stock.")
+
+    # 🧮 Deduct from inventory
+    inventory.quantity -= adjustment_data.quantity_adjusted
+    db.add(inventory)
+
+    # 📦 Create adjustment record
+    adjustment = BarInventoryAdjustment(
+        bar_id=adjustment_data.bar_id,
+        item_id=adjustment_data.item_id,
+        quantity_adjusted=adjustment_data.quantity_adjusted,
+        reason=adjustment_data.reason,
+        adjusted_by=current_user.username
+    )
+    db.add(adjustment)
+    db.commit()
+    db.refresh(adjustment)
+
+    return adjustment
+
+@router.get("/adjustments", response_model=List[BarInventoryAdjustmentDisplay])
+def list_bar_inventory_adjustments(
+    bar_id: Optional[int] = None,
+    item_id: Optional[int] = None,
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(BarInventoryAdjustment)
+
+    if bar_id:
+        query = query.filter(BarInventoryAdjustment.bar_id == bar_id)
+    if item_id:
+        query = query.filter(BarInventoryAdjustment.item_id == item_id)
+    if start_date:
+        query = query.filter(BarInventoryAdjustment.adjusted_at >= start_date)
+    if end_date:
+        query = query.filter(BarInventoryAdjustment.adjusted_at <= end_date)
+
+    adjustments = query.order_by(BarInventoryAdjustment.adjusted_at.desc()).all()
+    return adjustments
+
+
+@router.delete("/adjustments/{adjustment_id}", response_model=bar_schemas.BarInventoryAdjustmentDisplay)
+def delete_bar_inventory_adjustment(
+    adjustment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # ✅ Only admins can delete
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete adjustments.")
+
+    adjustment = db.query(BarInventoryAdjustment).get(adjustment_id)
+    if not adjustment:
+        raise HTTPException(status_code=404, detail="Adjustment not found.")
+
+    # 🔁 Restore quantity back to inventory
+    inventory = db.query(BarInventory).filter(
+        BarInventory.bar_id == adjustment.bar_id,
+        BarInventory.item_id == adjustment.item_id
+    ).first()
+
+    if inventory:
+        inventory.quantity += adjustment.quantity_adjusted
+        db.add(inventory)
+
+    db.delete(adjustment)
+    db.commit()
+
+    return adjustment
+
+
 
 
 @router.delete("/bars/{bar_id}")

@@ -99,3 +99,27 @@ class StoreIssueItem(Base):
 
 
 
+class StoreInventoryAdjustment(Base):
+    __tablename__ = "store_inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
+    quantity_adjusted = Column(Integer, nullable=False)
+    reason = Column(String, nullable=False)
+    adjusted_by = Column(String, nullable=False)
+    adjusted_at = Column(DateTime, default=datetime.utcnow)
+
+    item = relationship("StoreItem")
+
+
+
+
+class StoreInventory(Base):
+    __tablename__ = "store_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("store_items.id"), unique=True, nullable=False)
+    quantity = Column(Integer, default=0)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    item = relationship("StoreItem")

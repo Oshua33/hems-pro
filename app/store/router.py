@@ -7,12 +7,17 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.users.auth import get_current_user
+from app.users.models import User
 from app.users import schemas as user_schemas
 from app.store import models as store_models
 from app.store import schemas as store_schemas
 from app.bar.models import BarInventory  # ✅ updated model
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
+from app.store.models import StoreInventoryAdjustment
+from app.store.schemas import  StoreInventoryAdjustmentCreate, StoreInventoryAdjustmentDisplay
+from sqlalchemy.orm import joinedload
+
 
 
 from sqlalchemy.orm import selectinload
@@ -444,6 +449,15 @@ def get_store_balances(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    
+    # Fetch total adjustments per item
+    adjustments = db.query(
+        StoreInventoryAdjustment.item_id,
+        func.sum(StoreInventoryAdjustment.quantity_adjusted).label("total_adjusted")
+    ).group_by(StoreInventoryAdjustment.item_id).all()
+
+    adjustment_map = {a.item_id: a.total_adjusted for a in adjustments}
+
     # Group by item: total received and current balance
     received_data = db.query(
         store_models.StoreItem.id.label("item_id"),
@@ -464,15 +478,116 @@ def get_store_balances(
         total_issued = item.total_received - item.balance
         total_amount = unit_price * item.balance if unit_price is not None else None
 
+        adjusted = adjustment_map.get(item.item_id, 0)
+        total_issued = item.total_received - item.balance - adjusted
+
         response.append({
             "item_id": item.item_id,
             "item_name": item.name,
             "unit": item.unit,
             "total_received": item.total_received,
             "total_issued": total_issued,
+            "total_adjusted": adjusted,
             "balance": item.balance,
             "last_unit_price": unit_price,
             "balance_total_amount": round(total_amount, 2) if total_amount else None
         })
 
+
     return response
+
+
+@router.post("/adjust", response_model=StoreInventoryAdjustmentDisplay)
+def adjust_store_inventory(
+    adjustment_data: StoreInventoryAdjustmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can adjust inventory.")
+
+    # Get latest stock entry
+    latest_entry = db.query(StoreStockEntry).filter(
+        StoreStockEntry.item_id == adjustment_data.item_id,
+        StoreStockEntry.quantity > 0
+    ).order_by(StoreStockEntry.purchase_date.desc()).first()
+
+    if not latest_entry:
+        raise HTTPException(status_code=404, detail="Item not found or out of stock.")
+
+    if adjustment_data.quantity_adjusted > latest_entry.quantity:
+        raise HTTPException(status_code=400, detail="Adjustment exceeds available stock.")
+
+    # Deduct quantity
+    latest_entry.quantity -= adjustment_data.quantity_adjusted
+    db.add(latest_entry)
+
+    # Log adjustment
+    adjustment = StoreInventoryAdjustment(
+        item_id=adjustment_data.item_id,
+        quantity_adjusted=adjustment_data.quantity_adjusted,
+        reason=adjustment_data.reason,
+        adjusted_by=current_user.username
+    )
+    db.add(adjustment)
+    db.commit()
+    db.refresh(adjustment)
+
+    return adjustment
+
+
+@router.get("/adjustments", response_model=List[StoreInventoryAdjustmentDisplay])
+def list_store_inventory_adjustments(
+    item_id: Optional[int] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(StoreInventoryAdjustment)
+
+    if item_id:
+        query = query.filter(StoreInventoryAdjustment.item_id == item_id)
+    if start_date:
+        query = query.filter(StoreInventoryAdjustment.adjusted_at >= start_date)
+    if end_date:
+        query = query.filter(StoreInventoryAdjustment.adjusted_at <= end_date)
+
+    return query.order_by(StoreInventoryAdjustment.adjusted_at.desc()).all()
+
+
+@router.delete("/adjustments/{adjustment_id}")
+def delete_adjustment(
+    adjustment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete adjustments.")
+
+    adjustment = db.query(StoreInventoryAdjustment)\
+        .options(joinedload(StoreInventoryAdjustment.item))\
+        .filter(StoreInventoryAdjustment.id == adjustment_id).first()
+
+    if not adjustment:
+        raise HTTPException(status_code=404, detail="Adjustment not found.")
+
+    # Restore quantity to stock
+    stock_entry = db.query(StoreStockEntry).filter(
+        StoreStockEntry.item_id == adjustment.item_id
+    ).order_by(StoreStockEntry.purchase_date.desc()).first()
+
+    if not stock_entry:
+        raise HTTPException(status_code=404, detail="No stock entry found to revert the quantity.")
+
+    stock_entry.quantity += adjustment.quantity_adjusted
+    db.add(stock_entry)
+
+    db.delete(adjustment)
+    db.commit()
+
+    return {
+        "message": "Adjustment deleted successfully.",
+        "restored_quantity": adjustment.quantity_adjusted,
+        "item_id": adjustment.item_id
+    }

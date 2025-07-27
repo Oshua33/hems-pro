@@ -49,6 +49,22 @@ class BarInventory(Base):
     )
 
 
+class BarInventoryAdjustment(Base):
+    __tablename__ = "bar_inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bar_id = Column(Integer, ForeignKey("bars.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
+    quantity_adjusted = Column(Integer, nullable=False)  # e.g., 3 units removed
+    reason = Column(String, nullable=True)  # Damaged, Expired, etc.
+    adjusted_by = Column(String, nullable=True)
+    adjusted_at = Column(DateTime, server_default=func.now())
+
+    bar = relationship("Bar")
+    item = relationship("StoreItem")
+
+
+
 class BarInventoryReceipt(Base):
     __tablename__ = "bar_inventory_receipts"
 
