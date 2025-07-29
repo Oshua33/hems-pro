@@ -65,10 +65,11 @@ class BarInventoryDisplay(BaseModel):
     quantity: int
     selling_price: float
     received_at: datetime  # ✅ Include this field
+
     note: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ----------------------------
@@ -102,7 +103,7 @@ class BarSaleItemSummary(BaseModel):
     total_amount: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class BarSaleDisplay(BaseModel):
@@ -118,6 +119,22 @@ class BarSaleDisplay(BaseModel):
     model_config = {
         "from_attributes": True  # replaces orm_mode in Pydantic v2
     }
+
+class BarInventoryReceiptDisplay(BaseModel):
+    id: int
+    bar_id: int
+    bar_name: Optional[str]
+    item_id: int
+    item_name: Optional[str]
+    quantity: int
+    selling_price: float
+    received_at: datetime
+    note: Optional[str]
+    created_by: Optional[str]
+
+    class Config:
+        from_attributes = True
+
 
 
 class BarSaleListResponse(BaseModel):
@@ -149,4 +166,25 @@ class BarStockBalance(BaseModel):
     item_name: str
     total_issued: int
     total_sold: int
+    total_adjusted: int  # ✅ NEW
     balance: int
+
+
+class BarInventoryAdjustmentCreate(BaseModel):
+    bar_id: int
+    item_id: int
+    quantity_adjusted: int
+    reason: Optional[str]
+    #adjusted_by: str
+
+class BarInventoryAdjustmentDisplay(BaseModel):
+    id: int
+    bar_id: int
+    item_id: int
+    quantity_adjusted: int
+    reason: Optional[str]
+    adjusted_by: Optional[str]
+    adjusted_at: datetime
+
+    class Config:
+        orm_mode = True

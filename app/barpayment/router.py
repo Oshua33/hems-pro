@@ -252,31 +252,6 @@ def get_bar_payment_status(
 
 
 
-@router.put("/{payment_id}/void", response_model=schemas.BarPaymentDisplay)
-def void_bar_payment(payment_id: int, db: Session = Depends(get_db)):
-    payment = db.query(models.BarPayment).filter(
-        models.BarPayment.id == payment_id,
-        models.BarPayment.status == "active"
-    ).first()
-
-    if not payment:
-        raise HTTPException(status_code=404, detail="Active payment not found")
-
-    # Mark the payment as void
-    payment.status = "voided"
-    db.commit()
-    db.refresh(payment)
-
-    # Reopen the related bar sale if it was marked closed
-    bar_sale = db.query(models.BarSale).filter(
-        models.BarSale.id == payment.bar_sale_id
-    ).first()
-
-    if bar_sale:
-        bar_sale.status = "open"
-        db.commit()
-
-    return payment
 
 
 @router.delete("/{payment_id}", response_model=dict)

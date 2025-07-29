@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 from app.database import Base
 #from app.vendor import Vendor  # ✅ adjust the path as needed
+import os
 
 
 # ----------------------------
@@ -52,7 +53,7 @@ class StoreStockEntry(Base):
     total_amount = Column(Float)
     vendor_id = Column(Integer, ForeignKey("vendors.id"))
     purchase_date = Column(DateTime, default=datetime.utcnow)
-    #created_by_id = Column(Integer, ForeignKey("users.id"))  # ✅ FK to users
+    #created_by_id = Column(Integer, ForeignKey("users.id"))  
     created_by = Column(String, nullable=False)  # Track who created the purchase
     created_at = Column(DateTime, default=datetime.utcnow)
     attachment = Column(String, nullable=True)  
@@ -60,20 +61,18 @@ class StoreStockEntry(Base):
     # Relationships
     item = relationship("StoreItem")
     vendor = relationship("Vendor", back_populates="purchases")
-    #created_by_user = relationship("User", lazy="joined")  # ✅ Proper relationship to user
+    #created_by_user = relationship("User", lazy="joined")  
 
     #@property
     #def created_by(self):
         #return self.created_by_user.username if self.created_by_user else None
-
-    
 
     @property
     def attachment_url(self):
         if self.attachment:
             return f"/attachments/store_invoices/{os.path.basename(self.attachment)}"
         return None
-
+    
 
 
 # ----------------------------
@@ -107,3 +106,27 @@ class StoreIssueItem(Base):
 
 
 
+class StoreInventoryAdjustment(Base):
+    __tablename__ = "store_inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
+    quantity_adjusted = Column(Integer, nullable=False)
+    reason = Column(String, nullable=False)
+    adjusted_by = Column(String, nullable=False)
+    adjusted_at = Column(DateTime, default=datetime.utcnow)
+
+    item = relationship("StoreItem")
+
+
+
+
+class StoreInventory(Base):
+    __tablename__ = "store_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("store_items.id"), unique=True, nullable=False)
+    quantity = Column(Integer, default=0)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    item = relationship("StoreItem")

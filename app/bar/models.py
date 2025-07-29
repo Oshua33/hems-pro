@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Uni
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+from sqlalchemy import DateTime, func
 
 
 # ----------------------------
@@ -48,6 +49,36 @@ class BarInventory(Base):
     )
 
 
+class BarInventoryAdjustment(Base):
+    __tablename__ = "bar_inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bar_id = Column(Integer, ForeignKey("bars.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
+    quantity_adjusted = Column(Integer, nullable=False)  # e.g., 3 units removed
+    reason = Column(String, nullable=True)  # Damaged, Expired, etc.
+    adjusted_by = Column(String, nullable=True)
+    adjusted_at = Column(DateTime, server_default=func.now())
+
+    bar = relationship("Bar")
+    item = relationship("StoreItem")
+
+
+
+class BarInventoryReceipt(Base):
+    __tablename__ = "bar_inventory_receipts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bar_id = Column(Integer, ForeignKey("bars.id"))
+    bar_name = Column(String)
+    item_id = Column(Integer, ForeignKey("store_items.id"))
+    item_name = Column(String)
+    quantity = Column(Integer)
+    selling_price = Column(Float)
+    received_at = Column(DateTime, default=datetime.utcnow)
+    note = Column(String)
+    created_by = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # ✅ Add this line
 
 # ----------------------------
 # Bar Sale

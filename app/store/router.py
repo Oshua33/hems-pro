@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException,Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -7,12 +7,22 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.users.auth import get_current_user
+from app.users.models import User
 from app.users import schemas as user_schemas
 from app.store import models as store_models
 from app.store import schemas as store_schemas
-from app.bar.models import BarInventory  # ✅ updated model
+from app.bar.models import BarInventory  
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
+from app.store.models import StoreInventoryAdjustment
+from app.store.schemas import  StoreInventoryAdjustmentCreate, StoreInventoryAdjustmentDisplay
+from sqlalchemy.orm import joinedload
+from fastapi import File, UploadFile, Form
+import os
+
+from fastapi.responses import JSONResponse
+import shutil
+
 
 
 from sqlalchemy.orm import selectinload
@@ -168,44 +178,65 @@ def delete_item(
 
 
 
+
 @router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
-def receive_inventory(
-    entry: store_schemas.StoreStockEntryCreate,
+async def receive_inventory(
+    entry: store_schemas.StoreStockEntryCreate = Depends(),
+    attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    # Check if item exists
     item = db.query(store_models.StoreItem).filter_by(id=entry.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
+    # Calculate total amount
     total = (entry.quantity * entry.unit_price) if entry.unit_price else None
 
-    # Exclude 'created_by' from entry dict
-    entry_data = entry.dict(exclude={"created_by"})
+    # Set attachment path (default is None)
+    attachment_path = None
 
+    # Save attachment if provided
+    if attachment:
+        #upload_dir = "attachments/store_invoices"
+        upload_dir = "uploads/store_invoices"
+
+        os.makedirs(upload_dir, exist_ok=True)
+
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{attachment.filename}"
+        file_location = os.path.join(upload_dir, filename)
+
+        with open(file_location, "wb") as f:
+            f.write(await attachment.read())
+
+        # Store relative path or public URL if needed
+        attachment_path = file_location
+
+    # Create stock entry
     stock_entry = store_models.StoreStockEntry(
         item_id=entry.item_id,
         item_name=entry.item_name,
         quantity=entry.quantity,
-        original_quantity=entry.quantity,  # <-- Add this line
+        original_quantity=entry.quantity,
         unit_price=entry.unit_price,
         total_amount=total,
         vendor_id=entry.vendor_id,
+        purchase_date=entry.purchase_date,
         created_by=current_user.username,
+        attachment=attachment_path,
     )
-
-
 
     db.add(stock_entry)
     db.commit()
     db.refresh(stock_entry)
 
+    # Load related vendor for full response
     stock_entry = db.query(store_models.StoreStockEntry)\
         .options(selectinload(store_models.StoreStockEntry.vendor))\
         .get(stock_entry.id)
 
     return stock_entry
-
 
 @router.get("/purchases", response_model=List[store_schemas.StoreStockEntryDisplay])
 def list_purchases(
@@ -224,19 +255,30 @@ def list_purchases(
 
     results = []
     for purchase in purchases:
+        # Generate attachment URL if attachment exists
+        attachment_url = (
+            f"/files/{os.path.relpath(purchase.attachment, 'uploads').replace(os.sep, '/')}"
+            if purchase.attachment else None
+        )
+
         results.append({
             "id": purchase.id,
+            "item_id": purchase.item_id,
             "item_name": purchase.item.name if purchase.item else "",
             "quantity": purchase.quantity,
             "unit_price": purchase.unit_price,
             "total_amount": purchase.total_amount,
+            "vendor_id": purchase.vendor_id,
             "vendor_name": purchase.vendor.business_name if purchase.vendor else "",
-            #"created_by": purchase.created_by or "",  # ✅ plain string column
+            "purchase_date": purchase.purchase_date,
             "created_by": purchase.created_by,
             "created_at": purchase.created_at,
+            "attachment_url": attachment_url,
         })
 
     return results
+
+
 
 @router.put("/purchases/{entry_id}", response_model=store_schemas.UpdatePurchase)
 def update_purchase(
@@ -303,8 +345,6 @@ def supply_to_bars(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    print("ISSUE TO:", issue_data.issue_to)
-
     issue = StoreIssue(
         issue_to=issue_data.issue_to,
         issued_to_id=issue_data.issued_to_id,
@@ -315,6 +355,15 @@ def supply_to_bars(
     db.flush()
 
     for item_data in issue_data.issue_items:
+        # 1. Check available stock
+        total_available_stock = db.query(func.sum(StoreStockEntry.quantity))\
+            .filter(StoreStockEntry.item_id == item_data.item_id)\
+            .scalar() or 0
+
+        if total_available_stock < item_data.quantity:
+            raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
+
+        # 2. Create the issue item record
         issue_item = StoreIssueItem(
             issue_id=issue.id,
             item_id=item_data.item_id,
@@ -322,20 +371,12 @@ def supply_to_bars(
         )
         db.add(issue_item)
 
-        # Deduct from StoreStockEntry
-        # Calculate total available stock for the item
-        total_stock = db.query(func.sum(StoreStockEntry.quantity))\
-            .filter(StoreStockEntry.item_id == item_data.item_id)\
-            .scalar() or 0
-
-        if total_stock < item_data.quantity:
-            raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
-
-        # Deduct the issued quantity from available stock entries (FIFO: oldest first)
+        # 3. Deduct from store using FIFO (oldest entries first)
         remaining_quantity = item_data.quantity
         stock_entries = db.query(StoreStockEntry)\
             .filter(StoreStockEntry.item_id == item_data.item_id, StoreStockEntry.quantity > 0)\
-            .order_by(StoreStockEntry.purchase_date.asc()).all()
+            .order_by(StoreStockEntry.purchase_date.asc())\
+            .all()
 
         for stock_entry in stock_entries:
             if remaining_quantity <= 0:
@@ -348,10 +389,9 @@ def supply_to_bars(
                 remaining_quantity -= stock_entry.quantity
                 stock_entry.quantity = 0
 
+        # ✅ All quantity has been successfully deducted at this point
 
-        if not stock_entry or stock_entry.quantity < item_data.quantity:
-            raise HTTPException(status_code=404, detail=f"Not enough inventory for item {item_data.item_id}")
-
+        # 4. Add or update BarInventory
         if issue_data.issue_to.lower() == "bar":
             bar_inventory = db.query(BarInventory).filter_by(
                 bar_id=issue_data.issued_to_id,
@@ -360,14 +400,11 @@ def supply_to_bars(
 
             if bar_inventory:
                 bar_inventory.quantity += item_data.quantity
-                print(f"✅ Updated BarInventory: item_id={item_data.item_id}, new_qty={bar_inventory.quantity}")
             else:
-                latest_stock = (
-                    db.query(StoreStockEntry)
-                    .filter(StoreStockEntry.item_id == item_data.item_id)
-                    .order_by(StoreStockEntry.id.desc())
+                latest_stock = db.query(StoreStockEntry)\
+                    .filter(StoreStockEntry.item_id == item_data.item_id)\
+                    .order_by(StoreStockEntry.id.desc())\
                     .first()
-                )
 
                 bar_inventory = BarInventory(
                     bar_id=issue_data.issued_to_id,
@@ -376,15 +413,10 @@ def supply_to_bars(
                     selling_price=latest_stock.unit_price if latest_stock else 0
                 )
                 db.add(bar_inventory)
-                print(f"➕ Added to BarInventory: item_id={item_data.item_id}, bar_id={issue_data.issued_to_id}, qty={item_data.quantity}")
-
-        # Deduct quantity from stock after BarInventory has been updated
-        #stock_entry.quantity -= item_data.quantity
 
     db.commit()
     db.refresh(issue)
     return issue
-
 
 
 @router.get("/issues", response_model=list[store_schemas.IssueDisplay])
@@ -454,6 +486,15 @@ def get_store_balances(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
+    
+    # Fetch total adjustments per item
+    adjustments = db.query(
+        StoreInventoryAdjustment.item_id,
+        func.sum(StoreInventoryAdjustment.quantity_adjusted).label("total_adjusted")
+    ).group_by(StoreInventoryAdjustment.item_id).all()
+
+    adjustment_map = {a.item_id: a.total_adjusted for a in adjustments}
+
     # Group by item: total received and current balance
     received_data = db.query(
         store_models.StoreItem.id.label("item_id"),
@@ -474,15 +515,116 @@ def get_store_balances(
         total_issued = item.total_received - item.balance
         total_amount = unit_price * item.balance if unit_price is not None else None
 
+        adjusted = adjustment_map.get(item.item_id, 0)
+        total_issued = item.total_received - item.balance - adjusted
+
         response.append({
             "item_id": item.item_id,
             "item_name": item.name,
             "unit": item.unit,
             "total_received": item.total_received,
             "total_issued": total_issued,
+            "total_adjusted": adjusted,
             "balance": item.balance,
             "last_unit_price": unit_price,
             "balance_total_amount": round(total_amount, 2) if total_amount else None
         })
 
+
     return response
+
+
+@router.post("/adjust", response_model=StoreInventoryAdjustmentDisplay)
+def adjust_store_inventory(
+    adjustment_data: StoreInventoryAdjustmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can adjust inventory.")
+
+    # Get latest stock entry
+    latest_entry = db.query(StoreStockEntry).filter(
+        StoreStockEntry.item_id == adjustment_data.item_id,
+        StoreStockEntry.quantity > 0
+    ).order_by(StoreStockEntry.purchase_date.desc()).first()
+
+    if not latest_entry:
+        raise HTTPException(status_code=404, detail="Item not found or out of stock.")
+
+    if adjustment_data.quantity_adjusted > latest_entry.quantity:
+        raise HTTPException(status_code=400, detail="Adjustment exceeds available stock.")
+
+    # Deduct quantity
+    latest_entry.quantity -= adjustment_data.quantity_adjusted
+    db.add(latest_entry)
+
+    # Log adjustment
+    adjustment = StoreInventoryAdjustment(
+        item_id=adjustment_data.item_id,
+        quantity_adjusted=adjustment_data.quantity_adjusted,
+        reason=adjustment_data.reason,
+        adjusted_by=current_user.username
+    )
+    db.add(adjustment)
+    db.commit()
+    db.refresh(adjustment)
+
+    return adjustment
+
+
+@router.get("/adjustments", response_model=List[StoreInventoryAdjustmentDisplay])
+def list_store_inventory_adjustments(
+    item_id: Optional[int] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(StoreInventoryAdjustment)
+
+    if item_id:
+        query = query.filter(StoreInventoryAdjustment.item_id == item_id)
+    if start_date:
+        query = query.filter(StoreInventoryAdjustment.adjusted_at >= start_date)
+    if end_date:
+        query = query.filter(StoreInventoryAdjustment.adjusted_at <= end_date)
+
+    return query.order_by(StoreInventoryAdjustment.adjusted_at.desc()).all()
+
+
+@router.delete("/adjustments/{adjustment_id}")
+def delete_adjustment(
+    adjustment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete adjustments.")
+
+    adjustment = db.query(StoreInventoryAdjustment)\
+        .options(joinedload(StoreInventoryAdjustment.item))\
+        .filter(StoreInventoryAdjustment.id == adjustment_id).first()
+
+    if not adjustment:
+        raise HTTPException(status_code=404, detail="Adjustment not found.")
+
+    # Restore quantity to stock
+    stock_entry = db.query(StoreStockEntry).filter(
+        StoreStockEntry.item_id == adjustment.item_id
+    ).order_by(StoreStockEntry.purchase_date.desc()).first()
+
+    if not stock_entry:
+        raise HTTPException(status_code=404, detail="No stock entry found to revert the quantity.")
+
+    stock_entry.quantity += adjustment.quantity_adjusted
+    db.add(stock_entry)
+
+    db.delete(adjustment)
+    db.commit()
+
+    return {
+        "message": "Adjustment deleted successfully.",
+        "restored_quantity": adjustment.quantity_adjusted,
+        "item_id": adjustment.item_id
+    }
