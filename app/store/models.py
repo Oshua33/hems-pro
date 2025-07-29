@@ -55,6 +55,7 @@ class StoreStockEntry(Base):
     #created_by_id = Column(Integer, ForeignKey("users.id"))  # ✅ FK to users
     created_by = Column(String, nullable=False)  # Track who created the purchase
     created_at = Column(DateTime, default=datetime.utcnow)
+    attachment = Column(String, nullable=True)  
 
     # Relationships
     item = relationship("StoreItem")
@@ -66,6 +67,13 @@ class StoreStockEntry(Base):
         #return self.created_by_user.username if self.created_by_user else None
 
     
+
+    @property
+    def attachment_url(self):
+        if self.attachment:
+            return f"/attachments/store_invoices/{os.path.basename(self.attachment)}"
+        return None
+
 
 
 # ----------------------------
