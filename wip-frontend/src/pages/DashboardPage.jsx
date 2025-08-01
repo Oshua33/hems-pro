@@ -279,9 +279,9 @@ const printContent = () => {
     { name: "📅 Bookings", path: "/dashboard/bookings" },
     { name: "💳 Payments", path: "/dashboard/payments" },
     { name: "🎉 Events", path: "/dashboard/events" },
-    { name: "🍷 Bar", path: "/dashboard/bar" },
-    { name: "🍽️ Restaurant", path: "/dashboard/restaurant" },
-    { name: "🏪 Store", path: "/dashboard/store" },
+    { name: "🍷 Bar", path: "/bar" },
+    { name: "🏪 Store", path: "/store" },
+    { name: "🍽️ Restaurant", path: "/restaurant" },
     { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, // ⬅️ add this
   ];
 
@@ -379,15 +379,10 @@ const printContent = () => {
               >
                 <button
                   onClick={() => {
-                    if (item.name.includes("Store")) {
-                      window.open("/store", "_blank", "noopener,noreferrer");
-                    } else if (item.name.includes("Bar")) {
-                      window.open("/bar", "_blank", "noopener,noreferrer");
-                    } else {
-                      navigate(item.path);
-                    }
-
+                    navigate(item.path); // let React Router handle it
                   }}
+
+
 
                   className={`sidebar-button ${
                     isBookings && isBookingsHovered ||

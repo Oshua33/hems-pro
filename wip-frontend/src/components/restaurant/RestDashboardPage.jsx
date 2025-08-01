@@ -1,19 +1,21 @@
 import React, { useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { FaFileExcel, FaPrint } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
-import "./StoreDashboardPage.css";
+import "./RestDashboardPage.css"; // 🆕 restaurant CSS
 
-const StoreDashboardPage = () => {
+const RestDashboardPage = () => {
   const navigate = useNavigate();
+  const [hovered, setHovered] = useState("");
 
   const exportToExcel = async () => {
     const table = document.querySelector(".content-area table");
     if (!table) return alert("No table found to export.");
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Store Data");
+    const sheet = workbook.addWorksheet("Restaurant Data");
 
     const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
       th.innerText.trim()
@@ -22,7 +24,7 @@ const StoreDashboardPage = () => {
 
     sheet.mergeCells(1, 1, 1, colCount);
     const titleCell = sheet.getCell("A1");
-    titleCell.value = "Store Report";
+    titleCell.value = "Restaurant Report";
     titleCell.font = { size: 14, bold: true };
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
@@ -57,7 +59,7 @@ const StoreDashboardPage = () => {
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    saveAs(blob, `store_report.xlsx`);
+    saveAs(blob, `restaurant_report.xlsx`);
   };
 
   const printContent = () => {
@@ -71,63 +73,56 @@ const StoreDashboardPage = () => {
     printWindow.print();
   };
 
-  const storeMenu = [
+  const restaurantMenu = [
     {
-      name: "📂 Drinks Category",
+      name: "📍 Location",
       submenu: [
-        { label: "➕ New Category", path: "category/create" },
-        { label: "📃 List Category", path: "category/list" },
+        { label: "➕ Create", path: "/dashboard/restaurant/location/create" },
+        { label: "📃 List", path: "/dashboard/restaurant/location/list" },
       ],
     },
     {
-      name: "📦 Items",
+      name: "🍽️ Meal Category",
       submenu: [
-        { label: "➕ Add Item", path: "items/create" },
-        { label: "📃 Item List", path: "items/list" },
+        { label: "➕ Create Category", path: "/dashboard/restaurant/category/create" },
+        { label: "📃 List Category", path: "/dashboard/restaurant/category/list" },
       ],
     },
     {
-      name: "🛒 Purchase",
+      name: "🍲 Meal",
       submenu: [
-        { label: "➕ New Purchase", path: "purchase/create" },
-        { label: "📃 List Purchase", path: "purchase/list" },
+        { label: "➕ Create Meal", path: "/dashboard/restaurant/meal/create" },
+        { label: "📃 List Meal", path: "/dashboard/restaurant/meal/list" },
       ],
     },
     {
-      name: "🍶 Issue to Bar",
+      name: "🧾 Guest Order",
       submenu: [
-        { label: "📤 Issue Items", path: "issue/create" },
-        { label: "📃 List Items", path: "issue/list" },
+        { label: "🆕 Create Order", path: "/dashboard/restaurant/order/create" },
+        { label: "📃 List Order", path: "/dashboard/restaurant/order/list" },
       ],
     },
     {
-      name: "⚖️ Stock Adjustment",
+      name: "💰 Restaurant Sales",
       submenu: [
-        { label: "🔧 Adjust Stock", path: "adjustment/create" },
-        { label: "🔧 List Adjustment", path: "adjustment/list" },
+        { label: "📃 List Sales", path: "/dashboard/restaurant/sales/list" },
       ],
     },
     {
-      name: "📊 Stock Balance",
-      path: "stock-balance",
-    },
-    {
-      name: "🏭 Vendor",
+      name: "💳 Payment",
       submenu: [
-        { label: "➕ Add Vendor", path: "vendor/create" },
-        { label: "📃 Vendor List", path: "vendor/list" },
+        { label: "📃 List Payment", path: "/dashboard/restaurant/payment/list" },
+        { label: "❌ Void Payment", path: "/dashboard/restaurant/payment/void" },
       ],
     },
   ];
 
-  const [hovered, setHovered] = useState("");
-
   return (
     <div className="dashboard-container">
       <aside className="sidebars1">
-        <h2 className="sidebar-title">STORE MENU</h2>
+        <h2 className="sidebar-title">RESTAURANT MENU</h2>
         <nav>
-          {storeMenu.map((item) => (
+          {restaurantMenu.map((item) => (
             <div
               key={item.name}
               className="sidebar-item-wrapper"
@@ -166,7 +161,7 @@ const StoreDashboardPage = () => {
       <main className="main-content">
         <header className="header" style={{ gap: "20px" }}>
           <h1 className="header-title" style={{ flexGrow: 1 }}>
-            🏪 Store Management Dashboard
+            🍽️ Restaurant Management Dashboard
           </h1>
           <div style={{ display: "flex", gap: "10px" }}>
             <button onClick={exportToExcel} className="action-button1">
@@ -191,4 +186,4 @@ const StoreDashboardPage = () => {
   );
 };
 
-export default StoreDashboardPage;
+export default RestDashboardPage;

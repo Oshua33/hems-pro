@@ -1,0 +1,103 @@
+.vendor-container {
+  background: rgb(250, 247, 247);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-family: Arial, sans-serif;
+  max-width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.vendor-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.vendor-list-container {
+  padding: 10px 20px; /* Reduced top padding */
+}
+
+.vendor-list-container h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.vendor-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Header and rows layout */
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 60px 2fr 2fr 2fr 150px; /* ID, Name, Phone, Address, Actions */
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.table-header {
+  background-color: #e0e0e0;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.table-row:nth-child(even) {
+  background-color: #f2f6fa;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row div,
+.table-header div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 10px;
+  font-size: 13px;
+  border: 1px solid #ccc; /* Grid line effect */
+  box-sizing: border-box;
+}
+
+/* Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn.update {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn.update:hover {
+  background-color: #0056b3;
+}
+
+.btn.delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn.delete:hover {
+  background-color: #c82333;
+}

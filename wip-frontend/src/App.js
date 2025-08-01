@@ -19,6 +19,7 @@ import RoomsPage from "./pages/RoomsPage";
 import BookingsPage from "./pages/BookingsPage";
 import StoreDashboardPage from "./components/store/StoreDashboardPage";
 import BarDashboardPage from "./components/bar/BarDashboardPage";
+import RestDashboardPage from "./components/restaurant/RestDashboardPage";
 
 import CreateBooking from "./components/bookings/CreateBooking";
 import ListBooking from "./components/bookings/ListBooking";
@@ -38,6 +39,14 @@ import VoidEventPayment from "./components/events/VoidEventPayment";
 import ViewEventForm from "./components/events/ViewEventForm"; // ✅ add this
 import EventUpdate from "./components/events/EventUpdate";
 import ViewEventPayment from "./components/events/ViewEventPayment";
+
+
+
+import CreateVendor from "./components/store/CreateVendor";
+import ListVendor from "./components/store/ListVendor";
+
+
+
 
 
 
@@ -79,10 +88,20 @@ const App = () => {
 
 
           {/* ✅ Fullscreen Store route, outside /dashboard */}
-          <Route path="/store" element={<StoreDashboardPage />} />
+          <Route path="/store" element={<StoreDashboardPage />}>
+           
+            <Route path="vendor/create" element={<CreateVendor />} />
+            <Route path="vendor/list" element={<ListVendor />} />
+            
+          </Route>
+
+
+
+
           
           <Route path="/bar" element={<BarDashboardPage />} />
 
+          <Route path="/restaurant" element={<RestDashboardPage />} />
 
         {/* Protected dashboard routes */}
         <Route
@@ -133,11 +152,8 @@ const App = () => {
 
           </Route>
 
-          
-
-
-
-
+            
+      
 
 
           {/* ✅ Add this line below to link the Reservation Alert */}
