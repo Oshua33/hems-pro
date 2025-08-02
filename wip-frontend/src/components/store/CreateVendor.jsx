@@ -3,7 +3,7 @@ import "./CreateVendor.css";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
 
-const CreateVendor = () => {
+const CreateVendor = ({ onClose }) => {
   const [formData, setFormData] = useState({
     business_name: "",
     address: "",
@@ -11,7 +11,6 @@ const CreateVendor = () => {
   });
 
   const [message, setMessage] = useState("");
-  const [showForm, setShowForm] = useState(true); // NEW: Controls form visibility
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -34,7 +33,6 @@ const CreateVendor = () => {
         setMessage(`✅ Vendor "${data.business_name}" created successfully.`);
         setFormData({ business_name: "", address: "", phone_number: "" });
 
-        // Clear message after 3 seconds
         setTimeout(() => setMessage(""), 3000);
       } else {
         const errorData = await response.json();
@@ -47,8 +45,6 @@ const CreateVendor = () => {
         } else {
           setMessage("❌ Failed to create vendor.");
         }
-
-        // Clear message after 3 seconds
         setTimeout(() => setMessage(""), 3000);
       }
     } catch (error) {
@@ -59,49 +55,45 @@ const CreateVendor = () => {
   };
 
   return (
-    <>
-      {showForm && (
-        <div className="create-vendor-container">
-          <div className="form-header">
-            <h2>Create New Vendor</h2>
-            <button className="close-button" onClick={() => setShowForm(false)}>✖</button>
-          </div>
+    <div className="create-vendor-container">
+      <div className="form-header">
+        <h2>Create New Vendor</h2>
+        <button className="close-button" onClick={onClose}>✖</button>
+      </div>
 
-          <form onSubmit={handleSubmit} className="vendor-form">
-            <label>Business Name</label>
-            <input
-              type="text"
-              name="business_name"
-              value={formData.business_name}
-              onChange={handleChange}
-              required
-            />
+      <form onSubmit={handleSubmit} className="vendor-form">
+        <label>Business Name</label>
+        <input
+          type="text"
+          name="business_name"
+          value={formData.business_name}
+          onChange={handleChange}
+          required
+        />
 
-            <label>Address</label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
-            />
+        <label>Address</label>
+        <input
+          type="text"
+          name="address"
+          value={formData.address}
+          onChange={handleChange}
+          required
+        />
 
-            <label>Phone Number</label>
-            <input
-              type="text"
-              name="phone_number"
-              value={formData.phone_number}
-              onChange={handleChange}
-              required
-            />
+        <label>Phone Number</label>
+        <input
+          type="text"
+          name="phone_number"
+          value={formData.phone_number}
+          onChange={handleChange}
+          required
+        />
 
-            <button type="submit">Save Vendor</button>
-          </form>
+        <button type="submit">Save Vendor</button>
+      </form>
 
-          {message && <p className="vendor-message">{message}</p>}
-        </div>
-      )}
-    </>
+      {message && <p className="vendor-message">{message}</p>}
+    </div>
   );
 };
 

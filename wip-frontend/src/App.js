@@ -44,6 +44,10 @@ import ViewEventPayment from "./components/events/ViewEventPayment";
 
 import CreateVendor from "./components/store/CreateVendor";
 import ListVendor from "./components/store/ListVendor";
+import CreateCategory from "./components/store/CreateCategory";
+import ListCategory from "./components/store/ListCategory";
+import CreateItem from "./components/store/CreateItem";
+import ListItem from "./components/store/ListItem";
 
 
 
@@ -92,6 +96,10 @@ const App = () => {
            
             <Route path="vendor/create" element={<CreateVendor />} />
             <Route path="vendor/list" element={<ListVendor />} />
+            <Route path="category/create" element={<CreateCategory />} />
+            <Route path="category/list" element={<ListCategory />} />
+            <Route path="item/create" element={<CreateItem />} />
+            <Route path="items/list" element={<ListItem />} />  {/* ✅ FIXED */}
             
           </Route>
 

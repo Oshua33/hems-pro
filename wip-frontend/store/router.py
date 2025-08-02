@@ -16,6 +16,9 @@ from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreC
 from app.vendor import models as vendor_models
 from app.store.models import StoreInventoryAdjustment
 from app.store.schemas import  StoreInventoryAdjustmentCreate, StoreInventoryAdjustmentDisplay
+from sqlalchemy.orm import aliased
+from sqlalchemy import desc, func
+
 from sqlalchemy.orm import joinedload
 from fastapi import File, UploadFile, Form
 import os
@@ -117,16 +120,66 @@ def create_item(
     return new_item
 
 
+
+from sqlalchemy.orm import aliased
+from sqlalchemy import func, and_
+from fastapi import HTTPException
+
 @router.get("/items", response_model=list[store_schemas.StoreItemDisplay])
 def list_items(
     category: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    query = db.query(store_models.StoreItem)
-    if category:
-        query = query.join(store_models.StoreItem.category).filter(StoreCategory.name == category)
-    return query.order_by(store_models.StoreItem.name).all()
+    try:
+        # Subquery to get the latest stock entry (with unit_price) for each item
+        latest_entry_subquery = (
+            db.query(
+                store_models.StoreStockEntry.item_id,
+                func.max(store_models.StoreStockEntry.id).label("latest_entry_id")
+            )
+            .group_by(store_models.StoreStockEntry.item_id)
+            .subquery()
+        )
+
+        latest_entry = aliased(store_models.StoreStockEntry)
+
+        query = (
+            db.query(
+                store_models.StoreItem,
+                latest_entry.unit_price
+            )
+            .outerjoin(
+                latest_entry_subquery,
+                store_models.StoreItem.id == latest_entry_subquery.c.item_id
+            )
+            .outerjoin(
+                latest_entry,
+                latest_entry.id == latest_entry_subquery.c.latest_entry_id
+            )
+        )
+
+        if category:
+            query = query.join(store_models.StoreItem.category).filter(StoreCategory.name == category)
+
+        results = query.order_by(store_models.StoreItem.id.asc()).all()
+
+        items = []
+        for item, unit_price in results:
+            items.append(store_schemas.StoreItemDisplay(
+                id=item.id,
+                name=item.name,
+                unit=item.unit,
+                category=item.category,
+                unit_price=unit_price or 0.0,  # fallback to 0.0 if None
+                created_at=item.created_at
+            ))
+
+        return items
+
+    except Exception as e:
+        print("💥 Error:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -199,9 +252,7 @@ async def receive_inventory(
 
     # Save attachment if provided
     if attachment:
-        #upload_dir = "attachments/store_invoices"
         upload_dir = "uploads/store_invoices"
-
         os.makedirs(upload_dir, exist_ok=True)
 
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{attachment.filename}"
@@ -210,8 +261,11 @@ async def receive_inventory(
         with open(file_location, "wb") as f:
             f.write(await attachment.read())
 
-        # Store relative path or public URL if needed
         attachment_path = file_location
+
+    # Ensure datetime fields are naive (SQLite doesn't support tz-aware datetimes)
+    purchase_date = entry.purchase_date.replace(tzinfo=None) if entry.purchase_date.tzinfo else entry.purchase_date
+    created_at = datetime.now().replace(tzinfo=None)
 
     # Create stock entry
     stock_entry = store_models.StoreStockEntry(
@@ -222,8 +276,9 @@ async def receive_inventory(
         unit_price=entry.unit_price,
         total_amount=total,
         vendor_id=entry.vendor_id,
-        purchase_date=entry.purchase_date,
+        purchase_date=purchase_date,
         created_by=current_user.username,
+        created_at=created_at,
         attachment=attachment_path,
     )
 
@@ -237,6 +292,7 @@ async def receive_inventory(
         .get(stock_entry.id)
 
     return stock_entry
+    
 
 @router.get("/purchases", response_model=List[store_schemas.StoreStockEntryDisplay])
 def list_purchases(

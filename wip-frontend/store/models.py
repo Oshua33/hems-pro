@@ -28,6 +28,7 @@ class StoreItem(Base):
     name = Column(String, unique=True, nullable=False)
     unit = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("store_categories.id"), nullable=True)
+    unit_price = Column(Float, nullable=False, default=0.0)  # ✅ ADD THIS
     category = relationship("StoreCategory")
 
     created_at = Column(DateTime, default=datetime.utcnow)

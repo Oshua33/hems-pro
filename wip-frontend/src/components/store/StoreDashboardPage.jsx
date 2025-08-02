@@ -4,9 +4,20 @@ import { FaFileExcel, FaPrint } from "react-icons/fa";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 import "./StoreDashboardPage.css";
+import CreateCategory from "../store/CreateCategory";
+import CreateVendor from "../store/CreateVendor"; // ✅ Import CreateVendor
+import CreateItem from "../store/CreateItem";
+
 
 const StoreDashboardPage = () => {
   const navigate = useNavigate();
+  const [hovered, setHovered] = useState("");
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showCreateVendor, setShowCreateVendor] = useState(false); // ✅ New state
+  const [showCreateItem, setShowCreateItem] = useState(false);
+
+
+
 
   const exportToExcel = async () => {
     const table = document.querySelector(".content-area table");
@@ -75,15 +86,31 @@ const StoreDashboardPage = () => {
     {
       name: "📂 Drinks Category",
       submenu: [
-        { label: "➕ New Category", path: "category/create" },
-        { label: "📃 List Category", path: "category/list" },
+        {
+          label: "➕ New Category",
+          action: () => {
+            setShowCreateCategory(true);
+            setShowCreateVendor(false); // ✅ Close other form
+          },
+        },
+        {
+          label: "📃 List Category",
+          path: "category/list",
+        },
       ],
     },
     {
       name: "📦 Items",
-      submenu: [
-        { label: "➕ Add Item", path: "items/create" },
-        { label: "📃 Item List", path: "items/list" },
+        submenu: [
+          {
+            label: "➕ Add Item",
+            action: () => {
+              setShowCreateItem(true);
+              setShowCreateCategory(false);
+              setShowCreateVendor(false);
+            },
+          },
+          { label: "📃 Item List", path: "items/list" },
       ],
     },
     {
@@ -114,13 +141,20 @@ const StoreDashboardPage = () => {
     {
       name: "🏭 Vendor",
       submenu: [
-        { label: "➕ Add Vendor", path: "vendor/create" },
-        { label: "📃 Vendor List", path: "vendor/list" },
+        {
+          label: "➕ Add Vendor",
+          action: () => {
+            setShowCreateVendor(true);
+            setShowCreateCategory(false); // ✅ Close other form
+          },
+        },
+        {
+          label: "📃 Vendor List",
+          path: "vendor/list",
+        },
       ],
     },
   ];
-
-  const [hovered, setHovered] = useState("");
 
   return (
     <div className="dashboard-container">
@@ -137,7 +171,7 @@ const StoreDashboardPage = () => {
               <button
                 className={`sidebars1-button ${hovered === item.name ? "active" : ""}`}
                 onClick={() => {
-                  if (!item.submenu) navigate(item.path);
+                  if (!item.submenu && item.path) navigate(item.path);
                 }}
               >
                 {item.name}
@@ -146,10 +180,14 @@ const StoreDashboardPage = () => {
                 <div className="submenu">
                   {item.submenu.map((sub) => (
                     <button
-                      key={sub.path}
+                      key={sub.label}
                       className="submenu-item"
                       onClick={() => {
-                        navigate(sub.path);
+                        if (sub.path) {
+                          navigate(sub.path);
+                        } else if (sub.action) {
+                          sub.action();
+                        }
                         setHovered("");
                       }}
                     >
@@ -184,8 +222,17 @@ const StoreDashboardPage = () => {
         </header>
 
         <section className="content-area">
-          <Outlet />
+          {showCreateCategory ? (
+            <CreateCategory onClose={() => setShowCreateCategory(false)} />
+          ) : showCreateVendor ? (
+            <CreateVendor onClose={() => setShowCreateVendor(false)} />
+          ) : showCreateItem ? (
+            <CreateItem onClose={() => setShowCreateItem(false)} />
+          ) : (
+            <Outlet />
+          )}
         </section>
+
       </main>
     </div>
   );
