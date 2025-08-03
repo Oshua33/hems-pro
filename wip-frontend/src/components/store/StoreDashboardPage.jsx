@@ -4,20 +4,13 @@ import { FaFileExcel, FaPrint } from "react-icons/fa";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 import "./StoreDashboardPage.css";
-import CreateCategory from "../store/CreateCategory";
-import CreateVendor from "../store/CreateVendor"; // ✅ Import CreateVendor
-import CreateItem from "../store/CreateItem";
 
 
 const StoreDashboardPage = () => {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState("");
   const [showCreateCategory, setShowCreateCategory] = useState(false);
-  const [showCreateVendor, setShowCreateVendor] = useState(false); // ✅ New state
-  const [showCreateItem, setShowCreateItem] = useState(false);
-
-
-
+  const [showCreateVendor, setShowCreateVendor] = useState(false);
 
   const exportToExcel = async () => {
     const table = document.querySelector(".content-area table");
@@ -85,33 +78,12 @@ const StoreDashboardPage = () => {
   const storeMenu = [
     {
       name: "📂 Drinks Category",
-      submenu: [
-        {
-          label: "➕ New Category",
-          action: () => {
-            setShowCreateCategory(true);
-            setShowCreateVendor(false); // ✅ Close other form
-          },
-        },
-        {
-          label: "📃 List Category",
-          path: "category/list",
-        },
-      ],
+      path: "category/list", // 👈 Directly links to List Category
     },
+
     {
-      name: "📦 Items",
-        submenu: [
-          {
-            label: "➕ Add Item",
-            action: () => {
-              setShowCreateItem(true);
-              setShowCreateCategory(false);
-              setShowCreateVendor(false);
-            },
-          },
-          { label: "📃 Item List", path: "items/list" },
-      ],
+      name: "📦 Manage Items",
+      path: "items/list", // ✅ Goes directly to the list
     },
     {
       name: "🛒 Purchase",
@@ -139,21 +111,10 @@ const StoreDashboardPage = () => {
       path: "stock-balance",
     },
     {
-      name: "🏭 Vendor",
-      submenu: [
-        {
-          label: "➕ Add Vendor",
-          action: () => {
-            setShowCreateVendor(true);
-            setShowCreateCategory(false); // ✅ Close other form
-          },
-        },
-        {
-          label: "📃 Vendor List",
-          path: "vendor/list",
-        },
-      ],
+      name: "🏭 Manage Vendor",
+      path: "vendor/list", // 👉 direct navigation
     },
+
   ];
 
   return (
@@ -171,7 +132,9 @@ const StoreDashboardPage = () => {
               <button
                 className={`sidebars1-button ${hovered === item.name ? "active" : ""}`}
                 onClick={() => {
-                  if (!item.submenu && item.path) navigate(item.path);
+                  if (!item.submenu && item.path) {
+                    navigate(item.path);
+                  }
                 }}
               >
                 {item.name}
@@ -226,13 +189,10 @@ const StoreDashboardPage = () => {
             <CreateCategory onClose={() => setShowCreateCategory(false)} />
           ) : showCreateVendor ? (
             <CreateVendor onClose={() => setShowCreateVendor(false)} />
-          ) : showCreateItem ? (
-            <CreateItem onClose={() => setShowCreateItem(false)} />
           ) : (
             <Outlet />
           )}
         </section>
-
       </main>
     </div>
   );

@@ -44,7 +44,7 @@ def create_vendor(vendor: schemas.VendorCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[schemas.VendorOut])
 def list_vendors(db: Session = Depends(get_db)):
-    return db.query(models.Vendor).all()
+    return db.query(models.Vendor).order_by(models.Vendor.id.asc()).all()
 
 @router.get("/{vendor_id}", response_model=schemas.VendorOut)
 def get_vendor(vendor_id: int, db: Session = Depends(get_db)):

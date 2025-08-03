@@ -6,6 +6,7 @@ const ListCategory = ({ onClose }) => {
   const [categories, setCategories] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [newCategory, setNewCategory] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -18,6 +19,19 @@ const ListCategory = ({ onClose }) => {
       setCategories(res.data);
     } catch (err) {
       console.error("Failed to fetch categories:", err);
+    }
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      const axios = axiosWithAuth();
+      await axios.post("/store/categories", { name: newCategory });
+      setMessage("✅ Category created successfully!");
+      setNewCategory("");
+      fetchCategories();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || "❌ Error creating category.");
     }
   };
 
@@ -56,6 +70,19 @@ const ListCategory = ({ onClose }) => {
           </button>
         )}
       </div>
+
+      <form className="create-category-form" onSubmit={handleCreate}>
+        <label htmlFor="newCategory">New Category</label>
+        <input
+          id="newCategory"
+          type="text"
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="e.g. Soft Drinks, Wines, Whisky"
+          required
+        />
+        <button type="submit" className="create-btn">➕ Create Category</button>
+      </form>
 
       <table className="category-table">
         <thead>
@@ -111,7 +138,7 @@ const ListCategory = ({ onClose }) => {
           ))}
         </tbody>
       </table>
-      {message && <p className="vendor-message">{message}</p>}
+      {message && <p className="category-message">{message}</p>}
     </div>
   );
 };

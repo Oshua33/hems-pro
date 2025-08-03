@@ -101,3 +101,58 @@
 .btn.delete:hover {
   background-color: #c82333;
 }
+
+
+.vendor-create-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #f8f8f8;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.vendor-create-form input {
+  flex: 1 1 30%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.vendor-create-form button {
+  padding: 8px 16px;
+  background-color: #27ae60;
+  color: rgb(226, 216, 216);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.vendor-create-form button:hover {
+  background-color: #219150;
+}
+
+.vendor-message {
+  margin-bottom: 10px;
+  color: #73bd77;
+  font-weight: 500;
+  text-align: center;
+}
+
+
+/* New styles for submit button */
+button[type="submit"] {
+  padding: 8px 14px;
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+button[type="submit"]:hover {
+  background-color: #219150;
+}

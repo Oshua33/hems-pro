@@ -17,6 +17,7 @@ from app.vendor import models as vendor_models
 from app.store.models import StoreInventoryAdjustment
 from app.store.schemas import  StoreInventoryAdjustmentCreate, StoreInventoryAdjustmentDisplay
 from sqlalchemy.orm import aliased
+from fastapi import Form
 from sqlalchemy import desc, func
 
 from sqlalchemy.orm import joinedload
@@ -110,14 +111,19 @@ def create_item(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    existing = db.query(store_models.StoreItem).filter_by(name=item.name).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Item already exists")
-    new_item = store_models.StoreItem(**item.dict())
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
-    return new_item
+    try:
+        existing = db.query(store_models.StoreItem).filter_by(name=item.name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Item already exists")
+        new_item = store_models.StoreItem(**item.dict())
+        db.add(new_item)
+        db.commit()
+        db.refresh(new_item)
+        return new_item
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
 
 
 
@@ -181,6 +187,61 @@ def list_items(
         print("💥 Error:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+from sqlalchemy.orm import aliased
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+@router.get("/items/simple", response_model=List[store_schemas.StoreItemOut])
+def list_items_simple(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    try:
+        # Subquery to get the latest stock entry (unit_price) for each item
+        latest_entry_subquery = (
+            db.query(
+                store_models.StoreStockEntry.item_id,
+                func.max(store_models.StoreStockEntry.id).label("latest_entry_id")
+            )
+            .group_by(store_models.StoreStockEntry.item_id)
+            .subquery()
+        )
+
+        latest_entry = aliased(store_models.StoreStockEntry)
+
+        query = (
+            db.query(
+                store_models.StoreItem,
+                latest_entry.unit_price
+            )
+            .outerjoin(
+                latest_entry_subquery,
+                store_models.StoreItem.id == latest_entry_subquery.c.item_id
+            )
+            .outerjoin(
+                latest_entry,
+                latest_entry.id == latest_entry_subquery.c.latest_entry_id
+            )
+            .order_by(store_models.StoreItem.id.asc())
+        )
+
+        results = query.all()
+
+        items = []
+        for item, unit_price in results:
+            items.append(store_schemas.StoreItemOut(
+                id=item.id,
+                name=item.name,
+                unit=item.unit,
+                unit_price=unit_price or 0.0  # fallback to 0.0 if None
+            ))
+
+        return items
+
+    except Exception as e:
+        print("❌ Error in /items/simple:", e)
+        raise HTTPException(status_code=500, detail="Failed to fetch items.")
 
 
 
@@ -232,25 +293,25 @@ def delete_item(
 
 
 
+from fastapi import Depends
+
 @router.post("/purchases", response_model=store_schemas.PurchaseCreateList)
 async def receive_inventory(
-    entry: store_schemas.StoreStockEntryCreate = Depends(),
+    entry: store_schemas.StoreStockEntryCreate = Depends(store_schemas.StoreStockEntryCreate.as_form),
     attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    # Check if item exists
+    # Validate item existence
     item = db.query(store_models.StoreItem).filter_by(id=entry.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Calculate total amount
-    total = (entry.quantity * entry.unit_price) if entry.unit_price else None
-
-    # Set attachment path (default is None)
-    attachment_path = None
+    # Compute total amount
+    total = entry.quantity * entry.unit_price if entry.unit_price else None
 
     # Save attachment if provided
+    attachment_path = None
     if attachment:
         upload_dir = "uploads/store_invoices"
         os.makedirs(upload_dir, exist_ok=True)
@@ -263,11 +324,11 @@ async def receive_inventory(
 
         attachment_path = file_location
 
-    # Ensure datetime fields are naive (SQLite doesn't support tz-aware datetimes)
+    # Normalize datetimes
     purchase_date = entry.purchase_date.replace(tzinfo=None) if entry.purchase_date.tzinfo else entry.purchase_date
     created_at = datetime.now().replace(tzinfo=None)
 
-    # Create stock entry
+    # Create and save stock entry
     stock_entry = store_models.StoreStockEntry(
         item_id=entry.item_id,
         item_name=entry.item_name,
@@ -281,20 +342,21 @@ async def receive_inventory(
         created_at=created_at,
         attachment=attachment_path,
     )
-
     db.add(stock_entry)
     db.commit()
     db.refresh(stock_entry)
 
-    # Load related vendor for full response
-    stock_entry = db.query(store_models.StoreStockEntry)\
-        .options(selectinload(store_models.StoreStockEntry.vendor))\
+    # Load full vendor and item info for frontend
+    stock_entry = db.query(store_models.StoreStockEntry) \
+        .options(
+            selectinload(store_models.StoreStockEntry.vendor),
+            selectinload(store_models.StoreStockEntry.item)
+        ) \
         .get(stock_entry.id)
 
     return stock_entry
-    
 
-@router.get("/purchases", response_model=List[store_schemas.StoreStockEntryDisplay])
+@router.get("/purchases")
 def list_purchases(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
@@ -311,7 +373,6 @@ def list_purchases(
 
     results = []
     for purchase in purchases:
-        # Generate attachment URL if attachment exists
         attachment_url = (
             f"/files/{os.path.relpath(purchase.attachment, 'uploads').replace(os.sep, '/')}"
             if purchase.attachment else None
@@ -336,10 +397,18 @@ def list_purchases(
 
 
 
+
+
 @router.put("/purchases/{entry_id}", response_model=store_schemas.UpdatePurchase)
-def update_purchase(
+async def update_purchase(
     entry_id: int,
-    update_data: store_schemas.StoreStockEntryCreate,
+    item_id: int = Form(...),
+    item_name: str = Form(...),
+    quantity: float = Form(...),
+    unit_price: float = Form(...),
+    vendor_id: Optional[int] = Form(None),
+    purchase_date: datetime = Form(...),
+    attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
@@ -347,32 +416,65 @@ def update_purchase(
     if not entry:
         raise HTTPException(status_code=404, detail="Purchase entry not found")
 
-    # Check that the item exists
-    item = db.query(store_models.StoreItem).filter_by(id=update_data.item_id).first()
+    item = db.query(store_models.StoreItem).filter_by(id=item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    total = (update_data.quantity * update_data.unit_price) if update_data.unit_price else None
+    # Handle optional attachment update
+    if attachment:
+        upload_dir = "uploads/store_invoices"
+        os.makedirs(upload_dir, exist_ok=True)
 
-    # Exclude 'created_by' from update_data
-    update_fields = update_data.dict(exclude={"created_by"})
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{attachment.filename}"
+        file_location = os.path.join(upload_dir, filename)
 
-    for field, value in update_fields.items():
-        setattr(entry, field, value)
+        with open(file_location, "wb") as f:
+            f.write(await attachment.read())
 
-    entry.total_amount = total
-    entry.created_by = current_user.username  # Ensure created_by is updated with current user
+        entry.attachment = file_location
+
+    entry.item_id = item_id
+    entry.item_name = item_name
+    entry.quantity = quantity
+    entry.unit_price = unit_price
+    entry.vendor_id = vendor_id
+    entry.purchase_date = purchase_date
+    entry.total_amount = quantity * unit_price
+    entry.created_by = current_user.username
 
     db.commit()
     db.refresh(entry)
 
-    # Load related vendor (if needed for the frontend like in POST route)
-    entry = db.query(store_models.StoreStockEntry)\
-        .options(selectinload(store_models.StoreStockEntry.vendor))\
+    # Load related item and vendor
+    entry = (
+        db.query(store_models.StoreStockEntry)
+        .options(
+            selectinload(store_models.StoreStockEntry.vendor),
+            selectinload(store_models.StoreStockEntry.item),
+        )
         .get(entry.id)
+    )
 
-    return entry
+    attachment_url = (
+        f"/files/{os.path.relpath(entry.attachment, 'uploads').replace(os.sep, '/')}"
+        if entry.attachment else None
+    )
 
+    return {
+        "id": entry.id,
+        "item_id": entry.item_id,
+        "item_name": entry.item.name if entry.item else "",
+        "quantity": entry.quantity,
+        "unit_price": entry.unit_price,
+        "total_amount": entry.total_amount,
+        "vendor_id": entry.vendor_id,
+        "vendor_name": entry.vendor.business_name if entry.vendor else "",
+        "purchase_date": entry.purchase_date,
+        "created_by": entry.created_by,
+        "created_at": entry.created_at,
+        "attachment": entry.attachment,
+        "attachment_url": attachment_url,
+    }
 
 
 @router.delete("/purchases/{entry_id}")

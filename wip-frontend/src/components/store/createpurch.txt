@@ -1,0 +1,241 @@
+import React, { useEffect, useState } from "react";
+import axiosWithAuth from "../../utils/axiosWithAuth";
+import "./CreatePurchase.css";
+
+const CreatePurchase = () => {
+  const [categories, setCategories] = useState([]);
+  const [items, setItems] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [rows, setRows] = useState([
+    { categoryId: "", itemId: "", quantity: "", unitPrice: "", total: 0 },
+  ]);
+  const [vendorId, setVendorId] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState("");
+  const [attachment, setAttachment] = useState(null);
+  const [message, setMessage] = useState("");
+
+  const axios = axiosWithAuth();
+
+  useEffect(() => {
+    fetchCategories();
+    fetchItems();
+    fetchVendors();
+  }, []);
+
+  const fetchCategories = async () => {
+  try {
+    const axios = axiosWithAuth();
+    const response = await axios.get("/store/categories");
+
+    // Handle if response is wrapped in an object
+    const data = response.data;
+
+    if (Array.isArray(data)) {
+      setCategories(data);
+    } else if (Array.isArray(data.categories)) {
+      setCategories(data.categories);
+    } else {
+      console.error("Expected array but got:", data);
+      setCategories([]);
+    }
+  } catch (error) {
+    console.error("Failed to fetch categories:", error);
+  }
+};
+
+  const fetchItems = async () => {
+    try {
+      const res = await axios.get("/store/items/list");
+      setItems(res.data);
+    } catch (err) {
+      console.error("Failed to fetch items:", err);
+    }
+  };
+
+  const fetchVendors = async () => {
+  try {
+    const axios = axiosWithAuth();
+    const response = await axios.get("/store/vendors");
+    
+    // Check if the response is an array
+    if (Array.isArray(response.data)) {
+      setVendors(response.data);
+    } else {
+      console.error("Expected array but got:", response.data);
+      setVendors([]);
+    }
+  } catch (error) {
+    console.error("Failed to fetch vendors:", error);
+  }
+};
+
+  const handleRowChange = (index, field, value) => {
+    const updatedRows = [...rows];
+    updatedRows[index][field] = value;
+
+    const quantity = parseFloat(updatedRows[index].quantity) || 0;
+    const unitPrice = parseFloat(updatedRows[index].unitPrice) || 0;
+    updatedRows[index].total = quantity * unitPrice;
+
+    setRows(updatedRows);
+  };
+
+  const addRow = () => {
+    setRows([...rows, { categoryId: "", itemId: "", quantity: "", unitPrice: "", total: 0 }]);
+  };
+
+  const removeRow = (index) => {
+    const updatedRows = rows.filter((_, i) => i !== index);
+    setRows(updatedRows);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+
+    try {
+      for (const row of rows) {
+        const item = items.find((i) => i.id === parseInt(row.itemId));
+        if (!item) continue;
+
+        const formData = new FormData();
+        formData.append("item_id", item.id);
+        formData.append("item_name", item.name);
+        formData.append("quantity", row.quantity);
+        formData.append("unit_price", row.unitPrice);
+        formData.append("vendor_id", vendorId);
+        formData.append("purchase_date", new Date(purchaseDate).toISOString());
+        if (attachment) {
+          formData.append("attachment", attachment);
+        }
+
+        await axios.post("/store/purchases", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
+      setMessage("✅ Purchase saved successfully.");
+      setRows([{ categoryId: "", itemId: "", quantity: "", unitPrice: "", total: 0 }]);
+      setVendorId("");
+      setPurchaseDate("");
+      setAttachment(null);
+    } catch (err) {
+      const detail = err.response?.data?.detail || "❌ Failed to save purchase.";
+      console.error("Error:", err);
+      setMessage(detail);
+    }
+  };
+
+  return (
+    <div className="create-purchase-container">
+      <h2>Add New Purchase</h2>
+      <form onSubmit={handleSubmit} className="purchase-form">
+        <div className="form-group">
+          <label>Vendor</label>
+          <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} required>
+            <option value="">Select Vendor</option>
+            {vendors.map((vendor) => (
+              <option key={vendor.id} value={vendor.id}>
+                {vendor.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Purchase Date</label>
+          <input
+            type="date"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Attachment (optional)</label>
+          <input type="file" onChange={(e) => setAttachment(e.target.files[0])} />
+        </div>
+
+        {rows.map((row, index) => (
+          <div key={index} className="row-entry">
+            <div>
+              <label>Category</label>
+              <select
+                value={row.categoryId}
+                onChange={(e) => handleRowChange(index, "categoryId", e.target.value)}
+              >
+                <option value="">Select</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label>Item</label>
+              <select
+                value={row.itemId}
+                onChange={(e) => handleRowChange(index, "itemId", e.target.value)}
+              >
+                <option value="">Select</option>
+                {items
+                  .filter((item) => item.category_id === parseInt(row.categoryId))
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label>Quantity</label>
+              <input
+                type="number"
+                value={row.quantity}
+                onChange={(e) => handleRowChange(index, "quantity", e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label>Unit Price</label>
+              <input
+                type="number"
+                value={row.unitPrice}
+                onChange={(e) => handleRowChange(index, "unitPrice", e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label>Total</label>
+              <input type="number" value={row.total} readOnly />
+            </div>
+
+            <div>
+              <button type="button" onClick={() => removeRow(index)}>
+                Remove
+              </button>
+            </div>
+          </div>
+        ))}
+
+        <button type="button" onClick={addRow}>
+          + Add Item
+        </button>
+
+        <button type="submit" className="submit-button">
+          Add Purchase
+        </button>
+
+        {message && <p className="message">{message}</p>}
+      </form>
+    </div>
+  );
+};
+
+export default CreatePurchase;

@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 from app.vendor.schemas import VendorDisplay  # ✅ import this
 from app.vendor.schemas import VendorInStoreDisplay  # make sure this import path is correct
+from app.vendor.schemas import VendorOut
 
 
 # ----------------------------
@@ -39,6 +40,17 @@ class StoreItemCreate(StoreItemBase):
     pass
 
 
+# ✅ Nested item info
+class StoreItemOut(BaseModel):
+    id: int
+    name: str
+    unit: str
+    unit_price: float
+
+    class Config:
+        from_attributes = True
+
+
 class StoreItemDisplay(BaseModel):
     id: int
     name: str
@@ -52,46 +64,90 @@ class StoreItemDisplay(BaseModel):
         from_attributes = True
 
 
+
+#class StoreItemDisplay(BaseModel):
+    #id: int
+    #name: str
+    #unit: str
+    #unit_price: float
+    #category_name: Optional[str]
+    #created_at: datetime
+
+    #class Config:
+        #from_attributes = True
+
+
+
 # ----------------------------
 # Store Stock Entry (Purchase)
 # ----------------------------
+from fastapi import Form
+from pydantic import BaseModel
+from datetime import datetime
+
 class StoreStockEntryCreate(BaseModel):
     item_id: int
     item_name: str
     quantity: int
-    unit_price: Optional[float] = None
-    vendor_id: Optional[int] = None  # 🔗 vendor ID
-    purchase_date: datetime = Field(default_factory=datetime.utcnow)
-    attachment: Optional[str] = None  # <-- Add this if uploading file path as string
+    unit_price: float
+    vendor_id: int
+    purchase_date: datetime
+
+    @classmethod
+    def as_form(
+        cls,
+        item_id: int = Form(...),
+        item_name: str = Form(...),
+        quantity: int = Form(...),
+        unit_price: float = Form(...),
+        vendor_id: int = Form(...),
+        purchase_date: datetime = Form(...),
+    ):
+        return cls(
+            item_id=item_id,
+            item_name=item_name,
+            quantity=quantity,
+            unit_price=unit_price,
+            vendor_id=vendor_id,
+            purchase_date=purchase_date,
+        )
 
 
 
 
 class PurchaseCreateList(BaseModel):
     id: int
-    item_id: int
     item_name: str
     quantity: int
     unit_price: float
     total_amount: float
-    vendor_id: Optional[int] = None  # 🔗 vendor ID
-    purchase_date: datetime = Field(default_factory=datetime.utcnow)
-    created_by: Optional[str] = None
-    attachment_url: Optional[str] = None  # This is what FastAPI is complaining about
+    purchase_date: datetime
+    created_by: Optional[str]
+    attachment_url: Optional[str]
+
+    # ✅ Nested item and vendor
+    item: Optional["StoreItemOut"] = None
+    vendor: Optional["VendorOut"] = None
+
+    class Config:
+        from_attributes = True
 
 
-
+# --- Display model for frontend lists ---
 class StoreStockEntryDisplay(BaseModel):
     id: int
     item_name: str
     quantity: int
     unit_price: float
     total_amount: float
-    vendor_name: Optional[str]
-    purchase_date: datetime = Field(default_factory=datetime.utcnow)
-    created_at: datetime
+    purchase_date: datetime
     created_by: Optional[str]
-    attachment_url: Optional[str]  # ✅ this is the missing field
+    created_at: datetime
+    attachment_url: Optional[str]
+
+    # ✅ Show full vendor and item info
+    item: Optional["StoreItemOut"]
+    vendor: Optional["VendorOut"]
 
     class Config:
         from_attributes = True
@@ -106,7 +162,8 @@ class UpdatePurchase(BaseModel):
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     created_at: datetime
     created_by: Optional[str]
-    attachment: Optional[str] = None  # <-- download URL
+    attachment: Optional[str]  # ✅ include this
+    attachment_url: Optional[str]  # ✅ For frontend use
 
     class Config:
         from_attributes = True
