@@ -20,6 +20,9 @@ from sqlalchemy.orm import aliased
 from fastapi import Form
 from sqlalchemy import desc, func
 
+from fastapi import Query
+from datetime import date
+
 from sqlalchemy.orm import joinedload
 from fastapi import File, UploadFile, Form
 import os
@@ -332,6 +335,7 @@ async def receive_inventory(
     stock_entry = store_models.StoreStockEntry(
         item_id=entry.item_id,
         item_name=entry.item_name,
+        invoice_number=entry.invoice_number,
         quantity=entry.quantity,
         original_quantity=entry.quantity,
         unit_price=entry.unit_price,
@@ -356,32 +360,53 @@ async def receive_inventory(
 
     return stock_entry
 
+
+
 @router.get("/purchases")
 def list_purchases(
+    start_date: date = Query(None),
+    end_date: date = Query(None),
+    invoice_number: str = Query(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    purchases = (
-        db.query(store_models.StoreStockEntry)
-        .options(
-            selectinload(store_models.StoreStockEntry.vendor),
-            selectinload(store_models.StoreStockEntry.item),
-        )
-        .order_by(store_models.StoreStockEntry.created_at.desc())
-        .all()
+    query = db.query(store_models.StoreStockEntry).options(
+        selectinload(store_models.StoreStockEntry.vendor),
+        selectinload(store_models.StoreStockEntry.item),
     )
 
+    # Filter by purchase date range (inclusive)
+    if start_date and end_date:
+        query = query.filter(
+            store_models.StoreStockEntry.purchase_date >= start_date,
+            store_models.StoreStockEntry.purchase_date <= end_date
+        )
+    elif start_date:
+        query = query.filter(store_models.StoreStockEntry.purchase_date >= start_date)
+    elif end_date:
+        query = query.filter(store_models.StoreStockEntry.purchase_date <= end_date)
+
+    # Filter by invoice number (case-insensitive partial match)
+    if invoice_number:
+        query = query.filter(store_models.StoreStockEntry.invoice_number.ilike(f"%{invoice_number}%"))
+
+    purchases = query.order_by(store_models.StoreStockEntry.created_at.desc()).all()
+
     results = []
+    total_amount = 0
     for purchase in purchases:
         attachment_url = (
             f"/files/{os.path.relpath(purchase.attachment, 'uploads').replace(os.sep, '/')}"
             if purchase.attachment else None
         )
 
+        total_amount += purchase.total_amount or 0
+
         results.append({
             "id": purchase.id,
             "item_id": purchase.item_id,
             "item_name": purchase.item.name if purchase.item else "",
+            "invoice_number": purchase.invoice_number,
             "quantity": purchase.quantity,
             "unit_price": purchase.unit_price,
             "total_amount": purchase.total_amount,
@@ -393,9 +418,11 @@ def list_purchases(
             "attachment_url": attachment_url,
         })
 
-    return results
-
-
+    return {
+        "total_entries": len(results),
+        "total_purchase": total_amount,
+        "purchases": results
+    }
 
 
 
@@ -404,6 +431,7 @@ async def update_purchase(
     entry_id: int,
     item_id: int = Form(...),
     item_name: str = Form(...),
+    invoice_number: str = Form(...),
     quantity: float = Form(...),
     unit_price: float = Form(...),
     vendor_id: Optional[int] = Form(None),
@@ -435,6 +463,7 @@ async def update_purchase(
 
     entry.item_id = item_id
     entry.item_name = item_name
+    entry.invoice_number= invoice_number
     entry.quantity = quantity
     entry.unit_price = unit_price
     entry.vendor_id = vendor_id
@@ -464,6 +493,7 @@ async def update_purchase(
         "id": entry.id,
         "item_id": entry.item_id,
         "item_name": entry.item.name if entry.item else "",
+        "invoice_number": entry.invoice_number,
         "quantity": entry.quantity,
         "unit_price": entry.unit_price,
         "total_amount": entry.total_amount,

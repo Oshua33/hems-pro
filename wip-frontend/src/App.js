@@ -48,7 +48,7 @@ import ListCategory from "./components/store/ListCategory";
 
 import ListItem from "./components/store/ListItem";
 import CreatePurchase from "./components/store/CreatePurchase"; // ✅ Add this
-
+import ListPurchase from "./components/store/ListPurchase"; // ✅ Add this
 
 
 
@@ -99,6 +99,7 @@ const App = () => {
             <Route path="category/list" element={<ListCategory />} />
             <Route path="items/list" element={<ListItem />} />  {/* ✅ FIXED */}
             <Route path="purchase/create" element={<CreatePurchase />} /> {/* ✅ Add this */}
+            <Route path="purchase/list" element={<ListPurchase />} /> {/* ✅ Add this */}
             
           </Route>
 

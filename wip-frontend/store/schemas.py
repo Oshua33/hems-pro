@@ -88,6 +88,7 @@ from datetime import datetime
 class StoreStockEntryCreate(BaseModel):
     item_id: int
     item_name: str
+    invoice_number: str
     quantity: int
     unit_price: float
     vendor_id: int
@@ -98,6 +99,7 @@ class StoreStockEntryCreate(BaseModel):
         cls,
         item_id: int = Form(...),
         item_name: str = Form(...),
+        invoice_number: str = Form(...),
         quantity: int = Form(...),
         unit_price: float = Form(...),
         vendor_id: int = Form(...),
@@ -106,6 +108,7 @@ class StoreStockEntryCreate(BaseModel):
         return cls(
             item_id=item_id,
             item_name=item_name,
+            invoice_number=invoice_number,
             quantity=quantity,
             unit_price=unit_price,
             vendor_id=vendor_id,
@@ -118,6 +121,7 @@ class StoreStockEntryCreate(BaseModel):
 class PurchaseCreateList(BaseModel):
     id: int
     item_name: str
+    invoice_number:str
     quantity: int
     unit_price: float
     total_amount: float

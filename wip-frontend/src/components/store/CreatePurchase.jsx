@@ -13,6 +13,8 @@ const CreatePurchase = () => {
   const [purchaseDate, setPurchaseDate] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [message, setMessage] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+
 
   useEffect(() => {
     fetchVendors();
@@ -94,7 +96,7 @@ const CreatePurchase = () => {
   const addRow = () => {
     setRows([
       ...rows,
-      { categoryId: "", itemId: "", quantity: "", unitPrice: "", total: 0 },
+      { categoryId: "", itemId: "",  quantity: "", unitPrice: "", total: 0 },
     ]);
   };
 
@@ -116,10 +118,12 @@ const CreatePurchase = () => {
         const formData = new FormData();
         formData.append("item_id", String(item.id));
         formData.append("item_name", item.name);
+        formData.append("invoice_number", invoiceNumber);
         formData.append("quantity", String(row.quantity));
         formData.append("unit_price", String(row.unitPrice));
         formData.append("vendor_id", String(vendorId));
         formData.append("purchase_date", new Date(purchaseDate).toISOString());
+
 
         if (attachment) {
           formData.append("attachment", attachment);
@@ -180,6 +184,20 @@ const CreatePurchase = () => {
         </div>
 
         <div className="form-group">
+          <label>Invoice Number</label>
+          <input
+            type="text"
+            value={invoiceNumber}
+            onChange={(e) => setInvoiceNumber(e.target.value)}
+            required
+          />
+        </div>
+
+
+        
+
+
+        <div className="form-group">
           <label>Attachment (optional)</label>
           <input
             type="file"
@@ -187,79 +205,84 @@ const CreatePurchase = () => {
           />
         </div>
 
-        {rows.map((row, index) => (
-          <div key={index} className="row-entry">
-            <div>
-              <label>Category</label>
-              <select
-                value={row.categoryId}
-                onChange={(e) =>
-                  handleRowChange(index, "categoryId", e.target.value)
-                }
-              >
-                <option value="">Select</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+        <div className="rows-container">
+          {rows.map((row, index) => (
+            <div key={index} className="row-entry">
+              <div>
+                <label>Category</label>
+                <select
+                  value={row.categoryId}
+                  onChange={(e) =>
+                    handleRowChange(index, "categoryId", e.target.value)
+                  }
+                >
+                  <option value="">Select</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label>Item</label>
+                <select
+                  value={row.itemId}
+                  onChange={(e) => handleRowChange(index, "itemId", e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              
+
+              <div>
+                <label>Quantity</label>
+                <input
+                  type="number"
+                  value={row.quantity}
+                  onChange={(e) =>
+                    handleRowChange(index, "quantity", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label>Unit Price</label>
+                <input
+                  type="number"
+                  value={row.unitPrice}
+                  onChange={(e) =>
+                    handleRowChange(index, "unitPrice", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label>Total</label>
+                <input type="number" value={row.total} readOnly />
+              </div>
+
+              <div>
+                <button type="button" onClick={() => removeRow(index)}>
+                  Remove
+                </button>
+              </div>
             </div>
+          ))}
+        </div>
 
-            <div>
-              <label>Item</label>
-              <select
-                value={row.itemId}
-                onChange={(e) => handleRowChange(index, "itemId", e.target.value)}
-              >
-                <option value="">Select</option>
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
 
-            </div>
 
-            <div>
-              <label>Quantity</label>
-              <input
-                type="number"
-                value={row.quantity}
-                onChange={(e) =>
-                  handleRowChange(index, "quantity", e.target.value)
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <label>Unit Price</label>
-              <input
-                type="number"
-                value={row.unitPrice}
-                onChange={(e) =>
-                  handleRowChange(index, "unitPrice", e.target.value)
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <label>Total</label>
-              <input type="number" value={row.total} readOnly />
-            </div>
-
-            <div>
-              <button type="button" onClick={() => removeRow(index)}>
-                Remove
-              </button>
-            </div>
-          </div>
-        ))}
-
-        <button type="button" onClick={addRow}>
+        <button type="button" onClick={addRow} className="add-row-btn">
           + Add Item
         </button>
 

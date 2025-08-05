@@ -109,15 +109,15 @@
   gap: 10px;
   background: #f8f8f8;
   padding: 15px;
-  border-radius: 10px;
+  border-radius: 12px;
   margin-bottom: 20px;
 }
 
 .vendor-create-form input {
   flex: 1 1 30%;
   padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  border: 1px solid #cac1c1;
+  border-radius: 8px;
 }
 
 .vendor-create-form button {
@@ -125,7 +125,7 @@
   background-color: #27ae60;
   color: rgb(226, 216, 216);
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   flex: 0 0 auto;
 }
