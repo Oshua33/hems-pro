@@ -1,7 +1,7 @@
 .list-purchase-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 25px;
+  padding: 15px;
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
@@ -9,7 +9,7 @@
 
 .list-purchase-container h2 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   color: #2c3e50;
   font-size: 25px;
   font-weight: bold;
@@ -19,7 +19,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   justify-content: flex-start;
 }
 
@@ -27,7 +27,7 @@
 .filters button {
   padding: 4px 6px;
   font-size: 14px;
-  border-radius: 6px;
+  border-radius: 68px;
   border: 1px solid #ccc;
 }
 
@@ -50,7 +50,7 @@
 
 .purchase-table th,
 .purchase-table td {
-  padding: 10px;
+  padding: 2px;
   border: 1px solid #ddd;
   text-align: left;
 }

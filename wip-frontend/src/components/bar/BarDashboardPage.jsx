@@ -76,10 +76,8 @@ const BarDashboardPage = () => {
   const barMenu = [
     {
         name: "🍾 Bar Outlet",
-        submenu: [
-        { label: "➕ Create Bar", path: "/dashboard/bar/create" },
-        { label: "📃 List Bar", path: "/dashboard/bar/list" },
-        ],
+        path: "/dashboard/bar/list"
+
     },
     {
         name: "📥 Receive Stock",

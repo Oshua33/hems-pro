@@ -61,7 +61,7 @@ def list_bars(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    return db.query(bar_models.Bar).order_by(bar_models.Bar.name).all()
+    return db.query(bar_models.Bar).order_by(bar_models.Bar.id.asc()).all()
 
 
 # ----------------------------
@@ -94,6 +94,19 @@ def update_bar(
     db.refresh(bar)
     return bar
 
+
+@router.delete("/bars/{bar_id}")
+def delete_bar(
+    bar_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    bar = db.query(bar_models.Bar).filter_by(id=bar_id).first()
+    if not bar:
+        raise HTTPException(status_code=404, detail="Bar not found")
+    db.delete(bar)
+    db.commit()
+    return {"detail": "Bar deleted"}
 
 
 

@@ -44,7 +44,7 @@
 .create-item-form select {
   padding: 6px;
   font-size: 13px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #b4a9a9;
   margin-top: 4px;
 }
@@ -68,13 +68,13 @@
 .item-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin-top: 10px;
   font-size: 13px;
 }
 
 .item-table th,
 .item-table td {
-  padding: 6px 8px; /* Reduced height */
+  padding: 2px 4px; /* Reduced height */
   border: 1px solid #ddd;
   text-align: center;
 }

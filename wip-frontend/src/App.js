@@ -55,6 +55,11 @@ import ListPurchase from "./components/store/ListPurchase"; // ✅ Add this
 
 
 
+import ListBar from "./components/bar/ListBar"; // ✅ Add this
+
+
+
+
 console.log("✅ API BASE:", process.env.REACT_APP_API_BASE_URL);
 
 
@@ -104,9 +109,19 @@ const App = () => {
           </Route>
 
 
+          {/* ✅ Fullscreen Bar route, outside /dashboard */}
+          <Route path="/dashboard/bar/*" element={<BarDashboardPage />}>
+           
+            <Route path="list" element={<ListBar />} />
 
+            
+          </Route>
 
           
+
+
+
+
           <Route path="/bar" element={<BarDashboardPage />} />
 
           <Route path="/restaurant" element={<RestDashboardPage />} />
