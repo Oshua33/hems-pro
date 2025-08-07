@@ -5,6 +5,15 @@ from pydantic import BaseModel, Field
 from app.vendor.schemas import VendorDisplay  # ✅ import this
 from app.vendor.schemas import VendorInStoreDisplay  # make sure this import path is correct
 from app.vendor.schemas import VendorOut
+#from app.bar.schemas import BarDisplaySimple
+from pydantic import BaseModel, Field
+from typing import Optional, List, Literal, Union
+from app.bar.schemas import BarDisplaySimple
+
+
+
+class SomeSchema(BaseModel):
+    related: 'BarDisplaySimple'  # use a string to avoid import issues
 
 
 # ----------------------------
@@ -183,16 +192,15 @@ class IssueItemCreate(BaseModel):  # ✅ renamed from StoreIssueItemBase
 
 
 class IssueCreate(BaseModel):  # ✅ renamed from StoreIssueCreate
-    issue_to: str            # "bar" or "restaurant"
+    issue_to: Literal["bar", "restaurant"]
     issued_to_id: int        # ID of the bar/restaurant
     issue_items: List[IssueItemCreate]  # ✅ renamed from 'items'
     issue_date: datetime = Field(default_factory=datetime.utcnow)
 
 
 
-class IssueItemDisplay(BaseModel):  # ✅ renamed from StoreIssueItemDisplay
+class IssueItemDisplay(BaseModel):
     id: int
-    item: StoreItemDisplay
     item: StoreItemDisplay
     quantity: int
 
@@ -200,7 +208,19 @@ class IssueItemDisplay(BaseModel):  # ✅ renamed from StoreIssueItemDisplay
         from_attributes = True
 
 
-class IssueDisplay(BaseModel):  # ✅ renamed from StoreIssueDisplay
+
+class IssueDisplay(BaseModel):
+    id: int
+    issue_to: str  # "bar" or "restaurant"
+    issued_to_id: int
+    issued_to: Optional[BarDisplaySimple] = None  # Will be set from backend logic
+    issue_date: datetime
+    issue_items: List[IssueItemDisplay]
+
+    class Config:
+        from_attributes = True
+
+class IssueDisplayOut(BaseModel):  # ✅ renamed from StoreIssueDisplay
     id: int
     issue_to: str
     issued_to_id: int
@@ -209,6 +229,7 @@ class IssueDisplay(BaseModel):  # ✅ renamed from StoreIssueDisplay
 
     class Config:
         from_attributes = True
+
 
 
 class StoreInventoryAdjustmentCreate(BaseModel):
@@ -227,3 +248,7 @@ class StoreInventoryAdjustmentDisplay(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+from app.bar.schemas import BarDisplaySimple
+SomeSchema.update_forward_refs()

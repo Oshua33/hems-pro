@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
-from app.store.schemas import StoreItemDisplay
+#from app.store.schemas import StoreItemDisplay
 from app.users.schemas import UserDisplaySchema
 
 
@@ -15,6 +15,14 @@ class BarBase(BaseModel):
 
 class BarCreate(BarBase):
     pass
+
+
+class BarDisplaySimple(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
 
 
 class BarDisplay(BarBase):

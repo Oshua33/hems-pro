@@ -11,7 +11,8 @@ from app.users.models import User
 from app.users import schemas as user_schemas
 from app.store import models as store_models
 from app.store import schemas as store_schemas
-from app.bar.models import BarInventory  
+from app.bar.models import BarInventory 
+from app.bar.models import Bar 
 from app.store.models import StoreIssue, StoreIssueItem, StoreStockEntry, StoreCategory
 from app.vendor import models as vendor_models
 from app.store.models import StoreInventoryAdjustment
@@ -543,7 +544,6 @@ def supply_to_bars(
     db.flush()
 
     for item_data in issue_data.issue_items:
-        # 1. Check available stock
         total_available_stock = db.query(func.sum(StoreStockEntry.quantity))\
             .filter(StoreStockEntry.item_id == item_data.item_id)\
             .scalar() or 0
@@ -551,7 +551,6 @@ def supply_to_bars(
         if total_available_stock < item_data.quantity:
             raise HTTPException(status_code=400, detail=f"Not enough inventory for item {item_data.item_id}")
 
-        # 2. Create the issue item record
         issue_item = StoreIssueItem(
             issue_id=issue.id,
             item_id=item_data.item_id,
@@ -559,7 +558,6 @@ def supply_to_bars(
         )
         db.add(issue_item)
 
-        # 3. Deduct from store using FIFO (oldest entries first)
         remaining_quantity = item_data.quantity
         stock_entries = db.query(StoreStockEntry)\
             .filter(StoreStockEntry.item_id == item_data.item_id, StoreStockEntry.quantity > 0)\
@@ -577,9 +575,6 @@ def supply_to_bars(
                 remaining_quantity -= stock_entry.quantity
                 stock_entry.quantity = 0
 
-        # ✅ All quantity has been successfully deducted at this point
-
-        # 4. Add or update BarInventory
         if issue_data.issue_to.lower() == "bar":
             bar_inventory = db.query(BarInventory).filter_by(
                 bar_id=issue_data.issued_to_id,
@@ -604,6 +599,12 @@ def supply_to_bars(
 
     db.commit()
     db.refresh(issue)
+
+    # ✅ Manually load issued_to info (Bar)
+    if issue.issue_to.lower() == "bar":
+        issued_to = db.query(Bar).filter(Bar.id == issue.issued_to_id).first()
+        issue.issued_to = issued_to
+
     return issue
 
 
@@ -612,7 +613,11 @@ def list_issues(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    return db.query(StoreIssue).order_by(StoreIssue.issue_date.desc()).all()
+    issues = db.query(StoreIssue)\
+        .options(joinedload(StoreIssue.issued_to))\
+        .order_by(StoreIssue.issue_date.desc())\
+        .all()
+    return issues
 
 
 

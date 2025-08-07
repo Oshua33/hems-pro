@@ -5,6 +5,7 @@ from datetime import datetime
 from app.database import Base
 #from app.vendor import Vendor  # ✅ adjust the path as needed
 import os
+from app.bar.models import Bar  # assuming this exists
 
 
 # ----------------------------
@@ -85,11 +86,14 @@ class StoreIssue(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     issue_to = Column(String, nullable=False)  # "bar" or "restaurant"
-    issued_to_id = Column(Integer, nullable=False)  # ✅ ADD THIS LINE
+    issued_to_id = Column(Integer, ForeignKey("bars.id"), nullable=False)  # ✅ Proper FK
     issued_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     issue_date = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     issue_items = relationship("StoreIssueItem", back_populates="issue", cascade="all, delete-orphan")
+    issued_to = relationship("Bar", back_populates="issues")  # ✅ Proper relationship
+
 
 
 class StoreIssueItem(Base):

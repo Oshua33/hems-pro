@@ -64,6 +64,15 @@ def list_bars(
     return db.query(bar_models.Bar).order_by(bar_models.Bar.id.asc()).all()
 
 
+
+@router.get("/bars/simple", response_model=List[bar_schemas.BarDisplaySimple])
+def list_bars(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    return db.query(bar_models.Bar).order_by(bar_models.Bar.id.asc()).all()
+
+
 # ----------------------------
 # BAR INVENTORY (Replace BarItem)
 # ----------------------------
