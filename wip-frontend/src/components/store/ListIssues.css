@@ -2,9 +2,9 @@
 
 .list-issues-container {
   max-width: 1000px;
-  margin: 30px auto;
-  padding: 20px;
-  background: white;
+  margin: 5px auto;
+  padding: 10px;
+  background: rgb(238, 234, 234);
   border-radius: 10px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
 }
@@ -23,21 +23,21 @@
 
 .list-issues-table th,
 .list-issues-table td {
-  padding: 12px;
+  padding: 4px;
   border: 1px solid #ccc;
   text-align: center;
 }
 
 .list-issues-table th {
-  background-color: #3b82f6;
+  background-color: #2b3342;
   color: white;
 }
 
 .list-issues-table button {
   margin: 0 4px;
-  padding: 6px 12px;
+  padding: 3px 6px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
 }
@@ -58,3 +58,69 @@
   text-align: center;
   color: green;
 }
+
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filters input[type="text"],
+.filters input[type="date"] {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.filters button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+
+.edit-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  max-width: 420px;
+  margin: 10px auto;
+  padding: 8px 12px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.edit-form label {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.edit-form input,
+.edit-form select,
+.edit-form textarea {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.edit-form button {
+  grid-column: span 2;
+  padding: 6px 10px;
+  font-size: 14px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.edit-form button:hover {
+  background-color: #45a049;
+}
+

@@ -94,7 +94,9 @@ class StoreIssue(Base):
     issue_items = relationship("StoreIssueItem", back_populates="issue", cascade="all, delete-orphan")
     issued_to = relationship("Bar", back_populates="issues")  # ✅ Proper relationship
 
+    items = relationship("StoreIssueItem", back_populates="issue", cascade="all, delete-orphan")
 
+    
 
 class StoreIssueItem(Base):
     __tablename__ = "store_issue_items"

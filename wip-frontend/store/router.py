@@ -608,17 +608,31 @@ def supply_to_bars(
     return issue
 
 
-@router.get("/issues", response_model=list[store_schemas.IssueDisplay])
+from typing import Optional, List
+from fastapi import Query
+
+@router.get("/issues", response_model=List[store_schemas.IssueDisplay])
 def list_issues(
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    bar_name: Optional[str] = Query(None),
 ):
-    issues = db.query(StoreIssue)\
-        .options(joinedload(StoreIssue.issued_to))\
-        .order_by(StoreIssue.issue_date.desc())\
-        .all()
-    return issues
+    query = db.query(StoreIssue).options(joinedload(StoreIssue.issued_to))
 
+    # Apply date filter
+    if start_date:
+        query = query.filter(StoreIssue.issue_date >= start_date)
+    if end_date:
+        query = query.filter(StoreIssue.issue_date <= end_date)
+
+    # Apply bar name filter
+    if bar_name:
+        query = query.join(StoreIssue.issued_to).filter(Bar.name.ilike(f"%{bar_name}%"))
+
+    issues = query.order_by(StoreIssue.issue_date.desc()).all()
+    return issues if issues else []
 
 
 @router.put("/issues/{issue_id}", response_model=store_schemas.IssueDisplay)

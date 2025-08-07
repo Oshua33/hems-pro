@@ -12,6 +12,7 @@ from app.bar.schemas import BarDisplaySimple
 
 
 
+
 class SomeSchema(BaseModel):
     related: 'BarDisplaySimple'  # use a string to avoid import issues
 

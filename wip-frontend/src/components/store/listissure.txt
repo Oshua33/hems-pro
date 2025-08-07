@@ -11,7 +11,7 @@ const ListIssues = () => {
   const [editingId, setEditingId] = useState(null);
   const [bars, setBars] = useState([]);
   const [formData, setFormData] = useState({
-    issue_to: "bar",
+    issue_to: "",
     issued_to_id: "",
     issue_date: "",
     issue_items: [],
@@ -61,8 +61,8 @@ const ListIssues = () => {
   const handleEditClick = (issue) => {
     setEditingId(issue.id);
     setFormData({
-      issue_to: issue.issue_to || "bar",
-      issued_to_id: issue.issued_to_id || "",
+      issue_to: issue.issued_to?.name || "",
+      issued_to_id: issue.issued_to?.id || "",
       issue_date: issue.issue_date?.split("T")[0] || "",
       issue_items: issue.issue_items.map((item) => ({
         item_id: item.item?.id,
@@ -79,22 +79,12 @@ const ListIssues = () => {
 
   const handleSubmitEdit = async (id) => {
     try {
-      const payload = {
-        ...formData,
-        issue_to: "bar", // Always send "bar" or "restaurant"
-        issued_to_id: parseInt(formData.issued_to_id),
-        issue_items: formData.issue_items.map((item) => ({
-          item_id: parseInt(item.item_id),
-          quantity: parseInt(item.quantity),
-        })),
-      };
-
-      await axiosWithAuth().put(`/store/issues/${id}`, payload);
+      await axiosWithAuth().put(`/store/issues/${id}`, formData);
       setMessage("✅ Issue updated successfully.");
       setEditingId(null);
       fetchIssues();
     } catch (err) {
-      console.error("❌ Update failed", err.response?.data || err.message);
+      console.error("❌ Update failed", err);
       setMessage("❌ Failed to update issue.");
     }
   };
@@ -112,6 +102,7 @@ const ListIssues = () => {
     }
   };
 
+  // Summary calculations
   const totalIssued = issues.length;
   const totalQuantity = issues.reduce((acc, issue) => {
     const qty = issue.issue_items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
@@ -123,7 +114,10 @@ const ListIssues = () => {
       <h2>📦 List of Issued Items</h2>
 
       <div className="filters">
-        <select value={barName} onChange={(e) => setBarName(e.target.value)}>
+        <select
+          value={barName}
+          onChange={(e) => setBarName(e.target.value)}
+        >
           <option value="">-- Filter by Bar --</option>
           {Array.isArray(bars) &&
             bars.map((bar) => (
@@ -207,16 +201,16 @@ const ListIssues = () => {
                   <tr>
                     <td colSpan="5">
                       <div className="edit-form">
-                        <label>Issue To:</label>
-                        <input type="text" value="bar" readOnly />
-
-                        <label>Bar:</label>
+                        <label>Issue To (Bar):</label>
                         <select
                           value={formData.issued_to_id}
                           onChange={(e) => {
+                            const selectedId = parseInt(e.target.value);
+                            const selectedBar = bars.find((bar) => bar.id === selectedId);
                             setFormData({
                               ...formData,
-                              issued_to_id: parseInt(e.target.value),
+                              issued_to_id: selectedId,
+                              issue_to: selectedBar?.name || "",
                             });
                           }}
                         >
@@ -232,9 +226,7 @@ const ListIssues = () => {
                         <input
                           type="date"
                           value={formData.issue_date}
-                          onChange={(e) =>
-                            setFormData({ ...formData, issue_date: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
                         />
 
                         <h4>Items</h4>
@@ -244,17 +236,13 @@ const ListIssues = () => {
                             <input
                               type="number"
                               value={item.item_id}
-                              onChange={(e) =>
-                                handleFormChange(index, "item_id", e.target.value)
-                              }
+                              onChange={(e) => handleFormChange(index, "item_id", e.target.value)}
                             />
                             <label>Quantity:</label>
                             <input
                               type="number"
                               value={item.quantity}
-                              onChange={(e) =>
-                                handleFormChange(index, "quantity", e.target.value)
-                              }
+                              onChange={(e) => handleFormChange(index, "quantity", e.target.value)}
                             />
                           </div>
                         ))}

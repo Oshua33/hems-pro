@@ -25,6 +25,8 @@
 }
 
 
+
+
 .create-item-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -89,7 +91,7 @@
 }
 
 .odd-row {
-  background-color: #ffffff;
+  background-color: #d1c2c2;
 }
 
 .edit-btn,
