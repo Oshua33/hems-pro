@@ -79,48 +79,75 @@
 }
 
 
+/* Modal background overlay */
+.edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Ultra-compact edit form modal box */
 .edit-form {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  max-width: 360px;
+  width: 95%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  max-width: 420px;
-  margin: 10px auto;
-  padding: 8px 12px;
-  background-color: #f9f9f9;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 13px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  z-index: 1001;
 }
 
 .edit-form label {
   font-weight: 500;
+  color: #333;
+  font-size: 12px;
   margin-bottom: 2px;
 }
 
+/* Inputs, selects, textareas */
 .edit-form input,
 .edit-form select,
 .edit-form textarea {
-  width: 100%;
+  grid-column: span 2;
   padding: 6px 8px;
-  font-size: 13px;
   border: 1px solid #bbb;
   border-radius: 8px;
-  box-sizing: border-box;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
+.edit-form input:focus,
+.edit-form select:focus,
+.edit-form textarea:focus {
+  border-color: #007bff;
+}
+
+/* Button */
 .edit-form button {
   grid-column: span 2;
-  padding: 6px 10px;
-  font-size: 14px;
-  background-color: #4caf50;
-  color: white;
+  padding: 6px 8px;
+  font-size: 13px;
+  background-color: #007bff;
+  color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
 }
 
 .edit-form button:hover {
-  background-color: #45a049;
+  background-color: #0056b3;
 }
-
