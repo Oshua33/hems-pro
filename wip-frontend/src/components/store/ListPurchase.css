@@ -110,48 +110,67 @@
   color: #14181b;
 }
 
-.edit-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  max-width: 360px;
-  margin: 6px auto;
-  padding: 4px;
-  background-color: #e7dddd;
-  border-radius: 6px;
-  font-size: 11px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.08);
-  overflow-y: auto;
-  animation: fadeIn 0.3s ease-in-out;
+/* Modal background overlay */
+.edit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3); /* semi-transparent */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
+.edit-form {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 320px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Labels */
 .edit-form h3 {
   grid-column: span 2;
   text-align: center;
-  font-size: 13px;
-  margin-bottom: 2px;
+  font-size: 14px;
+  margin-bottom: 4px;
   color: #2c3e50;
 }
 
-.edit-form input {
-  padding: 5px;
-  font-size: 11px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  width: 100%;
-  box-sizing: border-box;
+/* Inputs and file field */
+.edit-form input,
+.edit-form select,
+.edit-form textarea {
+  grid-column: span 2;
+  padding: 6px 8px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
 }
 
+.edit-form input:focus,
+.edit-form select:focus,
+.edit-form textarea:focus {
+  border-color: #007bff;
+}
+
+/* Buttons */
 .edit-form button {
-  padding: 4px 6px;
-  font-size: 11px;
+  grid-column: span 2;
+  padding: 6px 8px;
+  font-size: 13px;
   border: none;
-  border-radius: 3px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
 .edit-form button[type="submit"] {
-  background-color: #2980b9;
+  background-color: #007bff;
   color: white;
 }
 
@@ -164,18 +183,8 @@
   opacity: 0.9;
 }
 
-/* For smaller screens */
-@media (max-width: 480px) {
-  .edit-form {
-    grid-template-columns: 1fr;
-  }
-
-  .edit-form h3 {
-    font-size: 12px;
-  }
-}
-
+/* Animation */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }

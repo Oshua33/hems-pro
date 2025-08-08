@@ -5,6 +5,7 @@ import "./ListIssues.css";
 const ListIssues = () => {
   const [issues, setIssues] = useState([]);
   const [bars, setBars] = useState([]);
+  const [items, setItems] = useState([]);
   const [message, setMessage] = useState("");
   const [barName, setBarName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -20,9 +21,7 @@ const ListIssues = () => {
   // Helper to show messages for 3 seconds
   const showMessage = (msg) => {
     setMessage(msg);
-    setTimeout(() => {
-      setMessage("");
-    }, 3000);
+    setTimeout(() => setMessage(""), 3000);
   };
 
   // Fetch bars
@@ -37,12 +36,23 @@ const ListIssues = () => {
     })();
   }, []);
 
-  // Fetch issues when filters change
+  // Fetch items for dropdown
   useEffect(() => {
-    fetchIssues();
-  }, [barName, startDate, endDate]);
+    (async () => {
+      try {
+        const res = await axiosWithAuth().get("/store/items/simple");
+        setItems(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("❌ Error fetching items", err);
+      }
+    })();
+  }, []);
 
   const fetchIssues = async () => {
+    if (!startDate || !endDate) {
+      showMessage("⚠️ Please select a start and end date.");
+      return;
+    }
     try {
       const params = {};
       if (barName) params.bar_name = barName;
@@ -113,8 +123,7 @@ const ListIssues = () => {
   const totalQuantity = issues.reduce(
     (acc, issue) =>
       acc +
-      (issue.issue_items?.reduce((sum, item) => sum + (item.quantity || 0), 0) ||
-        0),
+      (issue.issue_items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0),
     0
   );
 
@@ -122,7 +131,6 @@ const ListIssues = () => {
     <div className="list-issues-container">
       <h2>📦 List of Issued Items</h2>
 
-      {/* Filters */}
       <div className="filters">
         <select value={barName} onChange={(e) => setBarName(e.target.value)}>
           <option value="">-- Filter by Bar --</option>
@@ -132,14 +140,25 @@ const ListIssues = () => {
             </option>
           ))}
         </select>
-        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+
         <button onClick={fetchIssues}>🔍 Filter</button>
         <button
           onClick={() => {
             setBarName("");
             setStartDate("");
             setEndDate("");
+            setIssues([]);
           }}
         >
           ♻️ Reset
@@ -148,13 +167,11 @@ const ListIssues = () => {
 
       {message && <p className="issue-message">{message}</p>}
 
-      {/* Summary */}
       <div className="summary">
         <p>Total Entries: {totalIssued}</p>
         <p>Total Quantity Issued: {totalQuantity}</p>
       </div>
 
-      {/* Table */}
       <table className="list-issues-table">
         <thead>
           <tr>
@@ -186,12 +203,8 @@ const ListIssues = () => {
                   </ul>
                 </td>
                 <td>
-                  <button className="edit-btn" onClick={() => handleEditClick(issue)}>
-                    ✏️ Edit
-                  </button>
-                  <button className="delete-btn" onClick={() => handleDelete(issue.id)}>
-                    🗑️ Delete
-                  </button>
+                  <button onClick={() => handleEditClick(issue)}>✏️ Edit</button>
+                  <button onClick={() => handleDelete(issue.id)}>🗑️ Delete</button>
                 </td>
               </tr>
             ))
@@ -199,7 +212,6 @@ const ListIssues = () => {
         </tbody>
       </table>
 
-      {/* Modal Edit Form */}
       {editingIssue && (
         <div className="edit-modal-overlay">
           <div className="edit-form">
@@ -224,22 +236,33 @@ const ListIssues = () => {
             <input
               type="date"
               value={formData.issue_date}
-              onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, issue_date: e.target.value })
+              }
             />
 
             <h4>Items</h4>
             {formData.issue_items.map((item, index) => (
               <div key={index} className="item-row">
-                <input
-                  type="number"
+                <select
                   value={item.item_id}
-                  onChange={(e) => handleFormChange(index, "item_id", e.target.value)}
-                  placeholder="Item ID"
-                />
+                  onChange={(e) =>
+                    handleFormChange(index, "item_id", e.target.value)
+                  }
+                >
+                  <option value="">-- Select an item --</option>
+                  {items.map((it) => (
+                    <option key={it.id} value={it.id}>
+                      {it.name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   type="number"
                   value={item.quantity}
-                  onChange={(e) => handleFormChange(index, "quantity", e.target.value)}
+                  onChange={(e) =>
+                    handleFormChange(index, "quantity", e.target.value)
+                  }
                   placeholder="Qty"
                 />
               </div>

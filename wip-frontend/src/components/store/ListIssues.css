@@ -84,7 +84,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 110vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.2);
   display: flex;
@@ -121,7 +121,7 @@
 .edit-form select,
 .edit-form textarea {
   grid-column: span 2;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border: 1px solid #bbb;
   border-radius: 8px;
   font-size: 12px;

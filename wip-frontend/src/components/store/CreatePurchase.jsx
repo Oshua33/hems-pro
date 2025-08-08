@@ -198,7 +198,7 @@ const CreatePurchase = () => {
 
 
         <div className="form-group">
-          <label>Attachment (optional)</label>
+          <label>Attach Invoice (optional)</label>
           <input
             type="file"
             onChange={(e) => setAttachment(e.target.files[0])}
