@@ -19,6 +19,9 @@ from app.bar.routers import router as bar_router
 from app.barpayment.router import router as barpayment_router
 from app.vendor.router import router as vendor_router
 
+from app.restaurant.router import router as restaurant_router
+from app.restpayment.router import router as restpayment_router
+
 
 import uvicorn
 import os
@@ -98,6 +101,8 @@ app.include_router(bar_router, prefix="/bar", tags=["Bar"])
 app.include_router(barpayment_router, prefix="/barpayment", tags=["Bar Payment"])
 app.include_router(vendor_router, prefix="/vendor", tags=["Vendor"])
 
+app.include_router(restaurant_router, prefix="/restaurant", tags=["Restaurant"])
+app.include_router(restpayment_router, prefix="/restpayment", tags=["Restaurant Payment"])
 
 
 # Simple health check
@@ -105,7 +110,7 @@ app.include_router(vendor_router, prefix="/vendor", tags=["Vendor"])
 def debug_ping():
     return {"status": "ok"}
 
-# ✅ Route fallback for SPA (React frontend)
+# Route fallback for SPA (React frontend)
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     # Skip fallback for known API/static routes

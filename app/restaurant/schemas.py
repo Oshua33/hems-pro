@@ -121,8 +121,8 @@ class RestaurantSaleDisplay(BaseModel):
     order_id: int
     served_by: str
     total_amount: float
-    amount_paid: float  # ✅ Add this
-    balance: float  # ✅ NEW
+    amount_paid: float
+    balance: float
     status: str
     served_at: datetime
     created_at: datetime

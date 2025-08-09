@@ -93,4 +93,3 @@ class RestaurantSale(Base):
     order = relationship("MealOrder", back_populates="sale")
     payments = relationship("RestaurantSalePayment", back_populates="sale", cascade="all, delete")
 
-

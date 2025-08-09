@@ -530,4 +530,3 @@ def delete_meal_order(order_id: int,
     return {"detail": "Meal order deleted successfully"}
 
 
-

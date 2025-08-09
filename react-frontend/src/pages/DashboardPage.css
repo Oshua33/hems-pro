@@ -136,7 +136,9 @@
 .header-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a45a1;
+  /* color: #1a45b1; */
+  /* color: #2563eb; */
+  color: #b91c1c;
   margin: 0;
 }
 
@@ -230,7 +232,8 @@
 
 .action-button {
   background-color: transparent;
-  color: #333;
+  /* color: #333; */
+  color: #dc3545;
   border: 1px solid #c2bfda;   /* Light border */
   border-radius: 6px;
   padding: 6px 4px;         /* Increased padding */
