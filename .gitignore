@@ -21,3 +21,12 @@ licence.txt
 # python-3.12.2-embed-amd64/LICENSE.txt
 python
 
+# logs
+app.log
+*.log
+
+# folders
+/wip-react/
+/wip-frontend/
+
+
