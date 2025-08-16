@@ -1,0 +1,113 @@
+.update-room-modal .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.update-room-modal .modal-content {
+  background-color: #eaecee;
+  padding: 20px 24px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: 360px;
+  width: 95%;
+  font-family: 'Segoe UI', sans-serif;
+  position: relative;
+}
+
+.update-room-modal .close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #555;
+  cursor: pointer;
+}
+
+.update-room-modal .close-btn:hover {
+  color: #000;
+}
+
+.update-room-modal .update-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.update-room-modal .update-room-form h3 {
+  margin: 0 auto 10px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  color: #222;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 6px;
+}
+
+.update-room-modal .update-room-form label {
+  font-weight: 500;
+  color: #333;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.update-room-modal .update-room-form input,
+.update-room-modal .update-room-form select {
+  padding: 7px 10px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.update-room-modal .update-room-form input:focus,
+.update-room-modal .update-room-form select:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.2);
+}
+
+/* Button */
+.update-room-modal .action-btn {
+  background-color: #28a745;
+  color: #fff;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 20px auto 0;
+  display: block;
+  width: fit-content;
+}
+
+.update-room-modal .action-btn:hover {
+  background-color: #1e7e34;
+}
+
+/* Fault Section */
+.fault-section {
+  margin-top: 10px;
+}
+
+.fault-section h4 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.fault-list {
+  padding-left: 16px;
+  font-size: 13px;
+}
+
+.fault-list li {
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+}

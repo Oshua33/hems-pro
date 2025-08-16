@@ -9,9 +9,9 @@ const CreateBooking = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    room_number: "",
+    room_numberssx: "",
     guest_name: "",
-    gender: "",
+    gendersx: "",
     mode_of_identification: "",
     identification_number: "",
     address: "",
@@ -144,7 +144,7 @@ const CreateBooking = () => {
   <div className="bookings-form-container">
     <button className="close-button" onClick={handleClose} title="Close">×</button>
 
-    <h2 className="forms-title">Create Booking</h2>
+    <h2 className="forms-title">Create Bookingsscsd</h2>
     {message && <p className="form-message">{message}</p>}
 
     <form className="bookings-form" onSubmit={handleSubmit} encType="multipart/form-data">

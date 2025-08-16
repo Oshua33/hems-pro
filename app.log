@@ -363,3 +363,123 @@
 2025-08-09 22:27:12.876 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
 2025-08-09 22:27:12.876 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
 2025-08-09 22:27:12.876 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-10 00:11:53.486 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-10 00:11:53.486 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-10 00:11:53.486 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-10 00:11:53.486 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-10 00:11:53.486 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-10 00:12:03.309 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-10 00:12:03.309 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-10 00:12:03.309 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-10 00:12:03.309 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-10 00:12:03.309 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 09:36:34.093 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 09:36:34.093 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 09:36:34.093 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 09:36:34.093 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 09:36:34.093 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 10:54:39.027 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 10:54:39.027 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 10:54:39.027 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 10:54:39.027 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-11 10:54:39.027 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:10:50.365 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:10:50.365 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:10:50.365 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:10:50.365 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:10:50.365 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:12:18.587 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:12:18.587 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:12:18.587 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:12:18.587 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:12:18.587 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:13:08.159 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:13:08.159 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:13:08.159 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:13:08.159 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:13:08.159 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:14:54.006 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:14:54.006 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:14:54.006 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:14:54.006 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:14:54.006 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:41:47.997 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:47.997 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:47.997 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:47.997 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:47.997 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:58.831 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:58.831 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:58.831 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:58.831 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:41:58.831 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:42:00.859 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:42:00.859 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:42:00.859 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:42:00.859 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:42:00.859 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:11.871 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:11.871 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:11.871 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:11.871 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:11.871 | WARNING  | app.users.router:login:60 - Authentication denied for username: adminjoy
+2025-08-12 21:43:51.289 | INFO     | app.users.router:sign_up:31 - creating user.....
+2025-08-12 21:43:51.289 | INFO     | app.users.router:sign_up:31 - creating user.....
+2025-08-12 21:43:51.289 | INFO     | app.users.router:sign_up:31 - creating user.....
+2025-08-12 21:43:51.289 | INFO     | app.users.router:sign_up:31 - creating user.....
+2025-08-12 21:43:51.289 | INFO     | app.users.router:sign_up:31 - creating user.....
+2025-08-12 21:43:52.121 | INFO     | app.users.router:sign_up:47 - user created successfully: adminjoy
+2025-08-12 21:43:52.121 | INFO     | app.users.router:sign_up:47 - user created successfully: adminjoy
+2025-08-12 21:43:52.121 | INFO     | app.users.router:sign_up:47 - user created successfully: adminjoy
+2025-08-12 21:43:52.121 | INFO     | app.users.router:sign_up:47 - user created successfully: adminjoy
+2025-08-12 21:43:52.121 | INFO     | app.users.router:sign_up:47 - user created successfully: adminjoy
+2025-08-12 21:44:25.609 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:44:25.609 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:44:25.609 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:44:25.609 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 21:44:25.609 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:05:11.600 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:05:11.600 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:05:11.600 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:05:11.600 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:05:11.600 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:32:42.360 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:32:42.360 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:32:42.360 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:32:42.360 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:32:42.360 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:37:39.013 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:37:39.013 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:37:39.013 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:37:39.013 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:37:39.013 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:43:32.878 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:43:32.878 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:43:32.878 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:43:32.878 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:43:32.878 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:49:44.955 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:49:44.955 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:49:44.955 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:49:44.955 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 22:49:44.955 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:03:33.946 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:03:33.946 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:03:33.946 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:03:33.946 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:03:33.946 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-12 23:04:46.765 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-12 23:04:46.765 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-12 23:04:46.765 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-12 23:04:46.765 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-12 23:04:46.765 | INFO     | app.users.router:list_all_users:83 - Fetching list of users
+2025-08-13 16:16:31.641 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 16:16:31.641 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 16:16:31.641 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 16:16:31.641 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 16:16:31.641 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 17:03:05.622 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 17:03:05.622 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 17:03:05.622 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 17:03:05.622 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy
+2025-08-13 17:03:05.622 | INFO     | app.users.router:login:66 - ✅ User authenticated: adminjoy

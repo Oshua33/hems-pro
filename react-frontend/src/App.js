@@ -17,6 +17,9 @@ import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import RoomsPage from "./pages/RoomsPage";
 import BookingsPage from "./pages/BookingsPage";
+import StoreDashboardPage from "./components/store/StoreDashboardPage";
+import BarDashboardPage from "./components/bar/BarDashboardPage";
+import RestDashboardPage from "./components/restaurant/RestDashboardPage";
 
 import CreateBooking from "./components/bookings/CreateBooking";
 import ListBooking from "./components/bookings/ListBooking";
@@ -36,6 +39,36 @@ import VoidEventPayment from "./components/events/VoidEventPayment";
 import ViewEventForm from "./components/events/ViewEventForm"; // ✅ add this
 import EventUpdate from "./components/events/EventUpdate";
 import ViewEventPayment from "./components/events/ViewEventPayment";
+
+
+
+
+import ListVendor from "./components/store/ListVendor";
+import ListCategory from "./components/store/ListCategory";
+
+import ListItem from "./components/store/ListItem";
+import CreatePurchase from "./components/store/CreatePurchase"; // ✅ Add this
+import ListPurchase from "./components/store/ListPurchase"; // ✅ Add this
+import IssueItems from "./components/store/IssueItems"; // ✅ Add this
+import ListIssues from "./components/store/ListIssues";
+
+import StockAdjustment from "./components/store/StockAdjustment";
+import ListAdjustment from "./components/store/ListAdjustment";
+import StockBalance from "./components/store/StockBalance";
+
+
+
+
+
+
+
+
+
+
+import ListBar from "./components/bar/ListBar"; // ✅ Add this
+
+
+
 
 console.log("✅ API BASE:", process.env.REACT_APP_API_BASE_URL);
 
@@ -73,13 +106,51 @@ const App = () => {
           }
         />
 
+
+          {/* ✅ Fullscreen Store route, outside /dashboard */}
+          <Route path="/store" element={<StoreDashboardPage />}>
+           
+            <Route path="vendor/list" element={<ListVendor />} />
+            <Route path="category/list" element={<ListCategory />} />
+            <Route path="items/list" element={<ListItem />} />  {/* ✅ FIXED */}
+            <Route path="purchase/create" element={<CreatePurchase />} /> {/* ✅ Add this */}
+            <Route path="purchase/list" element={<ListPurchase />} /> {/* ✅ Add this */}
+            <Route path="issue/create" element={<IssueItems />} />  {/* ✅ Add this */}
+            <Route path="issue/list" element={<ListIssues />} />
+            <Route path="adjustment/create" element={<StockAdjustment />} />
+            <Route path="adjustment/list" element={<ListAdjustment />} />
+            <Route path="stock-balance" element={<StockBalance />} />
+
+          </Route>
+
+
+          {/* ✅ Fullscreen Bar route, outside /dashboard */}
+          <Route path="/dashboard/bar/*" element={<BarDashboardPage />}>
+           
+            <Route path="list" element={<ListBar />} />
+
+            
+          </Route>
+
+          
+
+
+
+
+          <Route path="/bar" element={<BarDashboardPage />} />
+
+          <Route path="/restaurant" element={<RestDashboardPage />} />
+
         {/* Protected dashboard routes */}
         <Route
+
+          
           path="/dashboard"
           element={
             isLicenseVerified ? <DashboardPage /> : <Navigate to="/license" replace />
           }
         >
+          
           <Route path="users" element={<UsersPage />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="rooms/status" element={<RoomStatusBoard />} />
@@ -119,10 +190,8 @@ const App = () => {
 
           </Route>
 
-
-
-
-
+            
+      
 
 
           {/* ✅ Add this line below to link the Reservation Alert */}

@@ -11,10 +11,10 @@
 
 /* Sidebar styling */
 .sidebar {
-  width: 180px; /* reduced width */
+  width: 170px; /* reduced width */
   background: #1f2937; /* dark slate */
   color: white;
-  padding: 20px 15px; /* less horizontal padding */
+  padding: 10px 5px; /* less horizontal padding */
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column; /* vertical stack */
@@ -27,7 +27,7 @@
   font-weight: 700;
   font-size: 1.3rem;
   margin-bottom: 20px;
-  border-bottom: 2px solid #4ade80; /* green accent */
+  border-bottom: 2px solid #f2f1f3; /* green accent */
   padding-bottom: 8px;
   text-align: center;  /* <-- centered text */
 }
@@ -38,13 +38,13 @@
   border: none;
   color: #d1d5db;
   text-align: left;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  font-size: 1rem;
+  padding: 6px 12px;         /* reduced vertical padding */
+  margin-bottom: 4px;        /* less space between items */
+  font-size: 0.85rem;        /* smaller text */
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
-  display: block; /* force block to ensure vertical stacking */
+  display: block;
   width: 100%;
   white-space: nowrap;
 }
@@ -68,13 +68,6 @@
   text-align: center;
   font-size: 14px;            /* optional: smaller font for tighter look */
 }
-
-.reservation-button.alert-active {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
 
 
 /* Adjust reservation button hover */
@@ -136,9 +129,7 @@
 .header-title {
   font-size: 1.5rem;
   font-weight: 700;
-  /* color: #1a45b1; */
-  /* color: #2563eb; */
-  color: #b91c1c;
+  color: #1a45a1;
   margin: 0;
 }
 
@@ -232,8 +223,7 @@
 
 .action-button {
   background-color: transparent;
-  /* color: #333; */
-  color: #dc3545;
+  color: #333;
   border: 1px solid #c2bfda;   /* Light border */
   border-radius: 6px;
   padding: 6px 4px;         /* Increased padding */

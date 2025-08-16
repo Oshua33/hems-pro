@@ -23,7 +23,7 @@ const exportToExcel = async () => {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("DashboardData");
 
-  //  Determine title by pathname
+  // ✅ Determine title by pathname
   const path = window.location.pathname;
   let title = "Dashboard Data";
   if (path.includes("bookings")) title = "Guest Booking Details";
@@ -38,23 +38,23 @@ const exportToExcel = async () => {
   );
   const colCount = headers.length;
 
-  // Title
+  // ✅ Title
   sheet.mergeCells(1, 1, 1, colCount);
   const titleCell = sheet.getCell("A1");
   titleCell.value = title;
   titleCell.font = { size: 14, bold: true };
   titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-  // Table headers
+  // ✅ Table headers
   sheet.addRow(headers).font = { bold: true };
 
-  // Table rows
+  // ✅ Table rows
   const rows = Array.from(table.querySelectorAll("tbody tr")).map((tr) =>
     Array.from(tr.querySelectorAll("td")).map((td) => td.innerText.trim())
   );
   rows.forEach((row) => sheet.addRow(row));
 
-  // Blank row
+  // ✅ Blank row
   sheet.addRow([]);
 
   // === 🔽 Summary Sections ===
@@ -146,7 +146,7 @@ const exportToExcel = async () => {
     sheet.addRow([]);
   }
 
-  // 7. Event Payment Breakdown
+  // 7. ✅ Event Payment Breakdown
   const eventPaymentBreakdown = document.querySelector(".all-summary-wrappers");
   if (eventPaymentBreakdown) {
     sheet.addRow(["Event Payment Breakdown"]).font = { bold: true, italic: true };
@@ -167,7 +167,7 @@ const exportToExcel = async () => {
     sheet.addRow([]);
   }
 
-  // 8. Event Payment Summary (Outstanding Events + Balance)
+  // 8. ✅ Event Payment Summary (Outstanding Events + Balance)
   const eventOutstandingSummary = document.querySelector(".event-payment-summary");
   if (eventOutstandingSummary) {
     sheet.addRow(["Outstanding Event Summary"]).font = { bold: true, italic: true };
@@ -183,7 +183,7 @@ const exportToExcel = async () => {
     sheet.addRow([]);
   }
 
-  // Style all cells
+  // ✅ Style all cells
   sheet.eachRow((row) => {
     row.eachCell((cell) => {
       cell.border = {
@@ -196,7 +196,7 @@ const exportToExcel = async () => {
     });
   });
 
-  // Auto column width
+  // ✅ Auto column width
   sheet.columns.forEach((col) => {
     let maxLength = 10;
     col.eachCell({ includeEmpty: true }, (cell) => {
@@ -206,7 +206,7 @@ const exportToExcel = async () => {
     col.width = maxLength + 2;
   });
 
-  // Download file
+  // ✅ Download file
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -241,7 +241,7 @@ const printContent = () => {
 
       const checkDashboardStatus = async () => {
         try {
-          // 1. Check reservation alerts
+          // ✅ 1. Check reservation alerts
           const res = await axios.get(`${API_BASE_URL}/bookings/reservations/alerts`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -251,7 +251,7 @@ const printContent = () => {
           const count = res.data.count || 0;
           setReservationCount(count);
 
-          // 2. Trigger backend to auto-update room statuses after checkout time
+          // ✅ 2. Trigger backend to auto-update room statuses after checkout time
           await axios.post(`${API_BASE_URL}/rooms/update_status_after_checkout`, {}, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -279,11 +279,14 @@ const printContent = () => {
     { name: "📅 Bookings", path: "/dashboard/bookings" },
     { name: "💳 Payments", path: "/dashboard/payments" },
     { name: "🎉 Events", path: "/dashboard/events" },
-    { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, // ⬅️ add this
+    { name: "🍷 Bar", path: "/bar" },
+    { name: "🏪 Store", path: "/store" },
+    { name: "🍽️ Restaurant", path: "/restaurant" },
+    { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, 
   ];
 
   const bookingSubmenu = [
-    { label: "➕ Create Booking", path: "/dashboard/bookings/create" },
+    { label: "➕ Create Bookings", path: "/dashboard/bookings/create" },
     { label: "📝 List Booking", path: "/dashboard/bookings/list" },
     { label: "✅ Checkout Guest", path: "/dashboard/bookings/checkout" },
     { label: "❌ Cancel Booking", path: "/dashboard/bookings/cancel" },
@@ -376,11 +379,11 @@ const printContent = () => {
               >
                 <button
                   onClick={() => {
-                    if (!isBookings && !isPayments && !isEvents) {
-                      navigate(item.path);
-                    }
-                    
+                    navigate(item.path); // let React Router handle it
                   }}
+
+
+
                   className={`sidebar-button ${
                     isBookings && isBookingsHovered ||
                     isPayments && isPaymentsHovered ||
@@ -389,7 +392,7 @@ const printContent = () => {
                       : ""
                   }`}
                 >
-                  <span style={{ fontSize: "1.6rem", marginRight: "8px" }}>
+                  <span style={{ fontSize: "1.3rem", marginRight: "6px" }}>
                     {item.name.slice(0, 2)}
                   </span>
                   {item.name.slice(2).trim()}
@@ -429,7 +432,7 @@ const printContent = () => {
                   </div>
                 )}
 
-                {/* Event submenu */}
+                {/* ✅ Event submenu */}
                 {isEvents && isEventsHovered && (
                 <div className="submenu">
                   {eventSubmenu.map((sub) => (
@@ -449,8 +452,7 @@ const printContent = () => {
 
 
               </div>
-            ) 
-            : null;
+            ) : null;
           })}
 
           <button
@@ -485,7 +487,7 @@ const printContent = () => {
           style={{
             display: "flex",
             alignItems: "center",
-            paddingRight: "110px", // create space from the Logout button
+            paddingRight: "110px", // ✅ create space from the Logout button
             gap: "20px",
           }}
         >

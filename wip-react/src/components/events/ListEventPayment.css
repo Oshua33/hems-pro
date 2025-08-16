@@ -1,0 +1,123 @@
+/* src/components/events/ListEventPayment.css */
+
+.list-event-payment-containers {
+  font-family: Arial, sans-serif;
+  padding: 0.2rem;
+  background-color: #f7f9fc;
+  font-size: 0.7rem;
+  border-radius: 12px;
+
+}
+
+.list-event-payment-containers h2 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Filters */
+.filterss {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.filterss input[type="date"] {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.filterss button {
+  padding: 8px 16px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.filterss button:hover {
+  background-color: #1e40af;
+}
+
+/* Error Message */
+.errors {
+  color: red;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+/* Table */
+.payment-table-wrappers {
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.event-payment-tables {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  min-width: 1000px;
+}
+
+.event-payment-tables th {
+  padding: 6px 10px;
+  border: 1px solid #222427;
+  text-align: left;
+  font-size: .8rem; /* Increased font size for headings */
+}
+
+.event-payment-tables td {
+  padding: 6px 10px;
+  border: 1px solid #222427;
+  text-align: left;
+  font-size: 0.8rem; /* Increased font size for data */
+}
+
+
+.event-payment-tables thead {
+  background-color: #48494e;
+  color: white;
+}
+
+.event-payment-tables tbody tr:nth-child(even) {
+  background-color: #eceef1;
+}
+
+/* Summary */
+.all-summary-wrappers {
+  margin-top: 15px;
+  background-color: #ffffff;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  max-width: 200px;
+}
+
+.summary-rows {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.8rem; /* Increased font size for data */
+}
+
+.summary-rows:last-child {
+  border-bottom: none;
+}
+
+.summary-lefts {
+  font-weight: 900;
+  color: #374151;
+}
+
+.summary-rights {
+  font-weight: 900;
+  color: #111827;
+}
