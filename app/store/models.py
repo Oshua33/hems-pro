@@ -5,6 +5,7 @@ from datetime import datetime
 from app.database import Base
 #from app.vendor import Vendor  # ✅ adjust the path as needed
 import os
+from app.bar.models import Bar  # assuming this exists
 
 
 # ----------------------------
@@ -28,6 +29,9 @@ class StoreItem(Base):
     name = Column(String, unique=True, nullable=False)
     unit = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("store_categories.id"), nullable=True)
+    unit_price = Column(Float, nullable=False, default=0.0)  # ✅ ADD THIS
+    # unit_price = Column(Float, nullable=False, server_default="0.0")
+
     category = relationship("StoreCategory")
 
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -48,6 +52,7 @@ class StoreStockEntry(Base):
     item_id = Column(Integer, ForeignKey("store_items.id"))
     item_name= Column(String, nullable=False)  # Track who created the purchase
     quantity = Column(Integer)
+    invoice_number = Column(String(255), nullable=True)  # <-- Corrected
     original_quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=True)
     total_amount = Column(Float)
@@ -56,7 +61,7 @@ class StoreStockEntry(Base):
     #created_by_id = Column(Integer, ForeignKey("users.id"))  
     created_by = Column(String, nullable=False)  # Track who created the purchase
     created_at = Column(DateTime, default=datetime.utcnow)
-    attachment = Column(String, nullable=True)  
+    attachment = Column(String, nullable=True)  # <-- New: file path
 
     # Relationships
     item = relationship("StoreItem")
@@ -83,12 +88,17 @@ class StoreIssue(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     issue_to = Column(String, nullable=False)  # "bar" or "restaurant"
-    issued_to_id = Column(Integer, nullable=False)  # ✅ ADD THIS LINE
+    issued_to_id = Column(Integer, ForeignKey("bars.id"), nullable=False)  # ✅ Proper FK
     issued_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     issue_date = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     issue_items = relationship("StoreIssueItem", back_populates="issue", cascade="all, delete-orphan")
+    issued_to = relationship("Bar", back_populates="issues")  # ✅ Proper relationship
 
+    items = relationship("StoreIssueItem", back_populates="issue", cascade="all, delete-orphan")
+
+    
 
 class StoreIssueItem(Base):
     __tablename__ = "store_issue_items"

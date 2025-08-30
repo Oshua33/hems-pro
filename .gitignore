@@ -15,6 +15,7 @@ venv/
 # VSCode settings
 .vscode/
 
+
 # Ignore license and dependency files
 requirements.txt
 licence.txt

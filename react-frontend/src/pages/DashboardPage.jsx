@@ -282,11 +282,11 @@ const printContent = () => {
     { name: "🍷 Bar", path: "/bar" },
     { name: "🏪 Store", path: "/store" },
     { name: "🍽️ Restaurant", path: "/restaurant" },
-    { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, 
+    { name: "🟩 Room Status", path: "/dashboard/rooms/status" }, // ⬅️ add this
   ];
 
   const bookingSubmenu = [
-    { label: "➕ Create Bookings", path: "/dashboard/bookings/create" },
+    { label: "➕ Create Booking", path: "/dashboard/bookings/create" },
     { label: "📝 List Booking", path: "/dashboard/bookings/list" },
     { label: "✅ Checkout Guest", path: "/dashboard/bookings/checkout" },
     { label: "❌ Cancel Booking", path: "/dashboard/bookings/cancel" },

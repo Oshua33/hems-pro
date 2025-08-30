@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
-from app.store.schemas import StoreItemDisplay
+#from app.store.schemas import StoreItemDisplay
 from app.users.schemas import UserDisplaySchema
 
 
@@ -15,6 +15,14 @@ class BarBase(BaseModel):
 
 class BarCreate(BarBase):
     pass
+
+
+class BarDisplaySimple(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
 
 
 class BarDisplay(BarBase):
@@ -46,15 +54,17 @@ class BarPriceUpdate(BaseModel):
     new_price: float
 
 
-
-class BarStockReceiveCreate(BaseModel):
-    bar_id: int
-    bar_name: Optional[str]  # <-- Add this
-    item_id: int
-    item_name: str
-    quantity: int
+class BarItemSimple(BaseModel):
+    id: int
+    name: str
     selling_price: float
-    note: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+    class Config:
+        orm_mode = True
 
 class BarInventoryDisplay(BaseModel):
     id: int
@@ -72,12 +82,25 @@ class BarInventoryDisplay(BaseModel):
         from_attributes = True
 
 
+
+class BarStockReceiveCreate(BaseModel):
+    bar_id: int
+    bar_name: Optional[str]  # <-- Add this
+    item_id: int
+    item_name: str
+    quantity: int
+    selling_price: float
+    note: Optional[str] = None
+
+
+
 # ----------------------------
 # Bar Sale
 # ----------------------------
 class BarSaleItemCreate(BaseModel):
     item_id: int
     quantity: int
+    selling_price: float   # 👈 allow frontend to set price
 
 
 
@@ -120,6 +143,14 @@ class BarSaleDisplay(BaseModel):
         "from_attributes": True  # replaces orm_mode in Pydantic v2
     }
 
+
+class BarSaleListResponse(BaseModel):
+    total_entries: int
+    total_sales_amount: float
+    sales: List[BarSaleDisplay]
+
+    
+
 class BarInventoryReceiptDisplay(BaseModel):
     id: int
     bar_id: int
@@ -136,11 +167,17 @@ class BarInventoryReceiptDisplay(BaseModel):
         from_attributes = True
 
 
+#class BarSaleDisplay(BaseModel):
+    #id: int
+    #bar_id: int
+    #total_amount: float
+    #total_paid: float
+    #status: str
+    #created_at: datetime
 
-class BarSaleListResponse(BaseModel):
-    total_entries: int
-    total_sales_amount: float
-    sales: List[BarSaleDisplay]
+    #class Config:
+        #from_attributes = True
+
 
 
 class BarInventorySummaryDisplay(BaseModel):
@@ -162,12 +199,19 @@ class BarStockUpdate(BaseModel):
 
 
 class BarStockBalance(BaseModel):
+    bar_id: int
+    bar_name: str
     item_id: int
     item_name: str
-    total_issued: int
+    category_name: str     # ✅ added
+    unit: str              # ✅ added
+    total_received: int
     total_sold: int
-    total_adjusted: int  # ✅ NEW
+    total_adjusted: int
     balance: int
+    last_unit_price: Optional[float] = None   # latest price for the item in bar
+    balance_total_amount: Optional[float] = None  # balance * last_unit_price
+
 
 
 class BarInventoryAdjustmentCreate(BaseModel):
@@ -187,4 +231,21 @@ class BarInventoryAdjustmentDisplay(BaseModel):
     adjusted_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+
+class BarStockBalanceRow(BaseModel):
+    bar_id: int
+    bar_name: str
+    item_id: int
+    item_name: str
+    unit: Optional[str] = None
+    quantity: float
+    selling_price: float
+    amount: float  # quantity * selling_price
+
+class BarStockBalanceResponse(BaseModel):
+    rows: List[BarStockBalanceRow]
+    total_entries: int
+    total_amount: float

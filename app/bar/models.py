@@ -16,9 +16,10 @@ class Bar(Base):
     location = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     inventory_items = relationship("BarInventory", back_populates="bar", cascade="all, delete-orphan")
     sales = relationship("BarSale", back_populates="bar", cascade="all, delete-orphan")
-
+    issues = relationship("StoreIssue", back_populates="issued_to")  # ✅ Match the other side
 
 
 
@@ -119,7 +120,7 @@ class BarSaleItem(Base):
     sale_id = Column(Integer, ForeignKey("bar_sales.id"), nullable=False)
     bar_inventory_id = Column(Integer, ForeignKey("bar_inventory.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
-    unit_price = Column(Float, nullable=False)
+    selling_price = Column(Float, nullable=False)
     total_amount = Column(Float, nullable=False)
 
     sale = relationship("BarSale", back_populates="sale_items")

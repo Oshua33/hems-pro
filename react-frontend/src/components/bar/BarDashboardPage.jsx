@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { FaFileExcel, FaPrint } from "react-icons/fa";
-import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
-import "./BarDashboardPage.css"; // ✅ reuse Store CSS for consistent look
+import "./BarDashboardPage.css";
 
 const BarDashboardPage = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ⬅️ used for Outlet key + active states
   const [hovered, setHovered] = useState("");
 
   const exportToExcel = async () => {
@@ -34,6 +34,7 @@ const BarDashboardPage = () => {
       Array.from(tr.querySelectorAll("td")).map((td) => td.innerText.trim())
     );
     rows.forEach((row) => sheet.addRow(row));
+
     sheet.eachRow((row) => {
       row.eachCell((cell) => {
         cell.border = {
@@ -74,92 +75,98 @@ const BarDashboardPage = () => {
   };
 
   const barMenu = [
+    { name: "🍾 Bar Outlet", path: "/bar/list" },
+    
+    //{
+      //name: "📥 Receive Stock",
+      //submenu: [
+        //{ label: "➕ Enter Stock", path: "/bar/stock/create" },
+        //{ label: "📃 List Stock", path: "/bar/stock/list" },
+      //],
+    //},
+    
     {
-        name: "🍾 Bar Outlet",
-        path: "/dashboard/bar/list"
+      name: "🛍️ Bar Sales",
+      submenu: [
+        { label: "➕ Create Sales", path: "/bar/sales/create" },
+        { label: "📃 List Sales", path: "/bar/sales/list" },
+      ],
+    },
+    {
+      name: "💳 Bar Payment",
+      submenu: [
+        { label: "➕ Create Payment", path: "/bar/payment/create" },
+        { label: "📃 List Payment", path: "/bar/payment/list" },
+        //{ label: "❌ Void Payment", path: "/bar/payment/void" },
+      ],
+    },
+    { name: "📊 Stock Balance", path: "/bar/stock-balance" },
+    {
+      name: "🛠️ Stock Adjustment",
+      submenu: [
+        { label: "🔧 Adjust Stock", path: "/bar/adjustment/create" },
+        { label: "📃 List Adjustment", path: "/bar/adjustment/list" },
+      ],
+    },
 
-    },
-    {
-        name: "📥 Receive Stock",
-        submenu: [
-        { label: "➕ Enter Stock", path: "/dashboard/bar/stock/create" },
-        { label: "📃 List Stock", path: "/dashboard/bar/stock/list" },
-        ],
-    },
-    {
-        name: "🛍️ Bar Sales",
-        submenu: [
-        { label: "➕ Create Sales", path: "/dashboard/bar/sales/create" },
-        { label: "📃 List Sales", path: "/dashboard/bar/sales/list" },
-        ],
-    },
-    {
-        name: "💳 Bar Payment",
-        submenu: [
-        { label: "➕ Create Payment", path: "/dashboard/bar/payment/create" },
-        { label: "📃 List Payment", path: "/dashboard/bar/payment/list" },
-        { label: "❌ Void Payment", path: "/dashboard/bar/payment/void" },
-        ],
-    },
-    {
-        name: "📊 Stock Balance",
-        path: "/dashboard/bar/stock-balance",
-    },
-    {
-        name: "🛠️ Stock Adjustment",
-        submenu: [
-        { label: "🔧 Adjust Stock", path: "/dashboard/bar/adjustment/create" },
-        { label: "📃 List Adjustment", path: "/dashboard/bar/adjustment/list" },
-        ],
-    },
-    {
-        name: "💲 Set Price",
-        path: "/dashboard/bar/price",
-    },
-    {
-        name: "🏪 Store Issues Control",
-        path: "/dashboard/bar/store-issues",
-    },
-];
+    //{ name: "💲 Set Price", path: "/bar/price" },
+    { name: "🏪 Store Issues Control", path: "/bar/store-issues" },
+  ];
 
   return (
     <div className="dashboard-container">
       <aside className="sidebars1">
         <h2 className="sidebar-title">BAR MENU</h2>
         <nav>
-          {barMenu.map((item) => (
-            <div
-              key={item.name}
-              className="sidebar-item-wrapper"
-              onMouseEnter={() => setHovered(item.name)}
-              onMouseLeave={() => setHovered("")}
-            >
-              <button
-                className={`sidebars1-button ${hovered === item.name ? "active" : ""}`}
-                onClick={() => {
-                  if (!item.submenu) navigate(item.path);
-                }}
+          {barMenu.map((item) => {
+            const isActive =
+              !item.submenu && location.pathname === item.path;
+            return (
+              <div
+                key={item.name}
+                className="sidebar-item-wrapper"
+                onMouseEnter={() => setHovered(item.name)}
+                onMouseLeave={() => setHovered("")}
               >
-                {item.name}
-              </button>
-              {item.submenu && hovered === item.name && (
-                <div className="submenu">
-                  {item.submenu.map((sub) => (
-                    <button
-                      key={sub.path}
-                      className="submenu-item"
-                      onClick={() => {
-                        navigate(sub.path);
-                        setHovered("");
-                      }}
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                <button
+                  type="button"
+                  className={`sidebars1-button ${isActive ? "active" : ""} ${
+                    hovered === item.name ? "hover" : ""
+                  }`}
+                  onClick={() => {
+                    if (!item.submenu) {
+                      navigate(item.path); // ⬅️ make sure we navigate
+                    }
+                  }}
+                >
+                  {item.name}
+                </button>
+
+                {item.submenu && hovered === item.name && (
+                  <div className="submenu">
+                    {item.submenu.map((sub) => {
+                      const subActive = location.pathname === sub.path;
+                      return (
+                        <button
+                          type="button"
+                          key={sub.path}
+                          className={`submenu-item ${
+                            subActive ? "active" : ""
+                          }`}
+                          onClick={() => {
+                            navigate(sub.path);
+                            setHovered("");
+                          }}
+                        >
+                          {sub.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
@@ -177,15 +184,20 @@ const BarDashboardPage = () => {
               <FaPrint style={{ marginRight: "5px" }} />
               Print
             </button>
-            <button onClick={() => navigate("/logout")} className="logout-button1">
+            <button
+              onClick={() => navigate("/logout")}
+              className="logout-button1"
+            >
               🚪 Logout
             </button>
           </div>
         </header>
 
+        {/* Force child to re-mount when the path changes */}
         <section className="content-area">
           <Outlet />
         </section>
+
       </main>
     </div>
   );

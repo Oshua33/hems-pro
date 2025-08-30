@@ -18,10 +18,23 @@ const ListIssues = () => {
     issue_items: [],
   });
 
-  // Helper to show messages for 3 seconds
+  
+  // Show a message for 3 seconds
   const showMessage = (msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  // Get current month date range
+  const getCurrentMonthDates = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .split("T")[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      .toISOString()
+      .split("T")[0];
+    return { firstDay, lastDay };
   };
 
   // Fetch bars
@@ -36,7 +49,7 @@ const ListIssues = () => {
     })();
   }, []);
 
-  // Fetch items for dropdown
+  // Fetch items
   useEffect(() => {
     (async () => {
       try {
@@ -48,16 +61,16 @@ const ListIssues = () => {
     })();
   }, []);
 
-  const fetchIssues = async () => {
-    if (!startDate || !endDate) {
-      showMessage("⚠️ Please select a start and end date.");
-      return;
-    }
+  // Fetch issues
+  const fetchIssues = async (start, end) => {
+    const sDate = typeof start === "string" ? start : startDate;
+    const eDate = typeof end === "string" ? end : endDate;
+
     try {
       const params = {};
       if (barName) params.bar_name = barName;
-      if (startDate) params.start_date = startDate;
-      if (endDate) params.end_date = endDate;
+      if (sDate) params.start_date = sDate;
+      if (eDate) params.end_date = eDate;
 
       const res = await axiosWithAuth().get("/store/issues", { params });
       setIssues(Array.isArray(res.data) ? res.data : []);
@@ -65,6 +78,14 @@ const ListIssues = () => {
       console.error("❌ Error fetching issues", err);
     }
   };
+
+  // On first load → show current month
+  useEffect(() => {
+    const { firstDay, lastDay } = getCurrentMonthDates();
+    setStartDate(firstDay);
+    setEndDate(lastDay);
+    fetchIssues(firstDay, lastDay);
+  }, []);
 
   const handleEditClick = (issue) => {
     setEditingIssue(issue.id);
@@ -99,19 +120,20 @@ const ListIssues = () => {
       await axiosWithAuth().put(`/store/issues/${id}`, payload);
       showMessage("✅ Issue updated successfully.");
       setEditingIssue(null);
-      fetchIssues();
+      fetchIssues(startDate, endDate);
     } catch (err) {
       console.error("❌ Update failed", err.response?.data || err.message);
       showMessage("❌ Failed to update issue.");
     }
   };
+      setTimeout(() => setMessage(""), 3000);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this issue?")) return;
     try {
       await axiosWithAuth().delete(`/store/issues/${id}`);
       showMessage("✅ Issue deleted successfully.");
-      fetchIssues();
+      fetchIssues(startDate, endDate);
     } catch (err) {
       console.error("❌ Delete failed", err);
       showMessage("❌ Failed to delete issue.");
@@ -152,13 +174,14 @@ const ListIssues = () => {
           onChange={(e) => setEndDate(e.target.value)}
         />
 
-        <button onClick={fetchIssues}>🔍 Filter</button>
+        <button onClick={() => fetchIssues(startDate, endDate)}>🔍 Filter</button>
         <button
           onClick={() => {
+            const { firstDay, lastDay } = getCurrentMonthDates();
             setBarName("");
-            setStartDate("");
-            setEndDate("");
-            setIssues([]);
+            setStartDate(firstDay);
+            setEndDate(lastDay);
+            fetchIssues(firstDay, lastDay);
           }}
         >
           ♻️ Reset
@@ -203,8 +226,9 @@ const ListIssues = () => {
                   </ul>
                 </td>
                 <td>
-                  <button onClick={() => handleEditClick(issue)}>✏️ Edit</button>
-                  <button onClick={() => handleDelete(issue.id)}>🗑️ Delete</button>
+                  <button className="edit-btn" onClick={() => handleEditClick(issue)}>✏️ Edit</button>
+                  <button className="delete-btn" onClick={() => handleDelete(issue.id)}>🗑️ Delete</button>
+
                 </td>
               </tr>
             ))

@@ -412,11 +412,16 @@ def create_sale_from_order(
 
     items = [MealOrderItemDisplay.from_orm_with_meal(item) for item in order.items]
 
+    amount_paid = sum(payment.amount for payment in sale.payments)
+    balance = total - amount_paid
+
     return RestaurantSaleDisplay(
         id=sale.id,
         order_id=sale.order_id,
         served_by=sale.served_by,
         total_amount=sale.total_amount,
+        amount_paid=amount_paid,       # ✅ Required field
+        balance=balance,               # ✅ Required field
         status=sale.status,
         served_at=sale.served_at,
         created_at=sale.created_at,
@@ -528,5 +533,6 @@ def delete_meal_order(order_id: int,
     db.delete(order)
     db.commit()
     return {"detail": "Meal order deleted successfully"}
+
 
 
