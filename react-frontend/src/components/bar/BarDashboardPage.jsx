@@ -76,15 +76,13 @@ const BarDashboardPage = () => {
 
   const barMenu = [
     { name: "🍾 Bar Outlet", path: "/bar/list" },
-    
-    //{
-      //name: "📥 Receive Stock",
-      //submenu: [
-        //{ label: "➕ Enter Stock", path: "/bar/stock/create" },
-        //{ label: "📃 List Stock", path: "/bar/stock/list" },
-      //],
-    //},
-    
+    {
+      name: "📥 Receive Stock",
+      submenu: [
+        { label: "➕ Enter Stock", path: "/bar/stock/create" },
+        { label: "📃 List Stock", path: "/bar/stock/list" },
+      ],
+    },
     {
       name: "🛍️ Bar Sales",
       submenu: [
@@ -97,7 +95,7 @@ const BarDashboardPage = () => {
       submenu: [
         { label: "➕ Create Payment", path: "/bar/payment/create" },
         { label: "📃 List Payment", path: "/bar/payment/list" },
-        //{ label: "❌ Void Payment", path: "/bar/payment/void" },
+        { label: "❌ Void Payment", path: "/bar/payment/void" },
       ],
     },
     { name: "📊 Stock Balance", path: "/bar/stock-balance" },
@@ -108,8 +106,7 @@ const BarDashboardPage = () => {
         { label: "📃 List Adjustment", path: "/bar/adjustment/list" },
       ],
     },
-
-    //{ name: "💲 Set Price", path: "/bar/price" },
+    { name: "💲 Set Price", path: "/bar/price" },
     { name: "🏪 Store Issues Control", path: "/bar/store-issues" },
   ];
 

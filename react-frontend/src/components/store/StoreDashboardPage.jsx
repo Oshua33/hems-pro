@@ -111,7 +111,6 @@ const StoreDashboardPage = () => {
       name: "📊 Store Stock Balance",
       path: "stock-balance",
     },
-    
 
     {
       name: "📊 Bar Stock Balance",
