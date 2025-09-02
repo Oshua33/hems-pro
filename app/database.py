@@ -10,6 +10,9 @@ env_path = Path('.') / '.env'
 if not env_path.exists():
     env_path = Path(__file__).resolve().parent.parent / '.env'  # try from root directory
 
+load_dotenv()
+os.getenv("DB_URL")
+
 load_dotenv(dotenv_path=env_path)
 print(f"🔄 Loaded environment from: {env_path}")
 
