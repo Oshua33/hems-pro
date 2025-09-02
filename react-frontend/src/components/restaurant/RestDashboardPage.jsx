@@ -98,8 +98,8 @@ const RestDashboardPage = () => {
     {
       name: "🧾 Guest Order",
       submenu: [
-        { label: "🆕 Create Order", path: "/dashboard/restaurant/order/create" },
-        { label: "📃 List Order", path: "/dashboard/restaurant/order/list" },
+        { label: "🆕 Create Order", path: "/restaurant/guestordercreate" },
+        { label: "📃 List Order", path: "/restaurant/listguestorder" },
       ],
     },
     {
