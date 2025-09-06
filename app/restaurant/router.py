@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from datetime import datetime
 from typing import List
+from typing import Optional
 from app.users.auth import get_current_user
 from app.users.models import User
 from fastapi import Query
@@ -313,10 +314,15 @@ def list_meal_orders(
     status: str = Query(None, description="Filter by status: open or closed"),
     start_date: date = Query(None, description="Start date for filtering"),
     end_date: date = Query(None, description="End date for filtering"),
+    location_id: int = Query(None, description="Filter by location ID"),  # ✅ new filter
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     query = db.query(MealOrder)
+
+    # ✅ filter by location first
+    if location_id:
+        query = query.filter(MealOrder.location_id == location_id)
 
     if status:
         query = query.filter(MealOrder.status == status)
@@ -357,21 +363,104 @@ def list_meal_orders(
 
 
 
-
-from sqlalchemy import func
+from datetime import datetime
+from typing import Optional
 
 @router.get("/sales", response_model=dict)
 def list_sales(
-    status: str = Query(None, description="Filter by status: unpaid, partial, paid"),
-    start_date: date = Query(None, description="Start date for filtering"),
-    end_date: date = Query(None, description="End date for filtering"),
+    status: Optional[str] = Query(None, description="Filter by status: unpaid, partial, paid"),
+    start_date: Optional[date] = Query(None, description="Start date for filtering"),
+    end_date: Optional[date] = Query(None, description="End date for filtering"),
+    location_id: Optional[int] = Query(None, description="Filter sales by restaurant location"),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
     query = db.query(RestaurantSale)
 
+    # ✅ Status filter
     if status:
         query = query.filter(RestaurantSale.status == status)
+
+    # ✅ Date filters (inclusive)
+    if start_date:
+        query = query.filter(
+            RestaurantSale.created_at >= datetime.combine(start_date, datetime.min.time())
+        )
+    if end_date:
+        query = query.filter(
+            RestaurantSale.created_at <= datetime.combine(end_date, datetime.max.time())
+        )
+
+    sales = query.order_by(RestaurantSale.created_at.desc()).all()
+
+    result = []
+    total_sales_amount = 0.0
+    total_paid_amount = 0.0
+    total_balance = 0.0
+
+    for sale in sales:
+        order = sale.order
+        items = []
+        order_location_id = None
+
+        if order:
+            order_location_id = order.location_id
+            items = [
+                MealOrderItemDisplay.from_orm_with_meal(item)
+                for item in order.items
+            ]
+
+        # ✅ Location filter
+        if location_id is not None and order_location_id != location_id:
+            continue
+
+        # Compute payments
+        amount_paid = sum(payment.amount_paid for payment in sale.payments)
+        balance = sale.total_amount - amount_paid
+
+        total_sales_amount += sale.total_amount
+        total_paid_amount += amount_paid
+        total_balance += balance
+
+        # ✅ Send raw numbers
+        sale_display = {
+            "id": sale.id,
+            "order_id": sale.order_id,
+            "guest_name": order.guest_name if order else None,
+            "location_id": order_location_id,
+            "served_by": sale.served_by,
+            "total_amount": sale.total_amount,
+            "amount_paid": amount_paid,
+            "balance": balance,
+            "status": sale.status,
+            "served_at": sale.served_at,
+            "created_at": sale.created_at,
+            "items": items,
+        }
+        result.append(sale_display)
+
+    summary = {
+        "total_sales_amount": total_sales_amount,
+        "total_paid_amount": total_paid_amount,
+        "total_balance": total_balance,
+    }
+
+    return {"sales": result, "summary": summary}
+
+@router.get("/sales/outstanding", response_model=dict)
+def list_outstanding(
+    location_id: int = Query(None, description="Filter by location"),
+    start_date: date = Query(None, description="Start date for filtering"),
+    end_date: date = Query(None, description="End date for filtering"),
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+):
+    query = db.query(RestaurantSale).filter(RestaurantSale.status.in_(["unpaid", "partial"]))
+
+    # ✅ Filter by location if provided
+    if location_id:
+        query = query.join(RestaurantSale.order).filter(MealOrder.location_id == location_id)
+
     if start_date:
         query = query.filter(RestaurantSale.created_at >= start_date)
     if end_date:
@@ -386,20 +475,27 @@ def list_sales(
     total_balance = 0.0
 
     for sale in sales:
-        # Get order items
         order = sale.order
         items = []
+        location_id = None
+        location_name = None
+        guest_name = None
+
         if order:
+            location_id = order.location_id
+            guest_name = order.guest_name  # ✅ guest name from MealOrder
+            if order.location:
+                location_name = order.location.name
             items = [
                 MealOrderItemDisplay.from_orm_with_meal(item)
                 for item in order.items
             ]
 
-        # Compute amount paid from payments
-        amount_paid = sum(payment.amount_paid for payment in sale.payments)
+        # ✅ Compute payments excluding voided ones
+        amount_paid = sum(payment.amount_paid for payment in sale.payments if not payment.is_void)
         balance = sale.total_amount - amount_paid
 
-        # Add to totals
+        # Update totals
         total_sales_amount += sale.total_amount
         total_paid_amount += amount_paid
         total_balance += balance
@@ -407,6 +503,9 @@ def list_sales(
         sale_display = RestaurantSaleDisplay(
             id=sale.id,
             order_id=sale.order_id,
+            guest_name=guest_name,
+            location_id=location_id,
+            # location_name=location_name,  # uncomment if you want
             served_by=sale.served_by,
             total_amount=sale.total_amount,
             amount_paid=amount_paid,
@@ -414,18 +513,17 @@ def list_sales(
             status=sale.status,
             served_at=sale.served_at,
             created_at=sale.created_at,
-            items=items
+            items=items,
         )
         result.append(sale_display)
 
     summary = {
         "total_sales_amount": total_sales_amount,
         "total_paid_amount": total_paid_amount,
-        "total_balance": total_balance
+        "total_balance": total_balance,
     }
 
     return {"sales": result, "summary": summary}
-
 
 
 @router.get("/sales/{sale_id}", response_model=RestaurantSaleDisplay)
@@ -498,6 +596,7 @@ def delete_sale(
 def create_sale_from_order(
     order_id: int,
     served_by: str,
+    location_id: int,
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
@@ -506,14 +605,17 @@ def create_sale_from_order(
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != "open":
-        raise HTTPException(status_code=400, detail="Order is already closed and cannot be used to generate a sale.")
+        raise HTTPException(
+            status_code=400,
+            detail="Order is already closed and cannot be used to generate a sale."
+        )
 
-    # Calculate total from order items
     total = sum(item.meal.price * item.quantity for item in order.items if item.meal)
 
-    # Create sale
     sale = RestaurantSale(
         order_id=order.id,
+        location_id=location_id,   # ✅ only use the request param
+        guest_name=order.guest_name,
         served_by=served_by,
         total_amount=total,
         status="unpaid",
@@ -521,24 +623,23 @@ def create_sale_from_order(
     )
     db.add(sale)
 
-    # Close the order
     order.status = "closed"
-
     db.commit()
     db.refresh(sale)
 
     items = [MealOrderItemDisplay.from_orm_with_meal(item) for item in order.items]
-
     amount_paid = sum(payment.amount for payment in sale.payments)
     balance = total - amount_paid
 
     return RestaurantSaleDisplay(
         id=sale.id,
         order_id=sale.order_id,
+        location_id=sale.location_id,
+        guest_name=sale.guest_name,
         served_by=sale.served_by,
         total_amount=sale.total_amount,
-        amount_paid=amount_paid,       # ✅ Required field
-        balance=balance,               # ✅ Required field
+        amount_paid=amount_paid,
+        balance=balance,
         status=sale.status,
         served_at=sale.served_at,
         created_at=sale.created_at,
@@ -548,22 +649,22 @@ def create_sale_from_order(
 
 @router.get("/open")
 def list_open_meal_orders(
+    location_id: Optional[int] = Query(None, description="Filter open orders by location id"),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
 ):
-    # Fetch only open orders in ascending order of order id
-    orders = (
-        db.query(MealOrder)
-        .filter(MealOrder.status == "open")
-        .order_by(MealOrder.id.asc())
-        .all()
-    )
+    """
+    Return open meal orders. If location_id is provided, restrict to that location.
+    Returns an object with total_entries, total_amount and orders (empty array if none).
+    """
+    query = db.query(MealOrder).filter(MealOrder.status == "open")
+    if location_id is not None:
+        query = query.filter(MealOrder.location_id == location_id)
 
-    if not orders:
-        raise HTTPException(status_code=404, detail="No open meal orders found")
+    orders = query.order_by(MealOrder.id.asc()).all()
 
     result = []
-    total_amount = 0
+    total_amount = 0.0
 
     for order in orders:
         order_items = []
@@ -600,7 +701,6 @@ def list_open_meal_orders(
         "total_amount": total_amount,
         "orders": result,
     }
-
 
 
 @router.get("/{order_id}", response_model=MealOrderDisplay)

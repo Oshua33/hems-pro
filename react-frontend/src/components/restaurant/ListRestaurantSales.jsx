@@ -4,6 +4,15 @@ import "./ListRestaurantSales.css";
 import "./Receipt.css"; // ✅ Receipt styles
 
 const ListRestaurantSales = () => {
+  const printRef = useRef(); // Reference for receipt content
+
+  // ✅ Helper to get today's YYYY-MM-DD
+  const getToday = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  // ✅ States
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({
@@ -12,21 +21,54 @@ const ListRestaurantSales = () => {
     total_balance: 0,
   });
   const [selectedSale, setSelectedSale] = useState(null); // For print modal
-  const printRef = useRef(); // Reference for receipt content
+  const [locationId, setLocationId] = useState(""); // ✅ location filter
+  const [locations, setLocations] = useState([]); // ✅ available locations
+  const [startDate, setStartDate] = useState(getToday());
+  const [endDate, setEndDate] = useState(getToday());
 
-  // Fetch sales from backend
-  const fetchSales = async () => {
+  // ✅ Format numbers with commas (12,000 instead of 12000)
+  const formatAmount = (value) => {
+    if (value === null || value === undefined || value === "") return "0";
+    const num = Number(value); // Ensure it's converted to a number
+    if (isNaN(num)) return "0"; // Prevent NaN
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
+  // ✅ Fetch sales from backend
+  const fetchSalesWithDates = async (from, to) => {
     setLoading(true);
     try {
-      const res = await axiosWithAuth().get("/restaurant/sales");
-      setSales(res.data.sales || []);
-      setSummary(
-        res.data.summary || {
-          total_sales_amount: 0,
-          total_paid_amount: 0,
-          total_balance: 0,
-        }
-      );
+      const params = {};
+      if (locationId) params.location_id = locationId;
+      if (from) params.start_date = from;
+      if (to) params.end_date = to;
+
+      const res = await axiosWithAuth().get("/restaurant/sales", { params });
+
+      // normalize sales & summary
+      const normalizedSales = (res.data.sales || []).map((sale) => ({
+        ...sale,
+        total_amount: Number(sale.total_amount) || 0,
+        amount_paid: Number(sale.amount_paid) || 0,
+        balance: Number(sale.balance) || 0,
+        items: (sale.items || []).map((item) => ({
+          ...item,
+          total_price: Number(item.total_price) || 0,
+          quantity: Number(item.quantity) || 0,
+        })),
+      }));
+
+      const normalizedSummary = {
+        total_sales_amount: Number(res.data.summary?.total_sales_amount) || 0,
+        total_paid_amount: Number(res.data.summary?.total_paid_amount) || 0,
+        total_balance: Number(res.data.summary?.total_balance) || 0,
+      };
+
+      setSales(normalizedSales);
+      setSummary(normalizedSummary);
     } catch (err) {
       console.error("❌ Error fetching sales:", err);
       setSales([]);
@@ -37,6 +79,20 @@ const ListRestaurantSales = () => {
       });
     }
     setLoading(false);
+  };
+
+  // Keep this for filter button or manual refetch
+  const fetchSales = () => fetchSalesWithDates(startDate, endDate);
+
+  // ✅ Fetch locations from backend
+  const fetchLocations = async () => {
+    try {
+      const res = await axiosWithAuth().get("/restaurant/locations");
+      setLocations(res.data || []);
+    } catch (err) {
+      console.error("❌ Error fetching locations:", err);
+      setLocations([]);
+    }
   };
 
   // Delete sale
@@ -86,13 +142,50 @@ const ListRestaurantSales = () => {
     printWindow.close();
   };
 
+  // ✅ Load locations & today’s sales on mount
+  useEffect(() => {
+    fetchLocations();
+    fetchSalesWithDates(getToday(), getToday());
+  }, []);
+
+  // ✅ Refetch sales when location/date filters change
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [locationId, startDate, endDate]);
 
   return (
     <div className="list-sales">
       <h2>📊 Restaurant Sales</h2>
+
+      {/* ✅ Filters */}
+      <div className="filter-bar">
+        <label>Filter by Location:</label>
+        <select
+          value={locationId}
+          onChange={(e) => setLocationId(e.target.value)}
+        >
+          <option value="">All Locations</option>
+          {locations.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
+            </option>
+          ))}
+        </select>
+
+        <label>From:</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+
+        <label>To:</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </div>
 
       {loading ? (
         <p>Loading sales...</p>
@@ -101,9 +194,9 @@ const ListRestaurantSales = () => {
       ) : (
         <>
           <div className="sales-summary">
-            <span>Total Sales: ₦{summary.total_sales_amount.toFixed(2)}</span>
-            <span>Total Paid: ₦{summary.total_paid_amount.toFixed(2)}</span>
-            <span>Total Balance: ₦{summary.total_balance.toFixed(2)}</span>
+            <span>Total Sales: ₦{formatAmount(summary.total_sales_amount)}</span>
+            <span>Total Paid: ₦{formatAmount(summary.total_paid_amount)}</span>
+            <span>Total Balance: ₦{formatAmount(summary.total_balance)}</span>
           </div>
 
           <ul className="sales-list">
@@ -115,10 +208,11 @@ const ListRestaurantSales = () => {
                 </div>
 
                 <div className="sale-details">
+                  <p>Guest Name: <strong>{sale.guest_name}</strong></p>
                   <p>Status: <strong>{sale.status}</strong></p>
-                  <p>Total Amount: ₦{sale.total_amount.toFixed(2)}</p>
-                  <p>Amount Paid: ₦{sale.amount_paid.toFixed(2)}</p>
-                  <p>Balance: ₦{sale.balance.toFixed(2)}</p>
+                  <p>Total Amount: ₦{formatAmount(sale.total_amount)}</p>
+                  <p>Amount Paid: ₦{formatAmount(sale.amount_paid)}</p>
+                  <p>Balance: ₦{formatAmount(sale.balance)}</p>
                 </div>
 
                 <div className="sale-items">
@@ -127,7 +221,7 @@ const ListRestaurantSales = () => {
                     sale.items.map((item, idx) => (
                       <div key={idx} className="sale-item">
                         <span>{item.meal_name} × {item.quantity}</span>
-                        <span>₦{item.total_price?.toFixed(2)}</span>
+                        <span>₦{formatAmount(item.total_price)}</span>
                       </div>
                     ))
                   ) : (
@@ -158,10 +252,7 @@ const ListRestaurantSales = () => {
       {/* ✅ Global Modal showing POS receipt */}
       {selectedSale && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div
-            className="print-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="print-modal" onClick={(e) => e.stopPropagation()}>
             <div ref={printRef} className="receipt-container">
               <div className="receipt-header">
                 <h2>Destone Hotel & Suite</h2>
@@ -172,6 +263,7 @@ const ListRestaurantSales = () => {
 
               <div className="receipt-info">
                 <p><strong>Sale No:</strong> {selectedSale.id}</p>
+                <p><strong>Guest:</strong> {selectedSale.guest_name || "N/A"}</p>
                 <p><strong>Served by:</strong> {selectedSale.served_by}</p>
               </div>
               <hr />
@@ -181,9 +273,7 @@ const ListRestaurantSales = () => {
                   selectedSale.items.map((item, idx) => (
                     <div key={idx} className="receipt-item">
                       <span>{item.quantity} × {item.meal_name}</span>
-                      <span className="amount">
-                        ₦{item.total_price?.toFixed(2)}
-                      </span>
+                      <span className="amount">₦{formatAmount(item.total_price)}</span>
                     </div>
                   ))
                 ) : (
@@ -193,13 +283,14 @@ const ListRestaurantSales = () => {
               <hr />
 
               <div className="receipt-totals">
-                <p><span>Subtotal</span> <span>₦{selectedSale.total_amount.toFixed(2)}</span></p>
-                <p><span>Paid</span> <span>₦{selectedSale.amount_paid.toFixed(2)}</span></p>
+                <p><span>Subtotal</span> <span>₦{formatAmount(selectedSale.total_amount)}</span></p>
+                <p><span>Paid</span> <span>₦{formatAmount(selectedSale.amount_paid)}</span></p>
                 <p className="grand-total">
                   <span>Balance</span> 
-                  <span>₦{selectedSale.balance.toFixed(2)}</span>
+                  <span>₦{formatAmount(selectedSale.balance)}</span>
                 </p>
               </div>
+
               <hr />
 
               <div className="receipt-footer">

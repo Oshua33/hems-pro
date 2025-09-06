@@ -6,16 +6,30 @@ from typing import List
 
 
 
+class PaymentCreate(BaseModel):
+    amount: float
+    payment_mode: str
+    paid_by: str | None = None
+
+    
+
 class RestaurantSalePaymentDisplay(BaseModel):
     id: int
     sale_id: int
     amount_paid: float
     payment_mode: str  # e.g., "cash", "POS", "transfer"
     paid_by: Optional[str]
+    is_void: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UpdatePaymentSchema(BaseModel):
+    amount_paid: Optional[float]
+    payment_mode: Optional[str]
+    paid_by: Optional[str]
 
 
 # restpayment/schemas.py
