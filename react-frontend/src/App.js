@@ -72,7 +72,10 @@ import MealCreate from "./components/restaurant/MealCreate";
 
 import GuestOrderCreate from "./components/restaurant/GuestOrderCreate";
 import ListGuestOrder from "./components/restaurant/ListGuestOrder";
-
+import OrderToSales from "./components/restaurant/OrderToSales";
+import ListRestaurantSales from "./components/restaurant/ListRestaurantSales";
+import RestCreatePayment from "./components/restaurant/RestCreatePayment";
+import RestListPayment from "./components/restaurant/RestListPayment";
 
 
 
@@ -147,7 +150,12 @@ const App = () => {
           <Route path="MealCreate" element={<MealCreate />} />
           <Route path="GuestOrderCreate" element={<GuestOrderCreate />} />
           <Route path="ListGuestOrder" element={<ListGuestOrder />} />
+          <Route path="OrderToSales" element={<OrderToSales />} />
+          <Route path="ListRestaurantSales" element={<ListRestaurantSales />} />
+          <Route path="RestCreatePayment" element={<RestCreatePayment />} />
+          <Route path="RestListPayment" element={<RestListPayment />} />
 
+          
         </Route>
 
       

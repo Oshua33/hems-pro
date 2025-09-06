@@ -1,7 +1,8 @@
 // src/components/restaurant/ListGuestOrder.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListGuestOrder.css";
+import "./Receipt.css"; // ✅ Reuse receipt styles
 
 // Currency formatter for NGN
 const currencyNGN = (value) =>
@@ -24,8 +25,13 @@ const ListGuestOrder = () => {
     room_number: "",
     order_type: "",
     location_id: "",
-    items: [], // { meal_id, meal_name, price_per_unit, quantity }
+    items: [],
   });
+
+  // For printing
+  const [printOrder, setPrintOrder] = useState(null);
+  const [printTime, setPrintTime] = useState(null);
+  const printRef = useRef();
 
   // Locations
   const [locations, setLocations] = useState([]);
@@ -64,13 +70,14 @@ const ListGuestOrder = () => {
     }
   };
 
-
   // Derived totals
   const entriesTotal = orders.length;
   const grossTotal = orders.reduce((sum, o) => {
     const orderTotal = o.items.reduce(
       (s, it) =>
-        s + (Number(it.total_price) || (Number(it.price_per_unit) || 0) * (Number(it.quantity) || 0)),
+        s +
+        (Number(it.total_price) ||
+          (Number(it.price_per_unit) || 0) * (Number(it.quantity) || 0)),
       0
     );
     return sum + orderTotal;
@@ -111,10 +118,45 @@ const ListGuestOrder = () => {
     });
   };
 
+  // Open print modal
+  const handlePrint = (order) => {
+    setPrintOrder(order);
+    setPrintTime(new Date()); // save current time of print
+  };
+
+  // Close modal
+  const closePrintModal = () => {
+    setPrintOrder(null);
+    setPrintTime(null);
+  };
+
+  // Print receipt-style content
+  const printModalContent = () => {
+    if (!printRef.current) return;
+
+    const printWindow = window.open("", "_blank", "width=400,height=600");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Kitchen Order #${printOrder.id}</title>
+          <style>
+            ${document.querySelector("style")?.innerHTML || ""}
+          </style>
+        </head>
+        <body>
+          ${printRef.current.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
   // Update item field (quantity)
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...formData.items];
-    // ensure numeric for quantity
     if (field === "quantity") {
       const qty = Number(value);
       updatedItems[index][field] = isNaN(qty) ? 0 : qty;
@@ -157,7 +199,8 @@ const ListGuestOrder = () => {
   // Modal grand total
   const modalGrandTotal =
     formData.items?.reduce(
-      (sum, it) => sum + Number(it.price_per_unit || 0) * Number(it.quantity || 0),
+      (sum, it) =>
+        sum + Number(it.price_per_unit || 0) * Number(it.quantity || 0),
       0
     ) || 0;
 
@@ -195,13 +238,17 @@ const ListGuestOrder = () => {
           </button>
         </div>
 
-  <div className="filters-right">
-    <div>Entries: <strong>{entriesTotal}</strong></div>
-    <div>Gross Total: <strong>{currencyNGN(grossTotal)}</strong></div>
-  </div>
-</div>
+        <div className="filters-right">
+          <div>
+            Entries: <strong>{entriesTotal}</strong>
+          </div>
+          <div>
+            Gross Total: <strong>{currencyNGN(grossTotal)}</strong>
+          </div>
+        </div>
+      </div>
 
-<hr className="listorder-divider" />
+      <hr className="listorder-divider" />
 
       {/* Orders Table */}
       <table className="listorder-table">
@@ -222,7 +269,9 @@ const ListGuestOrder = () => {
             orders.map((o) => {
               const total = o.items.reduce(
                 (sum, it) =>
-                  sum + (Number(it.total_price) || (Number(it.price_per_unit) || 0) * (Number(it.quantity) || 0)),
+                  sum +
+                  (Number(it.total_price) ||
+                    (Number(it.price_per_unit) || 0) * (Number(it.quantity) || 0)),
                 0
               );
 
@@ -261,6 +310,12 @@ const ListGuestOrder = () => {
                     >
                       🗑️ Delete
                     </button>
+                    <button
+                      className="action-btn print"
+                      onClick={() => handlePrint(o)}
+                    >
+                      🖨️ Print
+                    </button>
                   </td>
                 </tr>
               );
@@ -275,7 +330,72 @@ const ListGuestOrder = () => {
         </tbody>
       </table>
 
-      {/* Edit Modal */}
+      {/* ✅ Print Modal for Kitchen */}
+      {printOrder && (
+        <div className="modal-overlay" onClick={closePrintModal}>
+          <div className="print-modal" onClick={(e) => e.stopPropagation()}>
+            <div ref={printRef} className="receipt-container">
+              <div className="receipt-header">
+                <h2>Kitchen Order</h2>
+                <p>{printTime.toLocaleString()}</p>
+                <hr />
+              </div>
+
+              <div className="receipt-info">
+                <p>
+                  <strong>Order #:</strong> {printOrder.id}
+                </p>
+                <p>
+                  <strong>Guest:</strong> {printOrder.guest_name || "--"}
+                </p>
+                <p>
+                  <strong>Room:</strong> {printOrder.room_number || "--"}
+                </p>
+                <p>
+                  <strong>Type:</strong> {printOrder.order_type}
+                </p>
+              </div>
+              <hr />
+
+              <div className="receipt-items">
+                {printOrder.items && printOrder.items.length > 0 ? (
+                  printOrder.items.map((item, idx) => (
+                    <div key={idx} className="receipt-item">
+                      <span>
+                        {item.quantity} × {item.meal_name}
+                      </span>
+                      <span className="amount">
+                        {currencyNGN(
+                          item.total_price ||
+                            item.price_per_unit * item.quantity
+                        )}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p>No items</p>
+                )}
+              </div>
+              <hr />
+
+              <div className="receipt-footer">
+                <p>-- Send to Kitchen --</p>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={printModalContent} className="print-btn">
+                🖨️ Print Now
+              </button>
+              <button onClick={closePrintModal} className="close-btn">
+                ❌
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Restored Edit Modal */}
       {editingOrder && (
         <div className="edit-modal">
           <div className="edit-modal-content">
@@ -360,7 +480,11 @@ const ListGuestOrder = () => {
                             min="1"
                             value={qty}
                             onChange={(e) =>
-                              handleItemChange(idx, "quantity", Number(e.target.value))
+                              handleItemChange(
+                                idx,
+                                "quantity",
+                                Number(e.target.value)
+                              )
                             }
                           />
                         </td>
@@ -381,7 +505,10 @@ const ListGuestOrder = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: "center", padding: "12px" }}>
+                    <td
+                      colSpan="5"
+                      style={{ textAlign: "center", padding: "12px" }}
+                    >
                       No items on this order.
                     </td>
                   </tr>
@@ -392,7 +519,9 @@ const ListGuestOrder = () => {
                   <td colSpan="3" className="total-cell-right">
                     Grand Total
                   </td>
-                  <td className="total-amount">{currencyNGN(modalGrandTotal)}</td>
+                  <td className="total-amount">
+                    {currencyNGN(modalGrandTotal)}
+                  </td>
                   <td />
                 </tr>
               </tfoot>

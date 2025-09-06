@@ -17,7 +17,7 @@ load_dotenv(dotenv_path=env_path)
 print(f"🔄 Loaded environment from: {env_path}")
 
 # ✅ Get database URL from environment
-SQLALCHEMY_DATABASE_URL = os.getenv("DB_URL2")
+SQLALCHEMY_DATABASE_URL = os.getenv("DB_URL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # ✅ Validate environment values
