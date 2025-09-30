@@ -12,6 +12,7 @@ from app.license.router import router as license_router
 from app.events.router import router as events_router
 from app.eventpayment.router import router as eventpayment_router
 from backup.backup import router as backup_router
+#from app.system.router import router as system_router
 
 
 from app.store.router import router as store_router
@@ -74,15 +75,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Static files (uploads)
 app.mount("/files", StaticFiles(directory="uploads"), name="files")
-#app.mount("/attachments", StaticFiles(directory="uploads/attachments"), name="attachments")
+
 
 # Static React frontend
-react_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "react-frontend", "build"))
+react_build_dir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "react-frontend", "build")
+)
 react_static_dir = os.path.join(react_build_dir, "static")
-app.mount("/static", StaticFiles(directory=react_static_dir), name="static")
+
+# ✅ Only mount if directory exists
+# Serve entire React build dir
+if os.path.isdir(react_build_dir):
+    app.mount("/static", StaticFiles(directory=react_static_dir), name="static")
+    print(f"[INFO] Serving static files from {react_static_dir}")
+else:
+    print(f"[WARNING] React static directory not found: {react_static_dir} — skipping static mount")
+
 
 # Routers
 app.include_router(user_router, prefix="/users", tags=["Users"])
@@ -102,6 +111,8 @@ app.include_router(vendor_router, prefix="/vendor", tags=["Vendor"])
 app.include_router(restaurant_router, prefix="/restaurant", tags=["Restaurant"])
 app.include_router(restpayment_router, prefix="/restpayment", tags=["Restaurant Payment"])
 
+#app.include_router(system_router,  prefix="/system", tags=["System"])
+
 
 
 # Simple health check
@@ -109,20 +120,16 @@ app.include_router(restpayment_router, prefix="/restpayment", tags=["Restaurant 
 def debug_ping():
     return {"status": "ok"}
 
-# ✅ Route fallback for SPA (React frontend)
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
-    # Skip fallback for known API/static routes
-    known_paths = [route.path for route in app.routes if isinstance(route, APIRoute)]
-    if any(full_path == path.strip("/") or full_path.startswith(path.strip("/") + "/") for path in known_paths):
-        return JSONResponse(status_code=404, content={"detail": "This is an API route, not SPA."})
-
     index_file = os.path.join(react_build_dir, "index.html")
-    return FileResponse(index_file)
+    request_file = os.path.join(react_build_dir, full_path)
 
-# Entry point
-if __name__ == "__main__":
-    
-    uvicorn.run("app.main:app", host=SERVER_IP, port=8000, log_level="info", access_log=False)
+    # If the file exists in build (manifest.json, favicon.ico, etc.), serve it
+    if os.path.isfile(request_file):
+        return FileResponse(request_file)
 
-
+    # Otherwise serve React index.html (SPA fallback)
+    if os.path.isfile(index_file):
+        return FileResponse(index_file)
+    return JSONResponse(status_code=404, content={"detail": "Frontend not built or missing."})

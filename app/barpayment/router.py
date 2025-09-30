@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
+from sqlalchemy.sql import func
+from datetime import date, timedelta
 from typing import Optional, List
 from sqlalchemy import func
 from app.database import get_db
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
 from . import models, schemas
 from app.bar.models import BarSale
 from app.barpayment.models import  BarPayment
@@ -21,7 +24,7 @@ router = APIRouter()
 def create_bar_payment(
     payment: schemas.BarPaymentCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["bar"]))
 ):
     sale = db.query(BarSale).filter(BarSale.id == payment.bar_sale_id).first()
     if not sale:
@@ -39,7 +42,7 @@ def create_bar_payment(
     db.commit()
     db.refresh(db_payment)
 
-    # Total paid so far (only ACTIVE payments)
+    # ✅ Total paid so far (only ACTIVE payments)
     total_paid = (
         db.query(func.coalesce(func.sum(models.BarPayment.amount_paid), 0))
         .filter(models.BarPayment.bar_sale_id == payment.bar_sale_id)
@@ -49,6 +52,7 @@ def create_bar_payment(
 
     balance_due = float(sale.total_amount) - float(total_paid)
 
+    # ✅ Recalculate sale-level status
     if total_paid == 0:
         status = "unpaid"
     elif total_paid < sale.total_amount:
@@ -60,7 +64,8 @@ def create_bar_payment(
         "id": db_payment.id,
         "bar_sale_id": db_payment.bar_sale_id,
         "sale_amount": float(sale.total_amount),
-        "amount_paid": float(total_paid),  # cumulative paid
+        "amount_paid": float(db_payment.amount_paid),   # this transaction
+        "cumulative_paid": float(total_paid),           # ✅ total active payments
         "balance_due": float(balance_due),
         "payment_method": db_payment.payment_method,
         "note": db_payment.note,
@@ -71,19 +76,13 @@ def create_bar_payment(
 
 
 
-from sqlalchemy.sql import func
-
-from datetime import date
-
-from datetime import date, timedelta
-
 @router.get("/")
 def list_bar_payments(
     bar_id: int | None = None,
     start_date: date | None = None,   # ✅ optional filter
     end_date: date | None = None,     # ✅ optional filter
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["bar"]))
 ):
     query = db.query(models.BarPayment).order_by(models.BarPayment.date_paid.desc())
 
@@ -121,7 +120,7 @@ def list_bar_payments(
         if not sale:
             continue
 
-        # ✅ Compute total paid for this sale (exclude voided)
+        # ✅ Compute total paid for this sale (exclude voided) → ALL-TIME, not filtered
         total_paid_for_sale = (
             db.query(func.coalesce(func.sum(models.BarPayment.amount_paid), 0))
             .filter(
@@ -138,7 +137,7 @@ def list_bar_payments(
             total_due_all += balance_due
             processed_sales.add(sale.id)
 
-        # ✅ Only count ACTIVE payments in totals
+        # ✅ Only count ACTIVE payments in totals (but only those inside the filter)
         if p.status == "active":
             total_paid_all += float(p.amount_paid)
 
@@ -152,23 +151,27 @@ def list_bar_payments(
                 elif method == "transfer":
                     total_transfer += float(p.amount_paid)
 
-        # ✅ Decide sale-level payment status
+        # ✅ Decide sale-level payment status (recalculated ALL-TIME)
         if total_paid_for_sale == 0:
-            payment_status = "unpaid"
+            sale_status = "unpaid"
         elif total_paid_for_sale < sale.total_amount:
-            payment_status = "part payment"
+            sale_status = "part payment"
         else:
-            payment_status = "fully paid"
+            sale_status = "fully paid"
 
-        # ✅ Row status (voided rows should appear as voided)
-        row_status = "voided" if p.status == "voided" else payment_status
+        # ✅ Row status
+        if p.status == "voided":
+            row_status = "voided"
+        else:
+            row_status = sale_status
 
         response.append({
             "id": p.id,
             "bar_sale_id": p.bar_sale_id,
             "sale_amount": float(sale.total_amount),
-            "amount_paid": float(p.amount_paid),
-            "balance_due": float(balance_due),
+            "amount_paid": float(p.amount_paid),            # this transaction
+            "cumulative_paid": float(total_paid_for_sale),  # ✅ total active payments (all-time)
+            "balance_due": float(balance_due),              # ✅ outstanding (all-time)
             "payment_method": p.payment_method,
             "note": p.note,
             "date_paid": p.date_paid,
@@ -178,10 +181,10 @@ def list_bar_payments(
 
     return {
         "payments": response,
-        "summary": {   # ✅ now excludes voided payments
+        "summary": {   # ✅ excludes voided payments
             "total_sales": total_sales,
             "total_paid": total_paid_all,
-            "total_due": total_due_all,
+            "total_due": total_due_all,   # ✅ now reflects all-time outstanding
             "total_cash": total_cash,
             "total_pos": total_pos,
             "total_transfer": total_transfer,
@@ -193,13 +196,14 @@ def list_bar_payments(
         }
     }
 
+
 from fastapi import Query
 
 @router.get("/outstanding", response_model=schemas.BarOutstandingSummary)
 def list_outstanding_payments(
     bar_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["bar"]))
 ):
     sales_query = db.query(BarSale)
 
@@ -254,7 +258,7 @@ def update_bar_payment(
     payment_id: int,
     update_data: schemas.BarPaymentUpdate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["bar"]))
 ):
     payment = (
         db.query(models.BarPayment)
@@ -317,12 +321,12 @@ def update_bar_payment(
 def void_bar_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     
     # ✅ Restrict to admin only
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can void payments")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can void payments")
     
     # ✅ Get the payment
     payment = db.query(models.BarPayment).filter(
@@ -382,7 +386,8 @@ def get_bar_payment_status(
     status: Optional[str] = Query(None, description="Filter by status: fully paid, part payment, pending, voided payment"),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["bar"]))
 ):
     # Fetch all payments (active or voided)
     query = db.query(BarPayment).join(BarSale)
@@ -442,11 +447,11 @@ def get_bar_payment_status(
 def delete_bar_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
-    # ✅ Allow only admins
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can delete payments")
+    ## ✅ Allow only admins
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can delete payments")
 
     payment = db.query(models.BarPayment).filter(models.BarPayment.id == payment_id).first()
     

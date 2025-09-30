@@ -1,139 +1,259 @@
+/* src/components/payments/ListBarPayment.css
+   Compact variant: tighter paddings, smaller font, sticky header, scrollable body, zebra + grid lines
+*/
+
 .list-bar-payment-container {
   padding: 10px;
   background: #f5f2f2;
   border-radius: 8px;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.05);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #222;
 }
 
+/* Header */
 .list-bar-payment-container h2 {
-  margin-bottom: 16px;
-  font-size: 1.5rem;
-  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #222;
 }
 
-.bar-payment-table {
+/* Filters */
+.filter-section {
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-section label { font-size: 13px; font-weight: 500; }
+.filter-section select,
+.filter-section input[type="date"] {
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Table wrapper (scrolling area) */
+.list-bar-payment-container .table-scroll {
+  max-height: 52vh;           /* adjust height as needed */
+  overflow: auto;
+  border: 1px solid #e6e6e6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Compact table */
+.list-bar-payment-container .bar-payment-table {
   width: 100%;
   border-collapse: collapse;
+  margin: 0;
+  font-size: 12px;            /* compact font */
+  table-layout: auto;
+  min-width: 900px;          /* allow horizontal scroll on very narrow screens */
 }
 
-.bar-payment-table th,
-.bar-payment-table td {
-  border: 1px solid #ddd;
-  padding: 2px 3px;
+/* Grid lines for header and body cells */
+.list-bar-payment-container .bar-payment-table th,
+.list-bar-payment-container .bar-payment-table td {
+  border: 1px solid #e6e6e6;
+  padding: 6px 8px;         /* compact padding */
   text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;       /* keep cells single-line for compactness */
 }
 
-.bar-payment-table th {
-  background-color: #f4f4f4;
-  font-weight: bold;
+/* Sticky header so column titles stay visible while scrolling */
+.list-bar-payment-container .bar-payment-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #2f3b46;
+  color: #ffffff;
+  z-index: 5;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.2px;
 }
 
-.status.unpaid {
-  color: red;
-  font-weight: bold;
+/* Zebra striping - keep void/exception rows separate */
+.list-bar-payment-container .bar-payment-table tbody tr:not(.void-row):nth-of-type(odd) {
+  background-color: #fbfbfb;
+}
+.list-bar-payment-container .bar-payment-table tbody tr:not(.void-row):nth-of-type(even) {
+  background-color: #ffffff;
 }
 
-.status.part-payment {
-  color: orange;
-  font-weight: bold;
+/* Hover effect (applies to any row) */
+.list-bar-payment-container .bar-payment-table tbody tr:hover {
+  background-color: #eef9ff;
 }
 
-.status.fully-paid {
-  color: green;
-  font-weight: bold;
+/* Void row accent (overrides zebra) */
+.list-bar-payment-container .bar-payment-table tbody tr.void-row {
+  background-color: #fff0f0 !important;
 }
 
-.status.voided {
-  color: gray;
-  font-style: italic;
+/* Status badge - smaller */
+.list-bar-payment-container .status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 11px;
 }
 
-.status.voided {
-  color: gray;
-  font-style: italic;
-}
+/* Status colors */
+.list-bar-payment-container .status.unpaid { background: #fff0f0; color: #d32f2f; }
+.list-bar-payment-container .status.part-payment { background: #fff7e6; color: #ff9800; }
+.list-bar-payment-container .status.fully-paid { background: #e8f6ea; color: #2e7d32; }
+.list-bar-payment-container .status.voided { background: #f2f2f2; color: #7a7a7a; font-style: italic; }
 
-.btn-edit,
-.btn-delete {
-  padding: 2px 4px;
+/* Compact action buttons */
+.list-bar-payment-container .btn-edit,
+.list-bar-payment-container .btn-delete,
+.list-bar-payment-container .btn-void,
+.list-bar-payment-container .btn-print {
+  padding: 4px 6px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  margin: 2px;
+  margin: 1px;
+  font-size: 11px;
+  line-height: 1;
 }
 
+/* Button colors */
+.list-bar-payment-container .btn-edit { background: #2e7d32; color: #fff; }
+.list-bar-payment-container .btn-delete { background: #d32f2f; color: #fff; }
+.list-bar-payment-container .btn-void { background: #ff9800; color: #fff; }
+.list-bar-payment-container .btn-void:disabled { background: #cfcfcf; cursor: not-allowed; }
+.list-bar-payment-container .btn-print { background: #1976d2; color: #fff; }
+
+/* Summary box - slim */
+.list-bar-payment-container .summary-box {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  font-size: 13px;
+}
+
+/* Modal styling (slim) */
+.modal-overlay3 { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.modal3 { background: #fff; padding: 14px; border-radius: 8px; width: 380px; max-height: 90vh; overflow:auto; }
+
+/* Responsiveness */
+@media (max-width: 1100px) {
+  .list-bar-payment-container .bar-payment-table { font-size: 11px; min-width: 760px; }
+  .list-bar-payment-container .bar-payment-table th,
+  .list-bar-payment-container .bar-payment-table td { padding: 5px 6px; }
+  .filter-section label { font-size: 12px; }
+}
+
+@media (max-width: 700px) {
+  .list-bar-payment-container .table-scroll { max-height: 60vh; }
+  .list-bar-payment-container .bar-payment-table { min-width: 900px; } /* allow horizontal scroll */
+}
+
+
+/* ✅ Modal Overlay */
+.modal-overlay3 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* dim background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* ✅ Modal Box */
+.modal3 {
+  background: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  width: 420px;
+  max-width: 95%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ✅ Modal Title */
+.modal3 h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+}
+
+/* ✅ Inputs & Select */
+.modal3 input,
+.modal3 select {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.modal3 input:focus,
+.modal3 select:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* ✅ Modal Actions */
+.modal-actions3 {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+/* ✅ Save Button */
 .btn-edit {
-  background: #4caf50;
-  color: white;
+  background-color: #28a745;
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s ease-in-out;
 }
 
 .btn-edit:hover {
-  background: #45a049;
+  background-color: #218838;
 }
 
+/* ✅ Cancel Button */
 .btn-delete {
-  background: #f44336;
-  color: white;
+  background-color: #dc3545;
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s ease-in-out;
 }
 
 .btn-delete:hover {
-  background: #da190b;
+  background-color: #c82333;
 }
 
-.error {
-  color: red;
-  margin: 10px 0;
-}
-
-
-.modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  width: 400px;
-  box-shadow: 0px 4px 12px rgba(0,0,0,0.3);
-}
-
-.modal-content h3 {
-  margin-bottom: 15px;
-}
-
-.modal-content label {
-  display: block;
-  margin: 8px 0 4px;
-  font-weight: bold;
-}
-
-.modal-content input {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-
-.modal-content select {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fff;
+/* ✅ Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }

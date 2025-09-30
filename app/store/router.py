@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
 from app.users.models import User
 from app.users import schemas as user_schemas
 from app.store import models as store_models
@@ -56,7 +57,7 @@ router = APIRouter()
 def create_category(
     category: store_schemas.StoreCategoryCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     existing = db.query(store_models.StoreCategory).filter_by(name=category.name).first()
     if existing:
@@ -71,7 +72,7 @@ def create_category(
 @router.get("/categories", response_model=list[store_schemas.StoreCategoryDisplay])
 def list_categories(
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     return db.query(store_models.StoreCategory).all()
 
@@ -81,7 +82,7 @@ def update_category(
     category_id: int,
     update_data: store_schemas.StoreCategoryCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     category = db.query(store_models.StoreCategory).filter_by(id=category_id).first()
     if not category:
@@ -104,7 +105,7 @@ def update_category(
 def delete_category(
     category_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     category = db.query(store_models.StoreCategory).filter_by(id=category_id).first()
     if not category:
@@ -124,7 +125,7 @@ def delete_category(
 def create_item(
     item: store_schemas.StoreItemCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     try:
         existing = db.query(store_models.StoreItem).filter_by(name=item.name).first()
@@ -150,7 +151,7 @@ from fastapi import HTTPException
 def list_items(
     category: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     try:
         # Subquery to get the latest stock entry (with unit_price) for each item
@@ -210,7 +211,7 @@ from typing import List
 @router.get("/items/simple", response_model=List[store_schemas.StoreItemOut])
 def list_items_simple(
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    #current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     try:
         # Subquery to get the latest stock entry (unit_price) for each item
@@ -265,7 +266,7 @@ def update_item(
     item_id: int,
     update_data: store_schemas.StoreItemCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     item = db.query(store_models.StoreItem).filter_by(id=item_id).first()
     if not item:
@@ -290,7 +291,7 @@ def update_item(
 def delete_item(
     item_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    ccurrent_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     item = db.query(store_models.StoreItem).filter_by(id=item_id).first()
     if not item:
@@ -315,7 +316,7 @@ async def receive_inventory(
     entry: store_schemas.StoreStockEntryCreate = Depends(store_schemas.StoreStockEntryCreate.as_form),
     attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     # Validate item existence
     item = db.query(store_models.StoreItem).filter_by(id=entry.item_id).first()
@@ -374,20 +375,23 @@ async def receive_inventory(
 
 
 
+from fastapi import Request
+
 @router.get("/purchases")
 def list_purchases(
     start_date: date = Query(None),
     end_date: date = Query(None),
     invoice_number: str = Query(None),
+    request: Request = None,  # ✅ to build absolute URLs
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     query = db.query(store_models.StoreStockEntry).options(
         selectinload(store_models.StoreStockEntry.vendor),
         selectinload(store_models.StoreStockEntry.item),
     )
 
-    # Filter by purchase date range
+    # 🔎 Apply filters
     if start_date and end_date:
         query = query.filter(
             store_models.StoreStockEntry.purchase_date >= start_date,
@@ -398,19 +402,20 @@ def list_purchases(
     elif end_date:
         query = query.filter(store_models.StoreStockEntry.purchase_date <= end_date)
 
-    # Filter by invoice number
     if invoice_number:
         query = query.filter(store_models.StoreStockEntry.invoice_number.ilike(f"%{invoice_number}%"))
 
     purchases = query.order_by(store_models.StoreStockEntry.created_at.desc()).all()
 
-    results = []
-    total_amount = 0
+    results, total_amount = [], 0
     for purchase in purchases:
-        attachment_url = (
-            f"/files/{os.path.relpath(purchase.attachment, 'uploads').replace(os.sep, '/')}"
-            if purchase.attachment else None
-        )
+        attachment_url = None
+        if purchase.attachment:
+            # ✅ Normalize to forward slashes
+            rel_path = os.path.relpath(purchase.attachment, "uploads").replace("\\", "/")
+            # ✅ Build full URL
+            base_url = str(request.base_url).rstrip("/")
+            attachment_url = f"{base_url}/files/{rel_path}"
 
         total_amount += purchase.total_amount or 0
 
@@ -419,7 +424,7 @@ def list_purchases(
             "item_id": purchase.item_id,
             "item_name": purchase.item.name if purchase.item else "",
             "invoice_number": purchase.invoice_number,
-            "quantity": purchase.original_quantity,  # Show original purchased qty
+            "quantity": purchase.original_quantity,  # original purchased qty
             "unit_price": purchase.unit_price,
             "total_amount": purchase.total_amount,
             "vendor_id": purchase.vendor_id,
@@ -435,6 +440,7 @@ def list_purchases(
         "total_purchase": total_amount,
         "purchases": results
     }
+
 
 from fastapi import HTTPException, UploadFile, File, Form
 from datetime import datetime
@@ -452,7 +458,7 @@ async def update_purchase(
     purchase_date: datetime = Form(...),
     attachment: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     # Load the existing stock entry
     entry = db.query(store_models.StoreStockEntry).filter_by(id=entry_id).first()
@@ -568,7 +574,7 @@ async def update_purchase(
 def delete_purchase(
     entry_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     entry = db.query(store_models.StoreStockEntry).filter_by(id=entry_id).first()
     if not entry:
@@ -590,15 +596,17 @@ from datetime import datetime, date
 def supply_to_bars(
     issue_data: store_schemas.IssueCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "admin"]))  # ✅ allow both
 ):
-    # ✅ Date Control: Allow only today's date
     today = date.today()
+
+    # ✅ Date Control: only today's date unless admin
     if issue_data.issue_date and issue_data.issue_date.date() != today:
-        raise HTTPException(
-            status_code=400,
-            detail="❌ You can only make issues for today's date."
-        )
+        if "admin" not in current_user.roles:  # ✅ check list of roles
+            raise HTTPException(
+                status_code=400,
+                detail="❌ Only admins can post issues for a past date."
+            )
 
     issue = StoreIssue(
         issue_to=issue_data.issue_to,
@@ -674,16 +682,18 @@ def supply_to_bars(
     return issue
 
 
+
+
 from typing import Optional, List
 from fastapi import Query
 
 @router.get("/issues", response_model=List[store_schemas.IssueDisplay])
-def list_issues(
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+def list_issues(  
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     bar_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     query = db.query(StoreIssue).options(joinedload(StoreIssue.issued_to))
 
@@ -697,7 +707,8 @@ def list_issues(
     if bar_name:
         query = query.join(StoreIssue.issued_to).filter(Bar.name.ilike(f"%{bar_name}%"))
 
-    issues = query.order_by(StoreIssue.issue_date.desc()).all()
+    # ✅ Order by ID DESC (newest on top)
+    issues = query.order_by(StoreIssue.id.desc()).all()
     return issues if issues else []
 
 
@@ -706,7 +717,7 @@ def update_issue(
     issue_id: int,
     update_data: store_schemas.IssueCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     issue = db.query(StoreIssue).filter_by(id=issue_id).first()
     if not issue:
@@ -810,7 +821,7 @@ def update_issue(
 def delete_issue(
     issue_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     issue = db.query(StoreIssue).filter_by(id=issue_id).first()
     if not issue:
@@ -872,7 +883,7 @@ from fastapi import Query
 def get_store_balances(
     category_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     # 1) Historical Adjustments
     adjustments_q = (
@@ -919,39 +930,47 @@ def get_store_balances(
     # 4) Build Final Response
     response = []
     for item in received_q:
+        # Always pick the most recent stock entry for unit price
         latest_entry = (
             db.query(store_models.StoreStockEntry)
             .filter(store_models.StoreStockEntry.item_id == item.item_id)
-            .order_by(store_models.StoreStockEntry.purchase_date.desc())
+            .order_by(store_models.StoreStockEntry.purchase_date.desc(), store_models.StoreStockEntry.id.desc())
             .first()
         )
-        unit_price = float(latest_entry.unit_price) if latest_entry else None
-        balance_value = (unit_price * float(item.current_balance)) if unit_price is not None else None
+        
+        # Debug: Check the latest entry to verify it's correct
+        print(f"Item ID: {item.item_id} Latest Entry: {latest_entry}")  # Debug print
+
+        # Use the latest/current unit price
+        current_unit_price = float(latest_entry.unit_price) if latest_entry else 0.0
+        balance_value = current_unit_price * float(item.current_balance or 0)
 
         response.append({
             "item_id": item.item_id,
             "item_name": item.item_name,
             "category_name": item.category_name,
             "unit": item.unit,
-            "total_received": float(item.total_received or 0),   # All-time purchases
-            "total_issued": issued_map.get(item.item_id, 0),     # All-time issues (for info)
-            "total_adjusted": adjustment_map.get(item.item_id, 0), # All-time adjustments (for info)
-            "balance": float(item.current_balance or 0),         # Actual current stock
-            "last_unit_price": unit_price,
-            "balance_total_amount": round(balance_value, 2) if balance_value is not None else None,
+            "total_received": float(item.total_received or 0),       # All-time purchases
+            "total_issued": issued_map.get(item.item_id, 0),         # All-time issues
+            "total_adjusted": adjustment_map.get(item.item_id, 0),   # All-time adjustments
+            "balance": float(item.current_balance or 0),             # Actual current stock
+            "current_unit_price": current_unit_price,                # ✅ Always the latest unit price
+            "balance_total_amount": round(balance_value, 2),         # ✅ Cost at current unit price
         })
 
     return response
+
+
 
 
 @router.post("/adjust", response_model=StoreInventoryAdjustmentDisplay)
 def adjust_store_inventory(
     adjustment_data: StoreInventoryAdjustmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can adjust inventory.")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can adjust inventory.")
 
     # Get latest stock entry
     latest_entry = db.query(StoreStockEntry).filter(
@@ -989,7 +1008,7 @@ def list_store_inventory_adjustments(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     query = db.query(StoreInventoryAdjustment)
 
@@ -1008,11 +1027,11 @@ def update_adjustment(
     adjustment_id: int,
     data: StoreInventoryAdjustmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     # AuthZ
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can edit adjustments.")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can edit adjustments.")
 
     # Load existing adjustment
     adjustment = db.query(StoreInventoryAdjustment).filter(
@@ -1098,11 +1117,11 @@ def update_adjustment(
 def delete_adjustment(
     adjustment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     # Only admins can delete
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can delete adjustments.")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can delete adjustments.")
 
     # Get adjustment
     adjustment = db.query(StoreInventoryAdjustment)\
@@ -1140,13 +1159,14 @@ def delete_adjustment(
 
 @router.get("/bar-balance-stock", response_model=List[bar_schemas.BarStockBalance])
 def get_bar_stock_balance(
-    category_id: Optional[int] = Query(None),
+    item_id: Optional[int] = Query(None, description="Filter by specific item"),
+    bar_id: Optional[int] = Query(None, description="Filter by bar"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
 ):
     try:
         # -----------------------------
-        # 1) Fetch issued items (what bars received from store)
+        # 1) Fetch issued items
         # -----------------------------
         issued_query = (
             db.query(
@@ -1155,11 +1175,13 @@ def get_bar_stock_balance(
                 func.sum(store_models.StoreIssueItem.quantity).label("total_received"),
             )
             .join(store_models.StoreIssue)
-            .join(store_models.StoreItem)   # ✅ ensure StoreItem is available for category filter
+            .join(store_models.StoreItem)
         )
 
-        if category_id:
-            issued_query = issued_query.filter(store_models.StoreItem.category_id == category_id)
+        if item_id:
+            issued_query = issued_query.filter(store_models.StoreItem.id == item_id)
+        if bar_id:
+            issued_query = issued_query.filter(store_models.StoreIssue.issued_to_id == bar_id)
 
         issued_query = issued_query.group_by(
             store_models.StoreIssueItem.item_id,
@@ -1181,11 +1203,13 @@ def get_bar_stock_balance(
             )
             .join(bar_models.BarSaleItem.bar_inventory)
             .join(bar_models.BarSaleItem.sale)
-            .join(store_models.StoreItem, bar_models.BarInventory.item_id == store_models.StoreItem.id)  # ✅ join to filter by category
+            .join(store_models.StoreItem, bar_models.BarInventory.item_id == store_models.StoreItem.id)
         )
 
-        if category_id:
-            sold_query = sold_query.filter(store_models.StoreItem.category_id == category_id)
+        if item_id:
+            sold_query = sold_query.filter(store_models.StoreItem.id == item_id)
+        if bar_id:
+            sold_query = sold_query.filter(bar_models.BarSale.bar_id == bar_id)
 
         sold_query = sold_query.group_by(
             bar_models.BarInventory.item_id,
@@ -1202,11 +1226,13 @@ def get_bar_stock_balance(
                 bar_models.BarInventoryAdjustment.bar_id,
                 func.sum(bar_models.BarInventoryAdjustment.quantity_adjusted).label("total_adjusted"),
             )
-            .join(store_models.StoreItem, bar_models.BarInventoryAdjustment.item_id == store_models.StoreItem.id)  # ✅ join for filter
+            .join(store_models.StoreItem, bar_models.BarInventoryAdjustment.item_id == store_models.StoreItem.id)
         )
 
-        if category_id:
-            adjusted_query = adjusted_query.filter(store_models.StoreItem.category_id == category_id)
+        if item_id:
+            adjusted_query = adjusted_query.filter(store_models.StoreItem.id == item_id)
+        if bar_id:
+            adjusted_query = adjusted_query.filter(bar_models.BarInventoryAdjustment.bar_id == bar_id)
 
         adjusted_query = adjusted_query.group_by(
             bar_models.BarInventoryAdjustment.item_id,
@@ -1223,37 +1249,71 @@ def get_bar_stock_balance(
         all_keys = set(issued_data.keys()) | set(sold_data.keys()) | set(adjusted_data.keys())
         results = []
 
-        for (item_id, b_id) in all_keys:
-            issued = issued_data.get((item_id, b_id), {"total_received": 0})["total_received"]
-            sold = sold_data.get((item_id, b_id), 0)
-            adjusted = adjusted_data.get((item_id, b_id), 0)
+        for (i_id, b_id) in all_keys:
+            issued = issued_data.get((i_id, b_id), {"total_received": 0})["total_received"]
+            sold = sold_data.get((i_id, b_id), 0)
+            adjusted = adjusted_data.get((i_id, b_id), 0)
             balance = issued - sold - adjusted
 
-            # ✅ fetch item with category filter applied
-            item_q = db.query(store_models.StoreItem).filter(store_models.StoreItem.id == item_id)
-            if category_id:
-                item_q = item_q.filter(store_models.StoreItem.category_id == category_id)
-            item = item_q.first()
-
-            if not item:  # if category filter excludes item
+            item = db.query(store_models.StoreItem).filter(store_models.StoreItem.id == i_id).first()
+            if not item:
                 continue
 
             bar = db.query(bar_models.Bar).get(b_id)
 
-            # ✅ Get last unit price
+            # ---- Attempt 1: most recent entry WITH a non-null unit_price ----
             latest_entry = (
                 db.query(store_models.StoreStockEntry)
-                .filter(store_models.StoreStockEntry.item_id == item_id)
-                .order_by(store_models.StoreStockEntry.purchase_date.desc())
+                .filter(
+                    store_models.StoreStockEntry.item_id == i_id,
+                    store_models.StoreStockEntry.unit_price.isnot(None)
+                )
+                .order_by(store_models.StoreStockEntry.purchase_date.desc(), store_models.StoreStockEntry.id.desc())
                 .first()
             )
-            last_unit_price = float(latest_entry.unit_price) if latest_entry else None
-            balance_total_amount = balance * last_unit_price if last_unit_price is not None else None
+
+            # ---- Attempt 2: if none found, fall back to the most recent entry (regardless of unit_price) ----
+            if not latest_entry:
+                latest_entry = (
+                    db.query(store_models.StoreStockEntry)
+                    .filter(store_models.StoreStockEntry.item_id == i_id)
+                    .order_by(store_models.StoreStockEntry.purchase_date.desc(), store_models.StoreStockEntry.id.desc())
+                    .first()
+                )
+
+            # ---- Attempt 3: final fallback - any entry with non-null price ordered by id descending ----
+            if (not latest_entry) or (latest_entry and (latest_entry.unit_price is None)):
+                fallback = (
+                    db.query(store_models.StoreStockEntry)
+                    .filter(
+                        store_models.StoreStockEntry.item_id == i_id,
+                        store_models.StoreStockEntry.unit_price.isnot(None)
+                    )
+                    .order_by(store_models.StoreStockEntry.id.desc())
+                    .first()
+                )
+                if fallback:
+                    latest_entry = fallback
+
+            # parse price safely
+            unit_price = None
+            if latest_entry and latest_entry.unit_price is not None:
+                try:
+                    unit_price = float(latest_entry.unit_price)
+                except Exception:
+                    # if stored as Decimal/string, coerce via str then float
+                    try:
+                        unit_price = float(str(latest_entry.unit_price))
+                    except Exception:
+                        unit_price = None
+
+            # Compute balance total only when we have a price
+            balance_total_amount = round(balance * unit_price, 2) if unit_price is not None else None
 
             results.append(bar_schemas.BarStockBalance(
                 bar_id=b_id,
                 bar_name=bar.name if bar else "Unknown",
-                item_id=item_id,
+                item_id=i_id,
                 item_name=item.name if item else "Unknown",
                 category_name=item.category.name if item and item.category else "Uncategorized",
                 unit=item.unit if item else "-",
@@ -1261,9 +1321,12 @@ def get_bar_stock_balance(
                 total_sold=sold,
                 total_adjusted=adjusted,
                 balance=balance,
-                last_unit_price=last_unit_price,
+                last_unit_price=unit_price,               # note: this now holds the 'current' price if found
                 balance_total_amount=balance_total_amount,
             ))
+
+        # ✅ Sort results by item_name then bar_name
+        results.sort(key=lambda x: (x.item_name.lower(), x.bar_name.lower()))
 
         return results
 

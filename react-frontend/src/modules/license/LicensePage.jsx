@@ -8,6 +8,7 @@ const LicensePage = () => {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,6 +22,7 @@ const LicensePage = () => {
     }
   }, [location]);
 
+  // ✅ Verify license
   const handleVerify = async () => {
     setMessage("");
     setError("");
@@ -31,20 +33,22 @@ const LicensePage = () => {
     }
 
     try {
-      const data = await verifyLicense(licenseKey); // Expects { valid: true, expires_on }
+      const data = await verifyLicense(licenseKey); // { valid, expires_on }
 
       if (data.valid) {
-        setMessage("License verified successfully.");
-        localStorage.setItem("license_verified", "true");
-
+        let expiryMsg = "";
         if (data.expires_on) {
+          const expiryDate = new Date(data.expires_on);
+          expiryMsg = ` (valid until ${expiryDate.toLocaleDateString()})`;
           localStorage.setItem("license_valid_until", data.expires_on);
         }
+
+        setMessage(`License verified successfully${expiryMsg}.`);
+        localStorage.setItem("license_verified", "true");
 
         setLicenseKey("");
         setPassword("");
 
-        // ✅ Add this line:
         if (typeof setIsLicenseVerified === "function") {
           setIsLicenseVerified(true);
         }
@@ -60,7 +64,8 @@ const LicensePage = () => {
     }
   };
 
-    const handleGenerate = async () => {
+  // ✅ Generate license
+  const handleGenerate = async () => {
     setMessage("");
     setError("");
 
@@ -71,7 +76,9 @@ const LicensePage = () => {
 
     try {
       const data = await generateLicense(password, licenseKey);
-      setMessage(data.key ? `License generated: ${data.key}` : "License generated.");
+      setMessage(
+        data.key ? `License generated: ${data.key}` : "License generated."
+      );
       setLicenseKey("");
       setPassword("");
     } catch (err) {
@@ -89,7 +96,6 @@ const LicensePage = () => {
       } else if (status === 409) {
         setError("This license key already exists.");
       } else {
-        
         setError("License generation failed. Please try again.");
       }
     }
@@ -134,6 +140,7 @@ const LicensePage = () => {
           </button>
         </div>
 
+        {/* ✅ Messages */}
         {message && <p className="license-message success">{message}</p>}
         {error && <p className="license-message error">{error}</p>}
       </div>

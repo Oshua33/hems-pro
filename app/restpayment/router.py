@@ -8,6 +8,7 @@ from datetime import date
 from typing import Optional, List
 from collections import defaultdict
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
 from app.users.models import User
 from app.users import schemas as user_schemas
 
@@ -28,101 +29,155 @@ router = APIRouter()
 # app/restpayment/routes.py
 
 
+
+
 @router.post("/sales/{sale_id}/payments", response_model=RestaurantSaleDisplay)
 def add_payment_to_sale(
     sale_id: int,
-    amount: float = Query(...),
-    payment_mode: str = Query(...),
-    paid_by: str = Query(...),
+    payment: PaymentCreate,  # 👈 accept JSON body
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
+    # 🔎 Find sale
     sale = db.query(RestaurantSale).filter(RestaurantSale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
 
+    # 🔎 Calculate how much is already paid (ignoring voided)
+    total_paid = sum(p.amount_paid for p in sale.payments if not p.is_void)
+    balance = (sale.total_amount or 0) - total_paid
+
+    # 🚫 Prevent overpayment
+    if payment.amount > balance:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payment exceeds outstanding balance. Balance left: {balance}"
+        )
+
+    # 💾 Record new payment
     new_payment = RestaurantSalePayment(
         sale_id=sale.id,
-        amount_paid=amount,
-        payment_mode=payment_mode,
-        paid_by=paid_by,
+        amount_paid=payment.amount,
+        payment_mode=payment.payment_mode,
+        paid_by=payment.paid_by,
+        is_void=False,  # ✅ important
         created_at=datetime.utcnow()
     )
     db.add(new_payment)
-    db.flush()
+    db.commit()   # ✅ persist changes
+    db.refresh(sale)  # ✅ reload sale with updated payments
 
+    # 🔄 Update status (e.g., mark as fully_paid/partial)
     update_sale_status(sale, db)
+
     return sale
 
 
 @router.get("/sales/payments", response_model=dict)
 def list_payments_with_items(
-    sale_id: int = None,
-    start_date: date = Query(None),
-    end_date: date = Query(None),
+    sale_id: Optional[int] = None,
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    location_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
-    query = db.query(RestaurantSale)
+    query = db.query(RestaurantSalePayment).join(RestaurantSale)
 
+    # ✅ Apply filters
     if sale_id:
         query = query.filter(RestaurantSale.id == sale_id)
     if start_date:
-        query = query.filter(RestaurantSale.created_at >= start_date)
+        query = query.filter(
+            RestaurantSalePayment.created_at >= datetime.combine(start_date, datetime.min.time())
+        )
     if end_date:
-        query = query.filter(RestaurantSale.created_at <= end_date)
+        query = query.filter(
+            RestaurantSalePayment.created_at <= datetime.combine(end_date, datetime.max.time())
+        )
+    if location_id:
+        query = query.filter(RestaurantSale.location_id == location_id)
 
-    sales = query.all()
+    payments = query.order_by(RestaurantSalePayment.created_at.desc()).all()
 
-    # Summary logic
+    sales_map = {}
+
+    # Step 1: Organize payments under their sales
+    for p in payments:
+        sale = p.sale
+        if not sale:
+            continue
+
+        if sale.id not in sales_map:
+            # ✅ Get true all-time paid (exclude voided)
+            total_paid_for_sale = (
+                db.query(func.coalesce(func.sum(RestaurantSalePayment.amount_paid), 0))
+                .filter(
+                    RestaurantSalePayment.sale_id == sale.id,
+                    RestaurantSalePayment.is_void == False
+                )
+                .scalar()
+            )
+
+            balance = float(sale.total_amount or 0) - float(total_paid_for_sale)
+
+            # Decide sale status (all-time)
+            if total_paid_for_sale == 0:
+                status = "unpaid"
+            elif total_paid_for_sale < sale.total_amount:
+                status = "partial"
+            else:
+                status = "paid"
+
+            sales_map[sale.id] = {
+                "id": sale.id,
+                "guest_name": sale.guest_name,
+                "total_amount": float(sale.total_amount or 0),
+                "amount_paid": float(total_paid_for_sale),
+                "balance": balance,
+                "payments": [],
+                "status": status,
+            }
+
+        # Add payment dict, but use all-time balance for consistency
+        payment_dict = {
+            "id": p.id,
+            "sale_id": p.sale_id,
+            "amount_paid": float(p.amount_paid or 0),
+            "payment_mode": p.payment_mode,
+            "paid_by": p.paid_by,
+            "is_void": p.is_void,
+            "created_at": p.created_at,
+            "balance": sales_map[sale.id]["balance"],  # ✅ always true outstanding
+        }
+        sales_map[sale.id]["payments"].append(payment_dict)
+
+    # Step 2: Build summary
+    total_paid = 0.0
+    total_outstanding = 0.0
     payment_summary = defaultdict(float)
-    total_amount = 0.0
 
-    # Build response list using schema
-    sales_display = []
+    for sale_data in sales_map.values():
+        total_paid += sale_data["amount_paid"]
+        total_outstanding += sale_data["balance"]
 
-    for sale in sales:
-        for payment in sale.payments:
-            if not payment.is_void:   # <-- exclude voided payments
-                payment_summary[payment.payment_mode] += payment.amount_paid
-                total_amount += payment.amount_paid
+        for p in sale_data["payments"]:
+            if not p["is_void"]:
+                payment_summary[p["payment_mode"]] += p["amount_paid"]
 
+    summary = {k: float(v) for k, v in payment_summary.items()}
+    summary["Total Paid"] = float(total_paid)
+    summary["Total Outstanding"] = float(total_outstanding)
 
-        # Convert each sale to schema for serialization
-        sale_data = RestaurantSaleWithPaymentsDisplay.from_orm(sale)
-        sales_display.append(sale_data)
-
-    summary = dict(payment_summary)
-    summary["Total"] = total_amount
+    # Step 3: Redisplay only outstanding sales if needed
+    redisplay_sales = [s for s in sales_map.values() if s["balance"] > 0]
 
     return {
-        "sales": sales_display,
-        "summary": summary
+        "sales": list(sales_map.values()),
+        "summary": summary,
+        "redisplay_sales": redisplay_sales
     }
 
-
-@router.get("/sales/{sale_id}/payments", response_model=List[RestaurantSalePaymentDisplay])
-def get_payments_for_sale(sale_id: int, 
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    sale = db.query(RestaurantSale).filter(RestaurantSale.id == sale_id).first()
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-
-    return sale.payments
-
-
-@router.get("/sales/{sale_id}/details", response_model=RestaurantSaleWithPaymentsDisplay)
-def get_sale_with_payments(sale_id: int, 
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
-):
-    sale = db.query(RestaurantSale).filter(RestaurantSale.id == sale_id).first()
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-
-    return sale
 
 
 from typing import List
@@ -137,7 +192,7 @@ def update_payment(
     payment_id: int,
     payload: UpdatePaymentSchema,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     payment = db.query(RestaurantSalePayment).filter(RestaurantSalePayment.id == payment_id).first()
     if not payment:
@@ -164,11 +219,12 @@ def update_payment(
 
 # ✅ Void a payment
 # ✅ Void a payment (cancel transaction but keep history)
+
 @router.put("/sales/payments/{payment_id}/void", response_model=RestaurantSalePaymentDisplay)
 def void_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     payment = db.query(RestaurantSalePayment).filter(RestaurantSalePayment.id == payment_id).first()
     if not payment:
@@ -197,7 +253,7 @@ def void_payment(
 def delete_payment(
     payment_id: int = Path(..., description="The ID of the payment to delete"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can delete payments.")

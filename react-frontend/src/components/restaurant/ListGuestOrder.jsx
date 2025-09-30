@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListGuestOrder.css";
 import "./Receipt.css"; // ✅ Reuse receipt styles
+import { HOTEL_NAME } from "../../config/constants";
 
 // Currency formatter for NGN
 const currencyNGN = (value) =>
@@ -18,6 +19,28 @@ const ListGuestOrder = () => {
   const [endDate, setEndDate] = useState("");
   const [message, setMessage] = useState("");
   const [locationFilter, setLocationFilter] = useState("");   // ✅ new
+
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  let roles = [];
+
+  if (Array.isArray(storedUser.roles)) {
+    roles = storedUser.roles;
+  } else if (typeof storedUser.role === "string") {
+    roles = [storedUser.role];
+  }
+
+  roles = roles.map((r) => r.toLowerCase());
+
+
+  if (!(roles.includes("admin") || roles.includes("restaurant"))) {
+  return (
+    <div className="unauthorized">
+      <h2>🚫 Access Denied</h2>
+      <p>You do not have permission to list guest order.</p>
+    </div>
+  );
+}
+
 
   // Get today in YYYY-MM-DD
   const getToday = () => {
@@ -369,6 +392,7 @@ const fetchOrders = () => fetchOrdersWithDates(startDate, endDate);
           <div className="print-modal" onClick={(e) => e.stopPropagation()}>
             <div ref={printRef} className="receipt-container">
               <div className="receipt-header">
+                <h2>{HOTEL_NAME.toUpperCase()}</h2>  
                 <h2>Kitchen Order</h2>
                 <p>{printTime.toLocaleString()}</p>
                 <hr />

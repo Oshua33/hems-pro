@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List
 from typing import Optional
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
 from app.users.models import User
 from fastapi import Query
 from datetime import date
@@ -35,7 +36,7 @@ router = APIRouter()
 @router.post("/locations", response_model=restaurant_schemas.RestaurantLocationDisplay)
 def create_location(location: restaurant_schemas.RestaurantLocationCreate, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     db_location = restaurant_models.RestaurantLocation(**location.dict())
     db.add(db_location)
@@ -48,7 +49,7 @@ def create_location(location: restaurant_schemas.RestaurantLocationCreate,
 @router.get("/locations", response_model=list[restaurant_schemas.RestaurantLocationDisplay])
 def list_locations(
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     return db.query(restaurant_models.RestaurantLocation).order_by(restaurant_models.RestaurantLocation.id.asc()).all()
 
@@ -59,7 +60,7 @@ def update_location(
     location_id: int,
     location_update: restaurant_schemas.RestaurantLocationCreate,  # reuse create schema since it's same fields
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     db_location = db.query(restaurant_models.RestaurantLocation).filter(
         restaurant_models.RestaurantLocation.id == location_id
@@ -81,7 +82,7 @@ def update_location(
 def delete_location(
     location_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     db_location = db.query(restaurant_models.RestaurantLocation).filter(
         restaurant_models.RestaurantLocation.id == location_id
@@ -99,7 +100,7 @@ def delete_location(
 @router.patch("/locations/{location_id}", response_model=restaurant_schemas.RestaurantLocationDisplay)
 def toggle_location_active(location_id: int, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     location = db.query(restaurant_models.RestaurantLocation).filter_by(id=location_id).first()
     if not location:
@@ -114,7 +115,7 @@ def toggle_location_active(location_id: int,
 @router.post("/meal-categories", response_model=restaurant_schemas.MealCategoryDisplay)
 def create_meal_category(category: restaurant_schemas.MealCategoryCreate, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     # Check if name exists
     existing = db.query(restaurant_models.MealCategory).filter_by(name=category.name).first()
@@ -131,7 +132,7 @@ def create_meal_category(category: restaurant_schemas.MealCategoryCreate,
 @router.get("/meal-categories", response_model=list[restaurant_schemas.MealCategoryDisplay])
 def list_meal_categories(
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     return db.query(restaurant_models.MealCategory).order_by(restaurant_models.MealCategory.id.asc()).all()
 
@@ -142,7 +143,7 @@ def update_meal_category(
     category_id: int,
     category_update: restaurant_schemas.MealCategoryCreate,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     db_category = db.query(restaurant_models.MealCategory).filter_by(id=category_id).first()
     if not db_category:
@@ -166,7 +167,7 @@ def update_meal_category(
 def delete_meal_category(
     category_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     db_category = db.query(restaurant_models.MealCategory).filter_by(id=category_id).first()
     if not db_category:
@@ -182,7 +183,7 @@ def delete_meal_category(
 @router.post("/meals", response_model=restaurant_schemas.MealDisplay)
 def create_meal(meal: restaurant_schemas.MealCreate, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     db_meal = restaurant_models.Meal(**meal.dict())
     db.add(db_meal)
@@ -194,7 +195,7 @@ def create_meal(meal: restaurant_schemas.MealCreate,
 @router.get("/meals", response_model=list[restaurant_schemas.MealDisplay])
 def list_meals(
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     return db.query(restaurant_models.Meal).order_by(restaurant_models.Meal.id.asc()).all()
 
@@ -204,7 +205,7 @@ def update_meal(
     meal_id: int,
     meal: restaurant_schemas.MealCreate,   # you can also create a MealUpdate schema if needed
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     db_meal = db.query(restaurant_models.Meal).filter(restaurant_models.Meal.id == meal_id).first()
     if not db_meal:
@@ -223,7 +224,7 @@ def update_meal(
 def delete_meal(
     meal_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     db_meal = db.query(restaurant_models.Meal).filter(restaurant_models.Meal.id == meal_id).first()
     if not db_meal:
@@ -237,7 +238,7 @@ def delete_meal(
 @router.patch("/meals/{meal_id}/toggle-availability", response_model=restaurant_schemas.MealDisplay)
 def toggle_meal_availability(meal_id: int, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     meal = db.query(restaurant_models.Meal).filter_by(id=meal_id).first()
     if not meal:
@@ -252,7 +253,7 @@ def toggle_meal_availability(meal_id: int,
 @router.post("/orders/", response_model=MealOrderDisplay)
 def create_meal_order(order_data: MealOrderCreate, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     # Create the MealOrder
     order = MealOrder(
@@ -309,6 +310,8 @@ def create_meal_order(order_data: MealOrderCreate,
 
 
 
+from datetime import datetime, timedelta
+
 @router.get("/list", response_model=list[MealOrderDisplay])
 def list_meal_orders(
     status: str = Query(None, description="Filter by status: open or closed"),
@@ -316,7 +319,7 @@ def list_meal_orders(
     end_date: date = Query(None, description="End date for filtering"),
     location_id: int = Query(None, description="Filter by location ID"),  # ✅ new filter
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     query = db.query(MealOrder)
 
@@ -328,9 +331,13 @@ def list_meal_orders(
         query = query.filter(MealOrder.status == status)
 
     if start_date:
-        query = query.filter(MealOrder.created_at >= start_date)
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        query = query.filter(MealOrder.created_at >= start_datetime)
+
     if end_date:
-        query = query.filter(MealOrder.created_at <= end_date)
+        # ✅ include entire end date by setting time to 23:59:59
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        query = query.filter(MealOrder.created_at <= end_datetime)
 
     orders = query.order_by(MealOrder.created_at.desc()).all()
     response = []
@@ -366,6 +373,10 @@ def list_meal_orders(
 from datetime import datetime
 from typing import Optional
 
+from datetime import datetime, date, timedelta  # make sure this is at the top
+
+from datetime import datetime, date
+
 @router.get("/sales", response_model=dict)
 def list_sales(
     status: Optional[str] = Query(None, description="Filter by status: unpaid, partial, paid"),
@@ -373,7 +384,7 @@ def list_sales(
     end_date: Optional[date] = Query(None, description="End date for filtering"),
     location_id: Optional[int] = Query(None, description="Filter sales by restaurant location"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     query = db.query(RestaurantSale)
 
@@ -381,17 +392,21 @@ def list_sales(
     if status:
         query = query.filter(RestaurantSale.status == status)
 
-    # ✅ Date filters (inclusive)
+    # ✅ Date filters (inclusive, using served_at)
     if start_date:
-        query = query.filter(
-            RestaurantSale.created_at >= datetime.combine(start_date, datetime.min.time())
-        )
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        query = query.filter(RestaurantSale.served_at >= start_dt)
     if end_date:
-        query = query.filter(
-            RestaurantSale.created_at <= datetime.combine(end_date, datetime.max.time())
-        )
+        end_dt = datetime.combine(end_date, datetime.max.time())
+        query = query.filter(RestaurantSale.served_at <= end_dt)
 
-    sales = query.order_by(RestaurantSale.created_at.desc()).all()
+    # ✅ Prevent invalid date range
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(status_code=400, detail="Start date cannot be after end date")
+
+    # ✅ Always order by served_at, fallback to created_at if None
+    sales = query.order_by(RestaurantSale.served_at.desc().nullslast(),
+                           RestaurantSale.created_at.desc()).all()
 
     result = []
     total_sales_amount = 0.0
@@ -402,9 +417,11 @@ def list_sales(
         order = sale.order
         items = []
         order_location_id = None
+        guest_name = None
 
         if order:
             order_location_id = order.location_id
+            guest_name = order.guest_name
             items = [
                 MealOrderItemDisplay.from_orm_with_meal(item)
                 for item in order.items
@@ -414,19 +431,21 @@ def list_sales(
         if location_id is not None and order_location_id != location_id:
             continue
 
-        # Compute payments
-        amount_paid = sum(payment.amount_paid for payment in sale.payments)
-        balance = sale.total_amount - amount_paid
+        amount_paid = sum(
+            (payment.amount_paid or 0)
+            for payment in sale.payments
+            if not payment.is_void
+        )
+        balance = (sale.total_amount or 0) - amount_paid
 
-        total_sales_amount += sale.total_amount
+        total_sales_amount += (sale.total_amount or 0)
         total_paid_amount += amount_paid
         total_balance += balance
 
-        # ✅ Send raw numbers
         sale_display = {
             "id": sale.id,
             "order_id": sale.order_id,
-            "guest_name": order.guest_name if order else None,
+            "guest_name": guest_name,
             "location_id": order_location_id,
             "served_by": sale.served_by,
             "total_amount": sale.total_amount,
@@ -447,15 +466,18 @@ def list_sales(
 
     return {"sales": result, "summary": summary}
 
+
+
 @router.get("/sales/outstanding", response_model=dict)
 def list_outstanding(
     location_id: int = Query(None, description="Filter by location"),
     start_date: date = Query(None, description="Start date for filtering"),
     end_date: date = Query(None, description="End date for filtering"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
-    query = db.query(RestaurantSale).filter(RestaurantSale.status.in_(["unpaid", "partial"]))
+    # ✅ Get all sales (not filtering by status, we’ll compute balance ourselves)
+    query = db.query(RestaurantSale)
 
     # ✅ Filter by location if provided
     if location_id:
@@ -483,7 +505,7 @@ def list_outstanding(
 
         if order:
             location_id = order.location_id
-            guest_name = order.guest_name  # ✅ guest name from MealOrder
+            guest_name = order.guest_name
             if order.location:
                 location_name = order.location.name
             items = [
@@ -492,35 +514,48 @@ def list_outstanding(
             ]
 
         # ✅ Compute payments excluding voided ones
-        amount_paid = sum(payment.amount_paid for payment in sale.payments if not payment.is_void)
-        balance = sale.total_amount - amount_paid
+        valid_payments = [p for p in sale.payments if not p.is_void]
+        amount_paid = sum(p.amount_paid for p in valid_payments)
+        balance = float(sale.total_amount or 0) - float(amount_paid or 0)
+
+        if balance <= 0:
+            continue  # ✅ Only list sales with positive balance
 
         # Update totals
-        total_sales_amount += sale.total_amount
-        total_paid_amount += amount_paid
-        total_balance += balance
+        total_sales_amount += float(sale.total_amount or 0)
+        total_paid_amount += float(amount_paid or 0)
+        total_balance += float(balance or 0)
 
-        sale_display = RestaurantSaleDisplay(
-            id=sale.id,
-            order_id=sale.order_id,
-            guest_name=guest_name,
-            location_id=location_id,
-            # location_name=location_name,  # uncomment if you want
-            served_by=sale.served_by,
-            total_amount=sale.total_amount,
-            amount_paid=amount_paid,
-            balance=balance,
-            status=sale.status,
-            served_at=sale.served_at,
-            created_at=sale.created_at,
-            items=items,
-        )
+        sale_display = {
+            "id": sale.id,
+            "order_id": sale.order_id,
+            "guest_name": guest_name,
+            "location_id": location_id,
+            "served_by": sale.served_by,
+            "total_amount": float(sale.total_amount or 0),
+            "amount_paid": float(amount_paid or 0),
+            "balance": float(balance or 0),
+            "status": "partial" if amount_paid > 0 else "unpaid",  # ✅ Dynamic status
+            "served_at": sale.served_at,
+            "created_at": sale.created_at,
+            "items": items,
+            "payments": [
+                {
+                    "id": p.id,
+                    "amount_paid": float(p.amount_paid or 0),
+                    "payment_mode": p.payment_mode,
+                    "paid_by": p.paid_by,
+                    "created_at": p.created_at,
+                }
+                for p in valid_payments
+            ]
+        }
         result.append(sale_display)
 
     summary = {
-        "total_sales_amount": total_sales_amount,
-        "total_paid_amount": total_paid_amount,
-        "total_balance": total_balance,
+        "total_sales_amount": float(total_sales_amount),
+        "total_paid_amount": float(total_paid_amount),
+        "total_balance": float(total_balance),
     }
 
     return {"sales": result, "summary": summary}
@@ -530,7 +565,7 @@ def list_outstanding(
 def get_sale(
     sale_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     sale = db.query(RestaurantSale).filter(RestaurantSale.id == sale_id).first()
     if not sale:
@@ -562,10 +597,10 @@ def get_sale(
 def delete_sale(
     sale_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can delete sales.")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can delete sales.")
 
     # Check if the sale exists without accessing relationships
     sale_exists = db.query(RestaurantSale.id).filter(RestaurantSale.id == sale_id).first()
@@ -598,7 +633,7 @@ def create_sale_from_order(
     served_by: str,
     location_id: int,
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     order = db.query(MealOrder).filter(MealOrder.id == order_id).first()
     if not order:
@@ -651,7 +686,7 @@ def create_sale_from_order(
 def list_open_meal_orders(
     location_id: Optional[int] = Query(None, description="Filter open orders by location id"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     """
     Return open meal orders. If location_id is provided, restrict to that location.
@@ -706,7 +741,7 @@ def list_open_meal_orders(
 @router.get("/{order_id}", response_model=MealOrderDisplay)
 def get_meal_order(order_id: int, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     order = db.query(MealOrder).filter(MealOrder.id == order_id).first()
     if not order:
@@ -743,7 +778,7 @@ def update_meal_order(
     order_id: int,
     order_data: MealOrderCreate, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["restaurant"]))
 ):
     order = db.query(MealOrder).filter(MealOrder.id == order_id).first()
     if not order:
@@ -802,7 +837,7 @@ def update_meal_order(
 @router.delete("/{order_id}")
 def delete_meal_order(order_id: int, 
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
     order = db.query(MealOrder).filter(MealOrder.id == order_id).first()
     if not order:

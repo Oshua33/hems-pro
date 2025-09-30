@@ -10,6 +10,7 @@ from app.events import models as event_models
 from app.events import schemas as event_schemas
 from app.users import schemas as user_schemas
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
 from datetime import datetime, date
 import pytz
 from fastapi.responses import JSONResponse
@@ -28,7 +29,7 @@ lagos_tz = pytz.timezone("Africa/Lagos")
 def create_event(
     event: event_schemas.EventCreate, 
     db: Session = Depends(get_db), 
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["event"]))
 ):
     try:
         # Ensure start and end dates are valid `date` objects
@@ -80,7 +81,7 @@ def list_events(
     start_date: str = Query(None, description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(None, description="End date in YYYY-MM-DD format"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["event"]))
 ):
     query = db.query(event_models.Event).options(joinedload(event_models.Event.payments))
 
@@ -102,13 +103,31 @@ def list_events(
     for event in events:
         if event.payment_status == "cancelled":
             continue
-        payment_statuses = [p.payment_status.lower() for p in event.payments if p.payment_status]
-        if "complete" in payment_statuses:
-            event.payment_status = "complete"
-        elif "incomplete" in payment_statuses:
+
+        # ✅ Total due = event_amount + caution_fee
+        total_due = float(event.event_amount or 0) + float(event.caution_fee or 0)
+
+        # ✅ Sum all payments (excluding voided) for this event
+        total_paid = sum(
+            float(p.amount_paid or 0)
+            for p in event.payments
+            if p.payment_status != "voided"
+        )
+        total_discount = sum(
+            float(p.discount_allowed or 0)
+            for p in event.payments
+            if p.payment_status != "voided"
+        )
+
+        balance_due = total_due - (total_paid + total_discount)
+
+        # ✅ Recompute payment status dynamically
+        if balance_due > 0:
             event.payment_status = "incomplete"
+        elif balance_due == 0:
+            event.payment_status = "complete"
         else:
-            event.payment_status = "active"
+            event.payment_status = "excess"
 
     # Compute summary
     filtered_events = [e for e in events if e.payment_status != "cancelled"]
@@ -129,7 +148,9 @@ def list_events(
 
 # Get Event by ID
 @router.get("/{event_id}", response_model=event_schemas.EventResponse)
-def get_event(event_id: int, db: Session = Depends(get_db)):
+def get_event(event_id: int, db: Session = Depends(get_db),
+              current_user: user_schemas.UserDisplaySchema = Depends(role_required(["event"]))
+              ):
     db_event = db.query(event_models.Event).filter(event_models.Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -142,7 +163,7 @@ def update_event(
     event_id: int,
     event: event_schemas.EventCreate, 
     db: Session = Depends(get_db), 
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["event"]))
 ):
     db_event = db.query(event_models.Event).filter(event_models.Event.id == event_id).first()
     if not db_event:
@@ -165,10 +186,10 @@ def cancel_event(
     event_id: int, 
     cancellation_reason: str,
     db: Session = Depends(get_db), 
-    current_user: user_schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["event"]))
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can cancel events")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Only admins can cancel events")
 
     # Fetch the event by ID
     db_event = db.query(event_models.Event).filter(event_models.Event.id == event_id).first()

@@ -9,6 +9,8 @@ from app.database import get_db
 from app.payments import schemas as payment_schemas, crud
 from app.payments import models as payment_models
 from app.users.auth import get_current_user
+from app.users.permissions import role_required  # 👈 permission helper
+from app.users import schemas as user_schemas
 from app.users import schemas
 from app.rooms import models as room_models  # Ensure Room model is imported
 from app.bookings import models as booking_models
@@ -36,7 +38,7 @@ def create_payment(
     booking_id: int,
     payment_request: payment_schemas.PaymentCreateSchema,
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     """
     Create a new payment for a booking, considering discounts and payment history.
@@ -44,6 +46,9 @@ def create_payment(
     #transaction_time = datetime.now(timezone.utc)
     lagos_tz = pytz.timezone("Africa/Lagos")
     transaction_time = datetime.now(lagos_tz)
+
+    # Force payment_date to be actual current Lagos time
+    payment_date = transaction_time
 
     # Validate that payment_date is timezone-aware
     if payment_request.payment_date.tzinfo is None:
@@ -61,12 +66,13 @@ def create_payment(
      # Convert payment date to Lagos time zone for proper comparison
     payment_date = payment_request.payment_date.astimezone(lagos_tz)
     
-     # Restrict non-admin users to posting only for the current full day
-    if payment_date.date() < transaction_time.date() and current_user.role != "admin":
+     # Only admin can backdate payments (past dates)
+    if payment_date.date() < datetime.now(lagos_tz).date() and "admin" not in current_user.roles:
         raise HTTPException(
             status_code=400,
             detail="Only admin is allowed to enter a past date for payments."
         )
+
 
     # Fetch the booking record
     booking_record = db.query(booking_models.Booking).filter(
@@ -143,7 +149,7 @@ def create_payment(
                 amount_paid=payment_request.amount_paid,
                 discount_allowed=payment_request.discount_allowed,
                 payment_method=payment_request.payment_method,
-                payment_date=payment_request.payment_date,
+                payment_date=payment_date,  # ✅ always actual Lagos payment time
             
             ),
             booking_id=booking_id,
@@ -180,19 +186,25 @@ def create_payment(
     
 
 
+from sqlalchemy import func
+
+from sqlalchemy import func
+
 @router.get("/list")
 def list_payments(
     start_date: Optional[date] = Query(None, description="date format-yyyy-mm-dd"),
     end_date: Optional[date] = Query(None, description="date format-yyyy-mm-dd"),
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     """
-    List all payments made between the specified start and end date.
-    Provides a summarized view of total bookings, total amount paid, total discount, and total due.
-    Excludes voided and cancelled payments from the total calculation.
+    List payments (filtered by date range if provided).
+    For each returned payment row the `balance_due` is the CURRENT cumulative balance
+    for the booking (booking_cost minus ALL valid payments + discounts for that booking),
+    and that same balance is shown for every payment for that booking.
     """
     try:
+        # Convert dates to datetimes if provided
         if start_date:
             start_datetime = datetime.combine(start_date, datetime.min.time())
         if end_date:
@@ -200,6 +212,7 @@ def list_payments(
 
         query = db.query(payment_models.Payment)
 
+        # Apply filters (same as before)
         if start_date and end_date:
             if start_date > end_date:
                 raise HTTPException(
@@ -215,18 +228,59 @@ def list_payments(
         elif end_date:
             query = query.filter(payment_models.Payment.payment_date <= end_datetime)
 
+        # payments that will be returned (rows)
         payments = query.order_by(payment_models.Payment.id.desc()).all()
-
 
         if not payments:
             logger.info("No payments found for the specified criteria.")
             return {"message": "No payments found for the specified criteria."}
 
+        # Collect unique booking_ids present in the filtered payments
+        booking_ids = sorted({p.booking_id for p in payments if p.booking_id is not None})
+
+        # Load bookings for those booking_ids
+        bookings = {}
+        if booking_ids:
+            booking_objs = db.query(booking_models.Booking).filter(booking_models.Booking.id.in_(booking_ids)).all()
+            bookings = {b.id: b for b in booking_objs}
+
+        # Aggregate ALL payments (no date restriction) for these booking_ids to compute cumulative paid & discounts
+        sums_map = {}
+        if booking_ids:
+            agg = (
+                db.query(
+                    payment_models.Payment.booking_id,
+                    func.coalesce(func.sum(payment_models.Payment.amount_paid), 0).label("sum_paid"),
+                    func.coalesce(func.sum(payment_models.Payment.discount_allowed), 0).label("sum_discount"),
+                )
+                .filter(
+                    payment_models.Payment.booking_id.in_(booking_ids),
+                    ~payment_models.Payment.status.in_(["voided", "cancelled"])
+                )
+                .group_by(payment_models.Payment.booking_id)
+                .all()
+            )
+            for row in agg:
+                sums_map[row.booking_id] = {
+                    "sum_paid": float(row.sum_paid or 0),
+                    "sum_discount": float(row.sum_discount or 0),
+                }
+
+        # Build balances_by_booking so every payment of same booking uses identical current balance
+        balances_by_booking = {}
+        for bid in booking_ids:
+            b = bookings.get(bid)
+            if b:
+                sums = sums_map.get(bid, {"sum_paid": 0, "sum_discount": 0})
+                balances_by_booking[bid] = (b.booking_cost or 0) - (sums["sum_paid"] + sums["sum_discount"])
+            else:
+                balances_by_booking[bid] = None
+
+        # Build payment_list and compute the summary totals (totals here still derived from the filtered payments)
         total_bookings = set()
-        total_booking_cost = 0  # Corrected total booking cost calculation
+        total_booking_cost = 0
         total_amount_paid = 0
         total_discount_allowed = 0
-        total_due = 0
 
         total_cash = 0
         total_pos_card = 0
@@ -234,15 +288,19 @@ def list_payments(
 
         payment_list = []
         for payment in payments:
-            booking = db.query(booking_models.Booking).filter(
-                booking_models.Booking.id == payment.booking_id
-            ).first()
-            
+            booking = bookings.get(payment.booking_id)
+
+            # Add unique booking booking_cost into summary totals
             if booking and payment.booking_id not in total_bookings:
-                total_booking_cost += booking.booking_cost
+                total_booking_cost += booking.booking_cost or 0
                 total_bookings.add(payment.booking_id)
 
-            
+            # Use the precomputed cumulative balance for this booking if available
+            current_balance = balances_by_booking.get(payment.booking_id) if payment.booking_id is not None else None
+            # Fallback: if we don't have a booking or balance, use stored payment.balance_due
+            if current_balance is None:
+                current_balance = payment.balance_due
+
             payment_list.append({
                 "payment_id": payment.id,
                 "guest_name": payment.guest_name,
@@ -250,7 +308,7 @@ def list_payments(
                 "booking_cost": booking.booking_cost if booking else None,
                 "amount_paid": payment.amount_paid,
                 "discount_allowed": payment.discount_allowed,
-                "balance_due": payment.balance_due,
+                "balance_due": current_balance,   # <-- same value for all payments of the same booking
                 "payment_method": payment.payment_method,
                 "payment_date": payment.payment_date.isoformat(),
                 "status": payment.status,
@@ -259,19 +317,26 @@ def list_payments(
                 "created_by": payment.created_by,
             })
 
+            # Summary totals computed from the filtered payments rows (unchanged logic)
             if payment.status not in ["voided", "cancelled"]:
-                total_amount_paid += payment.amount_paid
-                total_discount_allowed += payment.discount_allowed
-                
-                if payment.payment_method.lower() == "cash":
-                    total_cash += payment.amount_paid
-                elif payment.payment_method.lower() == "pos_card":
-                    total_pos_card += payment.amount_paid
-                elif payment.payment_method.lower() == "bank_transfer":
-                    total_bank_transfer += payment.amount_paid
+                total_amount_paid += (payment.amount_paid or 0)
+                total_discount_allowed += (payment.discount_allowed or 0)
 
-        # Corrected calculation for total due
-        total_due = total_booking_cost - (total_amount_paid + total_discount_allowed)
+                method = (payment.payment_method or "").lower()
+                if method == "cash":
+                    total_cash += (payment.amount_paid or 0)
+                elif method == "pos_card":
+                    total_pos_card += (payment.amount_paid or 0)
+                elif method == "bank_transfer":
+                    total_bank_transfer += (payment.amount_paid or 0)
+
+        # Compute total_due based on the cumulative booking balances (bookings included in the filtered payments)
+        total_due = 0
+        for bid in total_bookings:
+            b = bookings.get(bid)
+            if b:
+                sums = sums_map.get(bid, {"sum_paid": 0, "sum_discount": 0})
+                total_due += (b.booking_cost or 0) - (sums["sum_paid"] + sums["sum_discount"])
 
         logger.info(f"Retrieved {len(payment_list)} payments.")
 
@@ -304,13 +369,14 @@ def list_payments(
 
 
 
+
 @router.get("/by-status")
 def list_payments_by_status(
     status: Optional[str] = Query(None, description="Payment status to filter by (fully paid, part payment, voided)"),
     start_date: Optional[date] = Query(None, description="Filter by payment date (start) in format yyyy-mm-dd"),
     end_date: Optional[date] = Query(None, description="Filter by payment date (end) in format yyyy-mm-dd"),
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     try:
         # Build the base query and join with booking
@@ -373,7 +439,7 @@ def list_payments_by_status(
 @router.get("/total_daily_payment")
 def total_payment(
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     """
     Retrieve total daily sales with a breakdown of payment methods (POS Card, Bank Transfer, Cash),
@@ -464,7 +530,7 @@ def get_debtor_list(
     start_date: Optional[date] = Query(None, description="date format-yyyy-mm-dd"),
     end_date: Optional[date] = Query(None, description="date format-yyyy-mm-dd"),
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     try:
         # Ensure that the start_date is not greater than end_date
@@ -599,7 +665,7 @@ def get_debtor_list(
 @router.get("/outstanding")
 def list_outstanding_bookings(
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     try:
         # Fetch all bookings that are not cancelled or complimentary or fully paid
@@ -678,7 +744,7 @@ def list_outstanding_bookings(
 def get_payment_by_id(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["dashboard"]))
 ):
     """
     Get payment details by payment ID.
@@ -735,10 +801,10 @@ def get_payment_by_id(
 def void_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: schemas.UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["admin"]))
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    #if current_user.role != "admin":
+        #raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     try:
         # Retrieve the payment record by ID

@@ -11,7 +11,19 @@ class PaymentCreate(BaseModel):
     payment_mode: str
     paid_by: str | None = None
 
-    
+
+
+class PaymentDisplay(BaseModel):
+    id: int
+    amount_paid: float
+    payment_mode: str
+    paid_by: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 
 class RestaurantSalePaymentDisplay(BaseModel):
     id: int
@@ -56,3 +68,5 @@ class RestaurantSaleWithPaymentsDisplay(BaseModel):
 
     class Config:
         from_attributes = True
+
+

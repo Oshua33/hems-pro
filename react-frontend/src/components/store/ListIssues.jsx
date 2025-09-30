@@ -11,12 +11,39 @@ const ListIssues = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [editingIssue, setEditingIssue] = useState(null);
+
+  const getToday = () => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+};
+
   const [formData, setFormData] = useState({
-    issue_to: "bar",
-    issued_to_id: "",
-    issue_date: "",
-    issue_items: [],
-  });
+  issue_to: "bar",
+  issued_to_id: "",
+  issue_date: getToday(),  // 👈 default to today
+  issue_items: [],
+});
+
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  let roles = [];
+
+  if (Array.isArray(storedUser.roles)) {
+    roles = storedUser.roles;
+  } else if (typeof storedUser.role === "string") {
+    roles = [storedUser.role];
+  }
+
+  roles = roles.map((r) => r.toLowerCase());
+
+
+  if (!(roles.includes("admin") || roles.includes("store"))) {
+  return (
+    <div className="unauthorized">
+      <h2>🚫 Access Denied</h2>
+      <p>You do not have permission to list items issued.</p>
+    </div>
+  );
+}
 
   
   // Show a message for 3 seconds

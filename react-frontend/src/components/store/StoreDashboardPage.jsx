@@ -122,13 +122,19 @@ const StoreDashboardPage = () => {
       path: "vendor/list", // 👉 direct navigation
     },
 
-  ];
+  // ✅ New Main Dashboard Button
+  {
+    name: "🏠 Main Dashboard",
+    path: "/dashboard", // navigate back to hotel dashboard
+    customClass: "main-dashboard-btn", // 👈 custom class
+  },
+];
 
   return (
     <div className="dashboard-container">
       <aside className="sidebars1">
         <h2 className="sidebar-title">STORE MENU</h2>
-        <nav>
+        <nav className="sidebars1-menu">
           {storeMenu.map((item) => (
             <div
               key={item.name}
@@ -136,8 +142,9 @@ const StoreDashboardPage = () => {
               onMouseEnter={() => setHovered(item.name)}
               onMouseLeave={() => setHovered("")}
             >
+              {/* Main Button */}
               <button
-                className={`sidebars1-button ${hovered === item.name ? "active" : ""}`}
+                className={`sidebars1-button ${hovered === item.name ? "active" : ""} ${item.customClass || ""}`}
                 onClick={() => {
                   if (!item.submenu && item.path) {
                     navigate(item.path);
@@ -146,6 +153,8 @@ const StoreDashboardPage = () => {
               >
                 {item.name}
               </button>
+
+              {/* Submenu */}
               {item.submenu && hovered === item.name && (
                 <div className="submenu">
                   {item.submenu.map((sub) => (
@@ -153,11 +162,8 @@ const StoreDashboardPage = () => {
                       key={sub.label}
                       className="submenu-item"
                       onClick={() => {
-                        if (sub.path) {
-                          navigate(sub.path);
-                        } else if (sub.action) {
-                          sub.action();
-                        }
+                        if (sub.path) navigate(sub.path);
+                        if (sub.action) sub.action();
                         setHovered("");
                       }}
                     >

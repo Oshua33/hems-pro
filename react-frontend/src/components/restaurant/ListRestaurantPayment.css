@@ -137,3 +137,60 @@
   background-color: #cfcfcf !important;
   cursor: not-allowed;
 }
+
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.filters label {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.filters select,
+.filters input {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.filters .btn.filter {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.filters .btn.filter:hover {
+  background: #0056b3;
+}
+
+
+.payment-summary .outstanding {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #b22222; /* dark red */
+}
+
+
+/* Existing styles ... */
+
+.void-text {
+  color: red;
+  font-weight: bold;
+}
+
+.void-row {
+  background-color: #ffe6e6; /* light red background for voided rows */
+}

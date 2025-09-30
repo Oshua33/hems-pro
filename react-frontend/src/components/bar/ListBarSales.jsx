@@ -9,8 +9,27 @@ const ListBarSales = () => {
   const [editingSale, setEditingSale] = useState(null);
   const [message, setMessage] = useState("");
   const [barId, setBarId] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+
+  // ✅ Get user roles from localStorage
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const roles = user.roles || [];
+
+  // ✅ Restrict access: only admin and bar can create payments
+  if (!(roles.includes("admin") || roles.includes("bar"))) {
+    return (
+      <div className="unauthorized">
+        <h2>🚫 Access Denied</h2>
+        <p>You do not have permission to list bar sales.</p>
+      </div>
+    );
+  }
+
+
+  // ✅ Default both start and end date to today
+  const today = new Date().toISOString().split("T")[0];
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+
 
   // 🔽 Fetch sales with filters
   const fetchSales = async () => {
@@ -128,40 +147,41 @@ const ListBarSales = () => {
 
       {/* 🔎 Filters + Totals in one top-bar */}
       <div className="top-bar">
-        <div className="filters">
-          <label>Bar:</label>
-          <select value={barId} onChange={(e) => setBarId(e.target.value)}>
-            <option value="">-- All Bars --</option>
-            {bars.map((bar) => (
-              <option key={bar.id} value={bar.id}>
-                {bar.name}
-              </option>
-            ))}
-          </select>
+      {/* 🔎 Filters in one compact line */}
+      <div className="filters">
+        <label>Bar:</label>
+        <select value={barId} onChange={(e) => setBarId(e.target.value)}>
+          <option value="">-- All Bars --</option>
+          {bars.map((bar) => (
+            <option key={bar.id} value={bar.id}>
+              {bar.name}
+            </option>
+          ))}
+        </select>
 
-          <label>Start Date:</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+        <label>Start Date:</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
 
-          <label>End Date:</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+        <label>End Date:</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
 
-          <button onClick={fetchSales}>🔍 Apply</button>
-        </div>
-
-        <div className="totals">
-          <span>Total Entries: {totalEntries}</span>
-          {"  "} &nbsp;&nbsp;
-          <span>Total Amount: ₦{totalAmount.toLocaleString()}</span>
-        </div>
+        <button onClick={fetchSales}>🔍 Apply</button>
       </div>
+
+      {/* ✅ Compact summary */}
+      <div className="totals compact-summary">
+        <span>Entries: <strong>{totalEntries}</strong></span>
+        <span>Amount: <strong>₦{totalAmount.toLocaleString()}</strong></span>
+      </div>
+    </div>
 
       {/* Wrapped content in a professional container */}
       <div className="data-container1">
@@ -208,68 +228,85 @@ const ListBarSales = () => {
       {editingSale && (
         <div className="modal-overlay2">
           <div className="modal2">
-            <h3>Edit Sale</h3>
-            <form onSubmit={handleUpdate}>
-              <label>Bar</label>
-              <select value={editingSale.bar_id} disabled>
-                {bars.map((bar) => (
-                  <option key={bar.id} value={bar.id}>
-                    {bar.name}
-                  </option>
-                ))}
-              </select>
+            <h3 className="modal-title">✏️ Edit Sale</h3>
+
+            <form onSubmit={handleUpdate} className="edit-sale-form">
+              <div className="form-group">
+                <label>Bar</label>
+                <select value={editingSale.bar_id} disabled>
+                  {bars.map((bar) => (
+                    <option key={bar.id} value={bar.id}>
+                      {bar.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {editingSale.items.map((item, idx) => (
-                <div key={idx} className="sale-item-row">
-                  <label>Item</label>
-                  <select
-                    value={item.item_id}
-                    onChange={(e) =>
-                      updateItemField(idx, "item_id", e.target.value)
-                    }
-                  >
-                    <option value="">-- Select Item --</option>
-                    {items.map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.name} ({it.unit})
-                      </option>
-                    ))}
-                  </select>
+                <div key={idx} className="sale-item-card">
+                  <h4>Item {idx + 1}</h4>
 
-                  <label>Quantity</label>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItemField(idx, "quantity", e.target.value)
-                    }
-                  />
+                  <div className="form-row">
+                    <label>Item</label>
+                    <select
+                      value={item.item_id}
+                      onChange={(e) =>
+                        updateItemField(idx, "item_id", e.target.value)
+                      }
+                    >
+                      <option value="">-- Select Item --</option>
+                      {items.map((it) => (
+                        <option key={it.id} value={it.id}>
+                          {it.name} ({it.unit})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <label>Selling Price (₦)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={item.selling_price}
-                    onChange={(e) =>
-                      updateItemField(idx, "selling_price", e.target.value)
-                    }
-                  />
+                  <div className="form-row">
+                    <label>Quantity</label>
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItemField(idx, "quantity", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <label>Selling Price (₦)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={item.selling_price}
+                      onChange={(e) =>
+                        updateItemField(idx, "selling_price", e.target.value)
+                      }
+                    />
+                  </div>
                 </div>
               ))}
 
-              <p>
-                Total: ₦
-                {editingSale.items
-                  .reduce(
-                    (sum, i) => sum + (i.quantity || 0) * (i.selling_price || 0),
-                    0
-                  )
-                  .toLocaleString()}
-              </p>
+              <div className="total-box">
+                <strong>Total: ₦
+                  {editingSale.items
+                    .reduce(
+                      (sum, i) =>
+                        sum + (i.quantity || 0) * (i.selling_price || 0),
+                      0
+                    )
+                    .toLocaleString()}
+                </strong>
+              </div>
 
               <div className="modal-actions2">
-                <button type="submit">💾 Save</button>
-                <button type="button" onClick={() => setEditingSale(null)}>
+                <button type="submit" className="btn-save">💾 Save</button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setEditingSale(null)}
+                >
                   ❌ Cancel
                 </button>
               </div>
@@ -277,6 +314,7 @@ const ListBarSales = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

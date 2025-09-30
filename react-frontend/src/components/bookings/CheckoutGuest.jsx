@@ -1,14 +1,35 @@
 import React, { useEffect, useState } from "react";
+import axiosWithAuth from "../../utils/axiosWithAuth";  // ✅ same as CreateBooking
 import "./CheckoutGuest.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:8000`;
-
-const CheckoutGuest = ({ token }) => {
+const CheckoutGuest = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookings, setBookings] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [totalBookingCost, setTotalBookingCost] = useState(0);
+
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  let roles = [];
+
+  if (Array.isArray(storedUser.roles)) {
+    roles = storedUser.roles;
+  } else if (typeof storedUser.role === "string") {
+    roles = [storedUser.role];
+  }
+
+  roles = roles.map((r) => r.toLowerCase());
+
+
+  if (!(roles.includes("admin") || roles.includes("dashboard"))) {
+  return (
+    <div className="unauthorized">
+      <h2>🚫 Access Denied</h2>
+      <p>You do not have permission to checkout guest.</p>
+    </div>
+  );
+}
+
 
   useEffect(() => {
     fetchUnavailableRooms();
@@ -16,46 +37,31 @@ const CheckoutGuest = ({ token }) => {
 
   const fetchUnavailableRooms = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/rooms/unavailable`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Failed to fetch");
-
-      setBookings(data.unavailable_rooms || []);
-      setTotalEntries(data.total_unavailable || 0);
-      setTotalBookingCost(data.total_booking_cost || 0);
+      const res = await axiosWithAuth().get("/rooms/unavailable");
+      setBookings(res.data.unavailable_rooms || []);
+      setTotalEntries(res.data.total_unavailable || 0);
+      setTotalBookingCost(res.data.total_booking_cost || 0);
     } catch (err) {
-      setError(err.message || "Error loading data");
+      setError(err.response?.data?.detail || "Error loading data");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCheckout = async (roomNumber) => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/bookings/${roomNumber}/`, {
+    try {
+      const res = await axiosWithAuth().put(`/bookings/${roomNumber}/`);
+      alert(res.data.message);
 
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Checkout failed");
+      // Optimistically remove the checked-out booking
+      setBookings((prev) => prev.filter((b) => b.room_number !== roomNumber));
 
-    alert(data.message);
-
-    // Optimistically remove the checked-out booking from state
-    setBookings((prev) => prev.filter((b) => b.room_number !== roomNumber));
-
-    // Refresh from backend to stay accurate
-    fetchUnavailableRooms();
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
+      // Refresh from backend
+      fetchUnavailableRooms();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Checkout failed");
+    }
+  };
 
   return (
     <div className="checkout-guest-container">
@@ -112,7 +118,7 @@ const CheckoutGuest = ({ token }) => {
                         {b.attachment ? (
                           <a
                             className="attachment-link"
-                            href={`${API_BASE_URL}/files/attachments/${b.attachment.split("/").pop()}`}
+                            href={`${axiosWithAuth().defaults.baseURL}/files/attachments/${b.attachment.split("/").pop()}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -130,7 +136,6 @@ const CheckoutGuest = ({ token }) => {
                           >
                             Checkout
                           </button>
-                          
                         </div>
                       </td>
                     </tr>

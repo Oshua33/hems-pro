@@ -9,6 +9,26 @@ const StockBalance = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
+  let roles = [];
+
+  if (Array.isArray(storedUser.roles)) {
+    roles = storedUser.roles;
+  } else if (typeof storedUser.role === "string") {
+    roles = [storedUser.role];
+  }
+
+  roles = roles.map((r) => r.toLowerCase());
+
+  if (!(roles.includes("admin") || roles.includes("store"))) {
+    return (
+      <div className="unauthorized">
+        <h2>🚫 Access Denied</h2>
+        <p>You do not have permission to view store stock balance.</p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -89,14 +109,14 @@ const StockBalance = () => {
       <table>
         <thead>
           <tr>
-            <th>Item</th>
+            <th>Items</th>
             <th>Unit</th>
             <th>Category</th>
             <th>Total Received</th>
             <th>Total Issued</th>
             <th>Total Adjusted</th>
             <th>Balance</th>
-            <th>Last Unit Price</th>
+            <th>Current Unit Price</th> {/* Updated column header */}
             <th>Balance Value</th>
           </tr>
         </thead>
@@ -114,9 +134,10 @@ const StockBalance = () => {
               <td>{item.total_adjusted}</td>
               <td>{item.balance}</td>
               <td>
-                {item.last_unit_price
-                  ? `₦${item.last_unit_price.toLocaleString()}`
-                  : "-"}
+                {item.current_unit_price
+                  ? `₦${item.current_unit_price.toLocaleString()}`
+                  : "-"}{" "}
+                {/* Use current_unit_price */}
               </td>
               <td>
                 {item.balance_total_amount
